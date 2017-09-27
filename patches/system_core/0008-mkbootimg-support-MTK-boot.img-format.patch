@@ -1,0 +1,277 @@
+From 1c9eeb9d570f6202a3a04582c6ffab16fff0fa8c Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Thu, 15 Oct 2015 21:41:00 +0800
+Subject: [PATCH] mkbootimg: support MTK boot.img format
+
+Change-Id: I97325ac4840d998f46b7655860b844dc742fe540
+---
+ mkbootimg/bootimg.h       |  2 ++
+ mkbootimg/mkbootimg.c     | 54 ++++++++++++++++++++++++++++++++++++++++-------
+ mkbootimg/unpackbootimg.c | 47 ++++++++++++++++++++++++++++++-----------
+ 3 files changed, 83 insertions(+), 20 deletions(-)
+
+diff --git a/mkbootimg/bootimg.h b/mkbootimg/bootimg.h
+index 308c537..bf3b1dc 100644
+--- a/mkbootimg/bootimg.h
++++ b/mkbootimg/bootimg.h
+@@ -26,6 +26,8 @@ typedef struct boot_img_hdr boot_img_hdr;
+ #define BOOT_ARGS_SIZE 512
+ #define BOOT_EXTRA_ARGS_SIZE 1024
+ 
++#define MTK_HEADER_SIZE 512
++
+ struct boot_img_hdr
+ {
+     unsigned char magic[BOOT_MAGIC_SIZE];
+diff --git a/mkbootimg/mkbootimg.c b/mkbootimg/mkbootimg.c
+index 38b4b37..80676a4 100644
+--- a/mkbootimg/mkbootimg.c
++++ b/mkbootimg/mkbootimg.c
+@@ -25,10 +25,12 @@
+ #include "mincrypt/sha.h"
+ #include "bootimg.h"
+ 
+-static void *load_file(const char *fn, unsigned *_sz)
++static void *load_file(const char *fn, unsigned *_sz, int is_mtk, const char *mtk_fn)
+ {
+     char *data;
++    char *buf_start;
+     int sz;
++    int buf_sz;
+     int fd;
+ 
+     data = 0;
+@@ -40,13 +42,36 @@ static void *load_file(const char *fn, unsigned *_sz)
+ 
+     if(lseek(fd, 0, SEEK_SET) != 0) goto oops;
+ 
+-    data = (char*) malloc(sz);
++    buf_sz = sz + (is_mtk ? MTK_HEADER_SIZE : 0);
++    data = buf_start = (char*) malloc(buf_sz);
+     if(data == 0) goto oops;
+ 
+-    if(read(fd, data, sz) != sz) goto oops;
++    if (is_mtk) {
++        /* MTK magic */
++        data[0] = 0x88;
++        data[1] = 0x16;
++        data[2] = 0x88;
++        data[3] = 0x58;
++
++        /* file length in little endian */
++        data[4] = sz & 0xFF;
++        data[5] = (sz >> 8) & 0xFF;
++        data[6] = (sz >> 16) & 0xFF;
++        data[7] = (sz >> 24) & 0xFF;
++
++        /* MTK "file name" */
++        strncpy(data + 8, mtk_fn, 32);
++
++        /* MTK header padding */
++        memset(data + 40, 0xff, MTK_HEADER_SIZE - 40);
++
++        buf_start += MTK_HEADER_SIZE;
++    }
++
++    if(read(fd, buf_start, sz) != sz) goto oops;
+     close(fd);
+ 
+-    if(_sz) *_sz = sz;
++    if(_sz) *_sz = buf_sz;
+     return data;
+ 
+ oops:
+@@ -68,6 +93,7 @@ int usage(void)
+             "       [ --dt <filename> ]\n"
+             "       [ --ramdisk_offset <address> ]\n"
+             "       [ --tags_offset <address> ]\n"
++            "       [ --mtk <boot|recovery> ]\n"
+             "       -o|--output <filename>\n"
+             );
+     return 1;
+@@ -99,6 +125,8 @@ int main(int argc, char **argv)
+ {
+     boot_img_hdr hdr;
+ 
++    int is_mtk = 0;
++    int is_mtk_boot = 0;
+     char *kernel_fn = 0;
+     void *kernel_data = 0;
+     char *ramdisk_fn = 0;
+@@ -167,6 +195,16 @@ int main(int argc, char **argv)
+             }
+         } else if(!strcmp(arg, "--dt")) {
+             dt_fn = val;
++        } else if (!strcmp(arg, "--mtk")) {
++            if (!strcmp(val, "boot")) {
++                is_mtk = 1;
++                is_mtk_boot = 1;
++            } else if (!strcmp(val, "recovery")) {
++                is_mtk = 1;
++                is_mtk_boot = 0;
++            } else {
++                return usage();
++            }
+         } else {
+             return usage();
+         }
+@@ -216,7 +254,7 @@ int main(int argc, char **argv)
+         strncpy((char *)hdr.extra_cmdline, cmdline, BOOT_EXTRA_ARGS_SIZE);
+     }
+ 
+-    kernel_data = load_file(kernel_fn, &hdr.kernel_size);
++    kernel_data = load_file(kernel_fn, &hdr.kernel_size, is_mtk, "KERNEL");
+     if(kernel_data == 0) {
+         fprintf(stderr,"error: could not load kernel '%s'\n", kernel_fn);
+         return 1;
+@@ -226,7 +264,7 @@ int main(int argc, char **argv)
+         ramdisk_data = 0;
+         hdr.ramdisk_size = 0;
+     } else {
+-        ramdisk_data = load_file(ramdisk_fn, &hdr.ramdisk_size);
++        ramdisk_data = load_file(ramdisk_fn, &hdr.ramdisk_size, is_mtk, is_mtk_boot ? "ROOTFS" : "RECOVERY");
+         if(ramdisk_data == 0) {
+             fprintf(stderr,"error: could not load ramdisk '%s'\n", ramdisk_fn);
+             return 1;
+@@ -234,7 +272,7 @@ int main(int argc, char **argv)
+     }
+ 
+     if(second_fn) {
+-        second_data = load_file(second_fn, &hdr.second_size);
++        second_data = load_file(second_fn, &hdr.second_size, is_mtk, "");
+         if(second_data == 0) {
+             fprintf(stderr,"error: could not load secondstage '%s'\n", second_fn);
+             return 1;
+@@ -242,7 +280,7 @@ int main(int argc, char **argv)
+     }
+ 
+     if(dt_fn) {
+-        dt_data = load_file(dt_fn, &hdr.dt_size);
++        dt_data = load_file(dt_fn, &hdr.dt_size, is_mtk, "");
+         if (dt_data == 0) {
+             fprintf(stderr,"error: could not load device tree image '%s'\n", dt_fn);
+             return 1;
+diff --git a/mkbootimg/unpackbootimg.c b/mkbootimg/unpackbootimg.c
+index 3d2fda7..d844cfd 100644
+--- a/mkbootimg/unpackbootimg.c
++++ b/mkbootimg/unpackbootimg.c
+@@ -38,11 +38,21 @@ void write_string_to_file(char* file, char* string)
+     fclose(f);
+ }
+ 
++void maybe_skip_mtk_header(FILE* f, int is_mtk)
++{
++    if (!is_mtk) {
++        return;
++    }
++
++    fseek(f, MTK_HEADER_SIZE, SEEK_CUR);
++}
++
+ int usage() {
+     printf("usage: unpackbootimg\n");
+     printf("\t-i|--input boot.img\n");
+     printf("\t[ -o|--output output_directory]\n");
+     printf("\t[ -p|--pagesize <size-in-hexadecimal> ]\n");
++    printf("\t[ --mtk 1 ]\n");
+     return 0;
+ }
+ 
+@@ -52,6 +62,7 @@ int main(int argc, char** argv)
+     char* directory = "./";
+     char* filename = NULL;
+     int pagesize = 0;
++    int is_mtk = 0;
+ 
+     argc--;
+     argv++;
+@@ -66,6 +77,12 @@ int main(int argc, char** argv)
+             directory = val;
+         } else if(!strcmp(arg, "--pagesize") || !strcmp(arg, "-p")) {
+             pagesize = strtoul(val, 0, 16);
++        } else if (!strcmp(arg, "--mtk")) {
++            if (!strcmp(val, "1")) {
++                is_mtk = 1;
++            }
++
++            return usage();
+         } else {
+             return usage();
+         }
+@@ -153,23 +170,27 @@ int main(int argc, char** argv)
+     //printf("total read: %d\n", total_read);
+     total_read += read_padding(f, sizeof(header), pagesize);
+ 
++    int mtk_size_adjust = is_mtk ? -MTK_HEADER_SIZE : 0;
++
+     sprintf(tmp, "%s/%s", directory, basename(filename));
+     strcat(tmp, "-zImage");
+     FILE *k = fopen(tmp, "wb");
+-    byte* kernel = (byte*)malloc(header.kernel_size);
++    byte* kernel = (byte*)malloc(header.kernel_size + mtk_size_adjust);
+     //printf("Reading kernel...\n");
+-    fread(kernel, header.kernel_size, 1, f);
++    maybe_skip_mtk_header(f, is_mtk);
++    fread(kernel, header.kernel_size + mtk_size_adjust, 1, f);
+     total_read += header.kernel_size;
+-    fwrite(kernel, header.kernel_size, 1, k);
++    fwrite(kernel, header.kernel_size + mtk_size_adjust, 1, k);
+     fclose(k);
+ 
+     //printf("total read: %d\n", header.kernel_size);
+     total_read += read_padding(f, header.kernel_size, pagesize);
+ 
+ 
+-    byte* ramdisk = (byte*)malloc(header.ramdisk_size);
++    byte* ramdisk = (byte*)malloc(header.ramdisk_size + mtk_size_adjust);
+     //printf("Reading ramdisk...\n");
+-    fread(ramdisk, header.ramdisk_size, 1, f);
++    maybe_skip_mtk_header(f, is_mtk);
++    fread(ramdisk, header.ramdisk_size + mtk_size_adjust, 1, f);
+     total_read += header.ramdisk_size;
+     sprintf(tmp, "%s/%s", directory, basename(filename));
+     if(ramdisk[0] == 0x02 && ramdisk[1]== 0x21)
+@@ -177,7 +198,7 @@ int main(int argc, char** argv)
+     else
+         strcat(tmp, "-ramdisk.gz");
+     FILE *r = fopen(tmp, "wb");
+-    fwrite(ramdisk, header.ramdisk_size, 1, r);
++    fwrite(ramdisk, header.ramdisk_size + mtk_size_adjust, 1, r);
+     fclose(r);
+ 
+     total_read += read_padding(f, header.ramdisk_size, pagesize);
+@@ -185,11 +206,12 @@ int main(int argc, char** argv)
+     sprintf(tmp, "%s/%s", directory, basename(filename));
+     strcat(tmp, "-second");
+     FILE *s = fopen(tmp, "wb");
+-    byte* second = (byte*)malloc(header.second_size);
++    byte* second = (byte*)malloc(header.second_size + mtk_size_adjust);
+     //printf("Reading second...\n");
+-    fread(second, header.second_size, 1, f);
++    maybe_skip_mtk_header(f, is_mtk);
++    fread(second, header.second_size + mtk_size_adjust, 1, f);
+     total_read += header.second_size;
+-    fwrite(second, header.second_size, 1, r);
++    fwrite(second, header.second_size + mtk_size_adjust, 1, r);
+     fclose(s);
+ 
+     total_read += read_padding(f, header.second_size, pagesize);
+@@ -197,11 +219,12 @@ int main(int argc, char** argv)
+     sprintf(tmp, "%s/%s", directory, basename(filename));
+     strcat(tmp, "-dt");
+     FILE *d = fopen(tmp, "wb");
+-    byte* dt = (byte*)malloc(header.dt_size);
++    byte* dt = (byte*)malloc(header.dt_size + mtk_size_adjust);
+     //printf("Reading dt...\n");
+-    fread(dt, header.dt_size, 1, f);
++    maybe_skip_mtk_header(f, is_mtk);
++    fread(dt, header.dt_size + mtk_size_adjust, 1, f);
+     total_read += header.dt_size;
+-    fwrite(dt, header.dt_size, 1, r);
++    fwrite(dt, header.dt_size + mtk_size_adjust, 1, r);
+     fclose(d);
+     
+     fclose(f);
+-- 
+2.5.0
+

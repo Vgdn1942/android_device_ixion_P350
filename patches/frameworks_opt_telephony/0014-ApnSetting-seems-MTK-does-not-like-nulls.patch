@@ -1,0 +1,65 @@
+From c98651f40499f4b86dce05f76b802357c738eb46 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Sat, 3 Oct 2015 12:32:09 +0800
+Subject: [PATCH] ApnSetting: seems MTK does not like nulls
+
+Change-Id: I810b2e4bb8f7fdeab9e2da78de1fe2fdbb97dae3
+---
+ .../telephony/dataconnection/ApnSetting.java       | 30 +++++++++++-----------
+ 1 file changed, 15 insertions(+), 15 deletions(-)
+
+diff --git a/src/java/com/android/internal/telephony/dataconnection/ApnSetting.java b/src/java/com/android/internal/telephony/dataconnection/ApnSetting.java
+index cf2c57c..c9963c7 100755
+--- a/src/java/com/android/internal/telephony/dataconnection/ApnSetting.java
++++ b/src/java/com/android/internal/telephony/dataconnection/ApnSetting.java
+@@ -111,23 +111,23 @@ public class ApnSetting {
+             int profileId, boolean modemCognitive, int maxConns, int waitTime, int maxConnsTime,
+             int mtu, String mvnoType, String mvnoMatchData) {
+         this.id = id;
+-        this.numeric = numeric;
+-        this.carrier = carrier;
+-        this.apn = apn;
+-        this.proxy = proxy;
+-        this.port = port;
+-        this.mmsc = mmsc;
+-        this.mmsProxy = mmsProxy;
+-        this.mmsPort = mmsPort;
+-        this.user = user;
+-        this.password = password;
++        this.numeric = numeric == null ? "" : numeric;
++        this.carrier = carrier == null ? "" : carrier;
++        this.apn = apn == null ? "" : apn;
++        this.proxy = proxy == null ? "" : proxy;
++        this.port = port == null ? "" : port;
++        this.mmsc = mmsc == null ? "" : mmsc;
++        this.mmsProxy = mmsProxy == null ? "" : mmsProxy;
++        this.mmsPort = mmsPort == null ? "" : mmsPort;
++        this.user = user == null ? "" : user;
++        this.password = password == null ? "" : password;
+         this.authType = authType;
+         this.types = new String[types.length];
+         for (int i = 0; i < types.length; i++) {
+-            this.types[i] = types[i].toLowerCase(Locale.ROOT);
++            this.types[i] = types[i] == null ? "" : types[i].toLowerCase(Locale.ROOT);
+         }
+-        this.protocol = protocol;
+-        this.roamingProtocol = roamingProtocol;
++        this.protocol = protocol == null ? "" : protocol;
++        this.roamingProtocol = roamingProtocol == null ? "" : roamingProtocol;
+         this.carrierEnabled = carrierEnabled;
+         this.bearer = bearer;
+         this.profileId = profileId;
+@@ -136,8 +136,8 @@ public class ApnSetting {
+         this.waitTime = waitTime;
+         this.maxConnsTime = maxConnsTime;
+         this.mtu = mtu;
+-        this.mvnoType = mvnoType;
+-        this.mvnoMatchData = mvnoMatchData;
++        this.mvnoType = mvnoType == null ? "" : mvnoType;
++        this.mvnoMatchData = mvnoMatchData == null ? "" : mvnoMatchData;
+ 
+     }
+ 
+-- 
+2.5.0
+

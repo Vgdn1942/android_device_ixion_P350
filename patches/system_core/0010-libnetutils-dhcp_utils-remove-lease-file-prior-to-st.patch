@@ -1,0 +1,42 @@
+From 20537b0677c0c627fcccdf32ad227bd3f661c245 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Tue, 12 Jan 2016 14:01:13 +0800
+Subject: [PATCH] libnetutils: dhcp_utils: remove lease file prior to starting
+ dhcp daemon
+
+For hopefully preventing intermittent DHCP failures; it seems the lease
+file could sometimes become corrupted, after which DHCP almost becomes
+impossible on the affected interface. Very annoying to warrant a
+quick-and-dirty fix.
+
+Change-Id: I27542dfd7e6a140994496845ce6fe94c8033ed67
+---
+ libnetutils/dhcp_utils.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/libnetutils/dhcp_utils.c b/libnetutils/dhcp_utils.c
+index e1df874..db90652 100644
+--- a/libnetutils/dhcp_utils.c
++++ b/libnetutils/dhcp_utils.c
+@@ -216,6 +216,18 @@ int dhcp_do_request(const char *interface,
+     /* Erase any previous setting of the dhcp result property */
+     property_set(result_prop_name, "");
+ 
++    /* HACK: Sometimes the lease file appears to be corrupted, which can cause
++     * unknown errors while obtaining an address. We just remove the corresponding
++     * lease file prior to starting the daemon...
++     */
++    {
++        char lease_file_path[PROPERTY_VALUE_MAX];
++        snprintf(lease_file_path, sizeof(lease_file_path),
++                "/data/misc/dhcp/dhcpcd-%s.lease",
++                p2p_interface);
++        unlink(lease_file_path);
++    }
++
+     /* Start the daemon and wait until it's ready */
+     if (property_get(HOSTNAME_PROP_NAME, prop_value, NULL) && (prop_value[0] != '\0'))
+         snprintf(daemon_cmd, sizeof(daemon_cmd), "%s_%s:-f %s -h %s %s", DAEMON_NAME,
+-- 
+2.5.0
+

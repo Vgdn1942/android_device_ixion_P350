@@ -1,0 +1,42 @@
+From bab90b385f7465bd4a254c1179fbe3080bced7f8 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Thu, 15 Oct 2015 16:46:42 +0800
+Subject: [PATCH] config: allow setting button brightness even if defaulted to
+ disabled
+
+Change-Id: I37ba716e12f266f748925759aa418774cd16d1b5
+---
+ core/res/res/values/cm_symbols.xml | 1 +
+ core/res/res/values/config.xml     | 4 ++++
+ 2 files changed, 5 insertions(+)
+
+diff --git a/core/res/res/values/cm_symbols.xml b/core/res/res/values/cm_symbols.xml
+index 0cb0965..f046d75 100644
+--- a/core/res/res/values/cm_symbols.xml
++++ b/core/res/res/values/cm_symbols.xml
+@@ -86,6 +86,7 @@
+     <java-symbol type="integer" name="config_keyboardBrightnessSettingDefault" />
+ 
+     <java-symbol type="bool" name="config_buttonBrightnessForceConfigurable" />
++    <java-symbol type="integer" name="config_buttonBrightnessOverriddenEnabledValue" />
+ 
+     <java-symbol type="string" name="config_geofenceServicesProvider" />
+     <java-symbol type="string" name="config_comboNetworkLocationProvider" />
+diff --git a/core/res/res/values/config.xml b/core/res/res/values/config.xml
+index 98dc24d..7eebe9b 100755
+--- a/core/res/res/values/config.xml
++++ b/core/res/res/values/config.xml
+@@ -1039,6 +1039,10 @@
+          value is set to 0 -->
+     <bool name="config_buttonBrightnessForceConfigurable">false</bool>
+ 
++    <!-- Overridden brightness value of enabled state if button brightness is
++         forced to be configurable -->
++    <integer name="config_buttonBrightnessOverriddenEnabledValue">255</integer>
++
+     <!-- Amount of time it takes for the light sensor to warm up in milliseconds.
+          For this time after the screen turns on, the Power Manager
+          will not debounce light sensor readings -->
+-- 
+2.5.0
+

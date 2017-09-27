@@ -1,0 +1,46 @@
+From 9d26e13df875e9db61e84e70266f88688ce63a59 Mon Sep 17 00:00:00 2001
+From: fire855 <thefire855@gmail.com>
+Date: Thu, 11 Jun 2015 18:04:51 +0200
+Subject: [PATCH] CardStateMonitor: Use fakeiccid if needed for legacy ril
+ (2/2) Original:
+ https://github.com/bauner/cm-android_packages_services_Telephony/commit/e90d9b335bcf42bd143a1d4a4ae5c7111873beb9
+
+Change-Id: I9b1af62bde274918a42a4f599678e2a53e95286a
+---
+ src/com/android/phone/CardStateMonitor.java | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/src/com/android/phone/CardStateMonitor.java b/src/com/android/phone/CardStateMonitor.java
+index da128c9..9288005 100644
+--- a/src/com/android/phone/CardStateMonitor.java
++++ b/src/com/android/phone/CardStateMonitor.java
+@@ -70,6 +70,8 @@ public class CardStateMonitor extends Handler {
+     private static final int EVENT_ICC_CHANGED = 1;
+     private static final int EVENT_ICCID_LOAD_DONE = 2;
+ 
++    private boolean mNeedsFakeIccid = false;
++
+     static class CardInfo {
+         boolean mLoadingIcc;
+         String mIccId;
+@@ -185,6 +187,9 @@ public class CardStateMonitor extends Handler {
+         String iccId = null;
+         if (iccIdResult.exception != null) {
+             logd("Exception in GET ICCID," + iccIdResult.exception);
++            if(mNeedsFakeIccid) {
++                iccId = IccConstants.FAKE_ICCID;
++            }
+         } else {
+             iccId = IccUtils.bcdToString(data, 0, data.length);
+             logd("get iccid on card" + cardIndex + ", iccId=" + iccId);
+@@ -229,6 +234,7 @@ public class CardStateMonitor extends Handler {
+         if (validApp != null) {
+             IccFileHandler fileHandler = validApp.getIccFileHandler();
+             if (fileHandler != null) {
++                mNeedsFakeIccid = fileHandler.needsFakeIccid();
+                 fileHandler.loadEFTransparent(IccConstants.EF_ICCID,
+                         obtainMessage(EVENT_ICCID_LOAD_DONE, sub));
+                 request = true;
+-- 
+2.5.0
+

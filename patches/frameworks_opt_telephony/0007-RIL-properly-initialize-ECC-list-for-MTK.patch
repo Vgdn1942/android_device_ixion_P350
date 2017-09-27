@@ -1,0 +1,98 @@
+From 0301e24a3aada32258eb4b11df9eb19facb4a4bf Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Tue, 29 Sep 2015 11:15:23 +0800
+Subject: [PATCH] RIL: properly initialize ECC list for MTK
+
+Change-Id: I5d3a303406d4f4a855d7a0e40ac4c5fce93e0f21
+---
+ src/java/com/android/internal/telephony/RIL.java | 62 ++++++++++++++++++++++++
+ 1 file changed, 62 insertions(+)
+
+diff --git a/src/java/com/android/internal/telephony/RIL.java b/src/java/com/android/internal/telephony/RIL.java
+index 209189c..a5c54f4 100644
+--- a/src/java/com/android/internal/telephony/RIL.java
++++ b/src/java/com/android/internal/telephony/RIL.java
+@@ -55,6 +55,7 @@ import android.telephony.SignalStrength;
+ import android.telephony.SmsManager;
+ import android.telephony.SmsMessage;
+ import android.telephony.SubscriptionManager;
++import android.telephony.TelephonyManager;
+ import android.text.TextUtils;
+ import android.util.SparseArray;
+ import android.view.Display;
+@@ -3387,6 +3388,12 @@ public class RIL extends BaseCommands implements CommandsInterface {
+             case RIL_UNSOL_RIL_CONNECTED: {
+                 if (RILJ_LOGD) unsljLogRet(response, ret);
+ 
++                // Set ecc list before MO call
++                if  (TelephonyManager.getDefault().getMultiSimConfiguration() == TelephonyManager.MultiSimVariants.DSDA
++                        || mInstanceId == 0) {
++                    setEccList();
++                }
++
+                 // Initial conditions
+                 // setRadioPower(false, null);
+                 setPreferredNetworkType(mPreferredNetworkType, null);
+@@ -5348,4 +5355,59 @@ public class RIL extends BaseCommands implements CommandsInterface {
+         if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
+         send(rr);
+     }
++
++    /*
++    public void
++    emergencyDial(String address, int clirMode, UUSInfo uusInfo, Message result) {
++        RILRequest rr = RILRequest.obtain(RIL_REQUEST_EMERGENCY_DIAL, result);
++
++        rr.mParcel.writeString(address);
++        rr.mParcel.writeInt(clirMode);
++        rr.mParcel.writeInt(0); // UUS information is absent
++
++        if (uusInfo == null) {
++            rr.mParcel.writeInt(0); // UUS information is absent
++        } else {
++            rr.mParcel.writeInt(1); // UUS information is present
++            rr.mParcel.writeInt(uusInfo.getType());
++            rr.mParcel.writeInt(uusInfo.getDcs());
++            rr.mParcel.writeByteArray(uusInfo.getUserData());
++        }
++
++        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
++
++        send(rr);
++    }
++    */
++
++    public void setEccServiceCategory(int serviceCategory) {
++        RILRequest rr = RILRequest.obtain(RIL_REQUEST_SET_ECC_SERVICE_CATEGORY, null);
++
++        rr.mParcel.writeInt(1);
++        rr.mParcel.writeInt(serviceCategory);
++
++        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest)
++            + " " + serviceCategory);
++
++        send(rr);
++    }
++
++    private void setEccList() {
++        RILRequest rr = RILRequest.obtain(RIL_REQUEST_SET_ECC_LIST, null);
++        ArrayList<PhoneNumberUtils.EccEntry> eccList = PhoneNumberUtils.getEccList();
++
++        rr.mParcel.writeInt(eccList.size() * 3);
++        for (PhoneNumberUtils.EccEntry entry : eccList) {
++            rr.mParcel.writeString(entry.getEcc());
++            rr.mParcel.writeString(entry.getCategory());
++            String strCondition = entry.getCondition();
++            if (strCondition.equals(PhoneNumberUtils.EccEntry.ECC_FOR_MMI))
++                strCondition = PhoneNumberUtils.EccEntry.ECC_NO_SIM;
++            rr.mParcel.writeString(strCondition);
++        }
++
++        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
++
++        send(rr);
++    }
+ }
+-- 
+2.5.0
+

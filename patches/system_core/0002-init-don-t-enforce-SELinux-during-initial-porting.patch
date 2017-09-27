@@ -1,0 +1,27 @@
+From 637fdc31f98a23dab9151add6246bc0cfee2cc39 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Tue, 25 Aug 2015 01:26:43 +0800
+Subject: [PATCH] init: don't enforce SELinux during initial porting
+
+Change-Id: I640d9ee74c51ede9074d89551d665e3acf9fe4a6
+---
+ init/init.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/init/init.c b/init/init.c
+index 8a7427d..cc01819 100644
+--- a/init/init.c
++++ b/init/init.c
+@@ -923,6 +923,9 @@ static bool selinux_is_disabled(void)
+ static bool selinux_is_enforcing(void)
+ {
+ #ifdef ALLOW_DISABLE_SELINUX
++    /* things are getting hairier... disable during initial porting */
++    return false;
++
+     char tmp[PROP_VALUE_MAX];
+ 
+     if (property_get("ro.boot.selinux", tmp) == 0) {
+-- 
+2.5.0
+

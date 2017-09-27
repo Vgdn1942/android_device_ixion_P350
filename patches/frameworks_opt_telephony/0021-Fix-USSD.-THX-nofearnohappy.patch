@@ -1,0 +1,400 @@
+From 4aa45ebe95b15103e2a62a8f7452349f61b43350 Mon Sep 17 00:00:00 2001
+From: Besik13 <egor.besik@gmail.com>
+Date: Wed, 10 Feb 2016 23:36:25 +0200
+Subject: [PATCH] Fix USSD. THX @nofearnohappy
+
+Change-Id: Ie757da2393cc00e4011275f4a91d48d8cfbe11d4
+---
+ .../internal/telephony/CommandsInterface.java      |  11 ++-
+ .../android/internal/telephony/gsm/GSMPhone.java   |  87 +++++++++++++++--
+ .../android/internal/telephony/gsm/GsmMmiCode.java | 104 ++++++++++++++++++++-
+ 3 files changed, 190 insertions(+), 12 deletions(-)
+
+diff --git a/src/java/com/android/internal/telephony/CommandsInterface.java b/src/java/com/android/internal/telephony/CommandsInterface.java
+index 564e12b..2d19aa8 100644
+--- a/src/java/com/android/internal/telephony/CommandsInterface.java
++++ b/src/java/com/android/internal/telephony/CommandsInterface.java
+@@ -102,6 +102,15 @@ public interface CommandsInterface {
+     static final int USSD_MODE_NOT_SUPPORTED = 4;
+     static final int USSD_MODE_NW_TIMEOUT    = 5;
+ 
++    /* M: SS part */
++    //MTK-START [mtk04070][111118][ALPS00093395]MTK added
++    static final int USSD_SESSION_END               = 2;
++    static final int USSD_HANDLED_BY_STK            = 3;
++    static final int USSD_OPERATION_NOT_SUPPORTED   = 4;
++    static final int USSD_NETWORK_TIMEOUT           = 5;
++    //MTK-END [mtk04070][111118][ALPS00093395]MTK added
++    /* M: SS part end */
++
+     // GSM SMS fail cause for acknowledgeLastIncomingSMS. From TS 23.040, 9.2.3.22.
+     static final int GSM_SMS_FAIL_CAUSE_MEMORY_CAPACITY_EXCEEDED    = 0xD3;
+     static final int GSM_SMS_FAIL_CAUSE_USIM_APP_TOOLKIT_BUSY       = 0xD4;
+@@ -2259,4 +2268,4 @@ public interface CommandsInterface {
+     void setFDMode(int mode, int parameter1, int parameter2, Message response);
+     public void setScriResult(Handler h, int what, Object obj);
+     public void unSetScriResult(Handler h);
+-}
++}
+\ No newline at end of file
+diff --git a/src/java/com/android/internal/telephony/gsm/GSMPhone.java b/src/java/com/android/internal/telephony/gsm/GSMPhone.java
+index 1b8ef2d..62cb1f8 100644
+--- a/src/java/com/android/internal/telephony/gsm/GSMPhone.java
++++ b/src/java/com/android/internal/telephony/gsm/GSMPhone.java
+@@ -147,6 +147,8 @@ public class GSMPhone extends PhoneBase {
+         }
+     }
+ 
++    public boolean mIsNetworkInitiatedUssd = false;
++
+     // Constructors
+ 
+     public
+@@ -977,6 +979,9 @@ public class GSMPhone extends PhoneBase {
+     @Override
+     public void sendUssdResponse(String ussdMessge) {
+         GsmMmiCode mmi = GsmMmiCode.newFromUssdUserInput(ussdMessge, this, mUiccApplication.get());
++        /* M: SS part */
++        Rlog.d(LOG_TAG, "[sendUssdResponse]mPendingMMIs.add(mmi) + " + mmi);
++        /* M: SS part end */
+         mPendingMMIs.add(mmi);
+         mMmiRegistrants.notifyRegistrants(new AsyncResult(null, mmi, null));
+         mmi.sendUssd(ussdMessge);
+@@ -1470,6 +1475,10 @@ public class GSMPhone extends PhoneBase {
+          * The exception is cancellation of an incoming USSD-REQUEST, which is
+          * not on the list.
+          */
++
++        /* M: SS part */
++        Rlog.d(LOG_TAG, "mPendingMMIs.remove(mmi) - " + mmi);
++        /* M: SS part end */
+         if (mPendingMMIs.remove(mmi) || mmi.isUssdRequest() || mmi.isSsInfo()) {
+             mMmiCompleteRegistrants.notifyRegistrants(
+                 new AsyncResult(null, mmi, null));
+@@ -1477,6 +1486,27 @@ public class GSMPhone extends PhoneBase {
+     }
+ 
+     /**
++     * Removes the given MMI from the pending list and notifies
++     * registrants that it is complete.
++     * @param mmi MMI that is done
++     * @param obj User object to deliver to application
++     */
++    public void onMMIDone(GsmMmiCode mmi, Object obj) {
++        /* Only notify complete if it's on the pending list.
++         * Otherwise, it's already been handled (eg, previously canceled).
++         * The exception is cancellation of an incoming USSD-REQUEST, which is
++         * not on the list.
++         */
++        /* M: SS part */
++        Rlog.d(LOG_TAG, "mPendingMMIs.remove(mmi) - " + mmi);
++        /* M: SS part end */
++        if (mPendingMMIs.remove(mmi) || mmi.isUssdRequest() || mmi.isSsInfo()) {
++            mMmiCompleteRegistrants.notifyRegistrants(
++                    new AsyncResult(obj, mmi, null));
++        }
++    }
++
++    /**
+      * Used to check if Call Forwarding status is present on sim card. If not, a message is
+      * sent so we can check if the CF status is stored as a Shared Preference.
+      */
+@@ -1506,34 +1536,55 @@ public class GSMPhone extends PhoneBase {
+         boolean isUssdError;
+         boolean isUssdRequest;
+         boolean isUssdRelease;
++        boolean isUssdhandleByStk;
++
++        Rlog.d(LOG_TAG, "onIncomingUSSD(): mIsNetworkInitiatedUssd = " + mIsNetworkInitiatedUssd);
+ 
+         isUssdRequest
+             = (ussdMode == CommandsInterface.USSD_MODE_REQUEST);
+-
++        /* M: SS part */
++        //MTK-START [mtk04070][111118][ALPS00093395]MTK modified
+         isUssdError
+-            = (ussdMode != CommandsInterface.USSD_MODE_NOTIFY
+-                && ussdMode != CommandsInterface.USSD_MODE_REQUEST);
++            = ((ussdMode == CommandsInterface.USSD_OPERATION_NOT_SUPPORTED)
++               || (ussdMode == CommandsInterface.USSD_NETWORK_TIMEOUT));
++        //MTK-END [mtk04070][111118][ALPS00093395]MTK modified
++
++        isUssdhandleByStk
++            = (ussdMode == CommandsInterface.USSD_HANDLED_BY_STK);
++        /* M: SS part end */
+ 
+         isUssdRelease = (ussdMode == CommandsInterface.USSD_MODE_NW_RELEASE);
++        Rlog.d(LOG_TAG, "ussdMode= " + ussdMode);
++        Rlog.d(LOG_TAG, "isUssdRequest=" + isUssdRequest + " isUssdError= " + isUssdError);
+ 
+         // See comments in GsmMmiCode.java
+         // USSD requests aren't finished until one
+         // of these two events happen
+         GsmMmiCode found = null;
++        Rlog.d(LOG_TAG, "USSD:mPendingMMIs= " + mPendingMMIs + " size=" + mPendingMMIs.size());
+         for (int i = 0, s = mPendingMMIs.size() ; i < s; i++) {
++            Rlog.d(LOG_TAG, "i= " + i + " isPending=" + mPendingMMIs.get(i).isPendingUSSD());
+             if(mPendingMMIs.get(i).isPendingUSSD()) {
+                 found = mPendingMMIs.get(i);
++                Rlog.d(LOG_TAG, "found = " + found);
+                 break;
+             }
+         }
+ 
+         if (found != null) {
+             // Complete pending USSD
+-
+-            if (isUssdRelease) {
++            /* M: SS part */
++            //For ALPS01471897
++            Rlog.d(LOG_TAG, "setUserInitiatedMMI  TRUE");
++            found.setUserInitiatedMMI(true);
++            /* M: SS part end */
++            if (isUssdRelease && mIsNetworkInitiatedUssd) {
++                Rlog.d(LOG_TAG, "onIncomingUSSD(): USSD_MODE_NW_RELEASE.");
+                 found.onUssdRelease();
+             } else if (isUssdError) {
+                 found.onUssdFinishedError();
++            } else if (isUssdhandleByStk) {
++                found.onUssdStkHandling(ussdMessage, isUssdRequest);
+             } else {
+                 found.onUssdFinished(ussdMessage, isUssdRequest);
+             }
+@@ -1542,6 +1593,13 @@ public class GSMPhone extends PhoneBase {
+ 
+             // ignore everything that isnt a Notify or a Request
+             // also, discard if there is no message to present
++
++            /* M: SS part */
++            //For ALPS01471897
++            Rlog.d(LOG_TAG, "The default value of UserInitiatedMMI is FALSE");
++            mIsNetworkInitiatedUssd = true;
++            Rlog.d(LOG_TAG, "onIncomingUSSD(): Network Initialized USSD");
++
+             if (!isUssdError && ussdMessage != null) {
+                 GsmMmiCode mmi;
+                 mmi = GsmMmiCode.newNetworkInitiatedUssd(ussdMessage,
+@@ -1549,8 +1607,25 @@ public class GSMPhone extends PhoneBase {
+                                                    GSMPhone.this,
+                                                    mUiccApplication.get());
+                 onNetworkInitiatedUssd(mmi);
++
++            //MTK-START [mtk04070][111118][ALPS00093395]MTK added
++            } else if (isUssdError) {
++                GsmMmiCode mmi;
++                mmi = GsmMmiCode.newNetworkInitiatedUssdError(ussdMessage,
++                                                   isUssdRequest,
++                                                   GSMPhone.this,
++                                                   mUiccApplication.get());
++                onNetworkInitiatedUssd(mmi);
++            //MTK-END [mtk04070][111118][ALPS00093395]MTK added
+             }
++            /* M: SS part end */
++        }
++
++        /* M: SS part */
++        if (isUssdRelease || isUssdError) {
++            mIsNetworkInitiatedUssd = false;
+         }
++        /* M: SS part end */
+     }
+ 
+     /**
+@@ -2198,4 +2273,4 @@ public class GSMPhone extends PhoneBase {
+     public void requestChangeCbPsw(String facility, String oldPwd, String newPwd, Message result) {
+         mCi.changeBarringPassword(facility, oldPwd, newPwd, result);
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/src/java/com/android/internal/telephony/gsm/GsmMmiCode.java b/src/java/com/android/internal/telephony/gsm/GsmMmiCode.java
+index c79c9f0..694f310 100644
+--- a/src/java/com/android/internal/telephony/gsm/GsmMmiCode.java
++++ b/src/java/com/android/internal/telephony/gsm/GsmMmiCode.java
+@@ -116,6 +116,12 @@ public final class GsmMmiCode extends Handler implements MmiCode {
+     static final int EVENT_SET_CFF_COMPLETE     = 6;
+     static final int EVENT_USSD_CANCEL_COMPLETE = 7;
+ 
++    /* M: SS part */
++    /// M: [mtk04070][111125][ALPS00093395]MTK added. @{
++    static final String USSD_HANDLED_BY_STK = "stk";
++    /// @}
++    /* M: SS part end */
++
+     //***** Instance Variables
+ 
+     GSMPhone mPhone;
+@@ -140,6 +146,9 @@ public final class GsmMmiCode extends Handler implements MmiCode {
+     CharSequence mMessage;
+     private boolean mIsSsInfo = false;
+ 
++    //For ALPS01471897
++    private boolean mUserInitiatedMMI = false;
++    //end
+ 
+     //***** Class Variables
+ 
+@@ -573,10 +582,21 @@ public final class GsmMmiCode extends Handler implements MmiCode {
+         return ((Phone) mPhone);
+     }
+ 
++    //For ALPS01471897
++    public void setUserInitiatedMMI(boolean userinit)
++    {
++       mUserInitiatedMMI = userinit;
++    }
++
++    public boolean getUserInitiatedMMI() {
++       return mUserInitiatedMMI;
++    }
++
+     // inherited javadoc suffices
+     @Override
+     public void
+     cancel() {
++        mPhone.mIsNetworkInitiatedUssd = false;
+         // Complete or failed cannot be cancelled
+         if (mState == State.COMPLETE || mState == State.FAILED) {
+             return;
+@@ -779,6 +799,36 @@ public final class GsmMmiCode extends Handler implements MmiCode {
+         return mIsSsInfo;
+     }
+ 
++    public static boolean isUssdNumber(String dialString, GSMPhone dialPhone, UiccCardApplication iccApp) {
++        String newDialString = PhoneNumberUtils.stripSeparators(dialString);
++        String networkPortion = PhoneNumberUtils.extractNetworkPortionAlt(newDialString);
++
++        GsmMmiCode mmi = GsmMmiCode.newFromDialString(networkPortion, dialPhone, iccApp);
++        if (mmi == null || mmi.isTemporaryModeCLIR()) {
++            return false;
++        }
++        else {
++            if (mmi.isShortCode()) {
++                return true;
++            } else if (mmi.mDialingNumber != null) {
++                return true;
++            } else if (mmi.mSc != null
++                    && (mmi.mSc.equals(SC_CLIP)
++                    || mmi.mSc.equals(SC_CLIR)
++                    || isServiceCodeCallForwarding(mmi.mSc)
++                    || isServiceCodeCallBarring(mmi.mSc)
++                    || mmi.mSc.equals(SC_PWD)
++                    || mmi.mSc.equals(SC_WAIT)
++                    || mmi.isPinPukCommand()
++                    )) {
++                return false;
++            } else if (mmi.mPoundString != null) {
++                return true;
++            }
++            return false;
++        }
++    }
++
+     /** Process a MMI code or short code...anything that isn't a dialing number */
+     void
+     processCode () {
+@@ -789,7 +839,13 @@ public final class GsmMmiCode extends Handler implements MmiCode {
+                 sendUssd(mDialingNumber);
+             } else if (mDialingNumber != null) {
+                 // We should have no dialing numbers here
+-                throw new RuntimeException ("Invalid or Unsupported MMI Code");
++
++                /* M: SS part */
++                /// M: [mtk04070][111125][ALPS00093395]MTK modified. @{
++                Rlog.w(LOG_TAG, "Special USSD Support:" + mPoundString + mDialingNumber);
++                sendUssd(mPoundString + mDialingNumber);
++                //throw new RuntimeException ("Invalid or Unsupported MMI Code");
++                /// @}
+             } else if (mSc != null && mSc.equals(SC_CLIP)) {
+                 Rlog.d(LOG_TAG, "is CLIP");
+                 if (isInterrogate()) {
+@@ -1007,7 +1063,10 @@ public final class GsmMmiCode extends Handler implements MmiCode {
+     void
+     onUssdFinished(String ussdMessage, boolean isUssdRequest) {
+         if (mState == State.PENDING) {
+-            if (ussdMessage == null) {
++            /* M: SS part */
++            /// M: [mtk04070][111125][ALPS00093395]Check the length of ussdMessage.
++            if (ussdMessage == null || ussdMessage.length() == 0) {
++            /* M: SS part end */
+                 mMessage = mContext.getText(com.android.internal.R.string.mmiComplete);
+             } else {
+                 mMessage = ussdMessage;
+@@ -1017,11 +1076,28 @@ public final class GsmMmiCode extends Handler implements MmiCode {
+             if (!isUssdRequest) {
+                 mState = State.COMPLETE;
+             }
+-
+             mPhone.onMMIDone(this);
+         }
+     }
+ 
++    void
++    onUssdStkHandling(String ussdMessage, boolean isUssdRequest) {
++        if (mState == State.PENDING) {
++            if (ussdMessage == null || ussdMessage.length() == 0) {
++                mMessage = mContext.getText(com.android.internal.R.string.mmiComplete);
++            } else {
++                mMessage = ussdMessage;
++            }
++            mIsUssdRequest = isUssdRequest;
++            // If it's a request, leave it PENDING so that it's cancelable.
++            if (!isUssdRequest) {
++                mState = State.COMPLETE;
++            }
++            String userObjStringStk = USSD_HANDLED_BY_STK;
++            mPhone.onMMIDone(this, (Object) userObjStringStk);
++        }
++    }
++
+     /**
+      * Called from GSMPhone
+      *
+@@ -1033,11 +1109,11 @@ public final class GsmMmiCode extends Handler implements MmiCode {
+         if (mState == State.PENDING) {
+             mState = State.FAILED;
+             mMessage = mContext.getText(com.android.internal.R.string.mmiError);
+-
+             mPhone.onMMIDone(this);
+         }
+     }
+ 
++
+     /**
+      * Called from GSMPhone
+      *
+@@ -1057,6 +1133,7 @@ public final class GsmMmiCode extends Handler implements MmiCode {
+         }
+     }
+ 
++
+     void sendUssd(String ussdMessage) {
+         // Treat this as a USSD string
+         mIsPendingUSSD = true;
+@@ -1616,4 +1693,21 @@ public final class GsmMmiCode extends Handler implements MmiCode {
+         sb.append("}");
+         return sb.toString();
+     }
+-}
++
++    /* M: SS part */
++    /// M: [mtk04070][111125][ALPS00093395]MTK proprietary methods. @{
++    static GsmMmiCode
++    newNetworkInitiatedUssdError(String ussdMessage,
++                                boolean isUssdRequest, GSMPhone phone, UiccCardApplication app) {
++        GsmMmiCode ret;
++
++        ret = new GsmMmiCode(phone, app);
++
++        ret.mMessage = ret.mContext.getText(com.android.internal.R.string.mmiError);
++        ret.mIsUssdRequest = isUssdRequest;
++
++        ret.mState = State.FAILED;
++
++        return ret;
++    }
++}
+\ No newline at end of file
+-- 
+2.5.0
+

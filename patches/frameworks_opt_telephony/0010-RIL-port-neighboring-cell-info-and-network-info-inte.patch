@@ -1,0 +1,117 @@
+From a780d0b1f1c673a028d750a7c74542f2dd421c5d Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Fri, 2 Oct 2015 01:37:59 +0800
+Subject: [PATCH] RIL: port neighboring cell info and network info interfaces
+
+Change-Id: I45947c852704dd1c3cdb5b381cf7d75c8392b99a
+---
+ .../android/internal/telephony/BaseCommands.java   | 20 +++++++++++++++++
+ .../internal/telephony/CommandsInterface.java      | 26 ++++++++++++++++++++++
+ .../android/internal/telephony/MediaTekRIL.java    | 16 +++++++++++++
+ 3 files changed, 62 insertions(+)
+
+diff --git a/src/java/com/android/internal/telephony/BaseCommands.java b/src/java/com/android/internal/telephony/BaseCommands.java
+index 7d4a982..9ba6e6b 100644
+--- a/src/java/com/android/internal/telephony/BaseCommands.java
++++ b/src/java/com/android/internal/telephony/BaseCommands.java
+@@ -99,6 +99,8 @@ public abstract class BaseCommands implements CommandsInterface {
+ 
+     // MTK registrants
+     protected RegistrantList mPhoneRatFamilyChangedRegistrants = new RegistrantList();
++    protected RegistrantList mNeighboringInfoRegistrants = new RegistrantList();
++    protected RegistrantList mNetworkInfoRegistrants = new RegistrantList();
+     protected RegistrantList mPlmnChangeNotificationRegistrant = new RegistrantList();
+     protected Registrant mRegistrationSuspendedRegistrant;
+     // M: fast dormancy.
+@@ -945,6 +947,24 @@ public abstract class BaseCommands implements CommandsInterface {
+ 
+     // MTK additions
+ 
++    public void registerForNeighboringInfo(Handler h, int what, Object obj) {
++        Registrant r = new Registrant(h, what, obj);
++        mNeighboringInfoRegistrants.add(r);
++    }
++
++    public void unregisterForNeighboringInfo(Handler h) {
++        mNeighboringInfoRegistrants.remove(h);
++    }
++
++    public void registerForNetworkInfo(Handler h, int what, Object obj) {
++        Registrant r = new Registrant(h, what, obj);
++        mNetworkInfoRegistrants.add(r);
++    }
++
++    public void unregisterForNetworkInfo(Handler h) {
++        mNetworkInfoRegistrants.remove(h);
++    }
++
+     public void setTrm(int mode, Message result) {}
+ 
+     public void setOnPlmnChangeNotification(Handler h, int what, Object obj) {
+diff --git a/src/java/com/android/internal/telephony/CommandsInterface.java b/src/java/com/android/internal/telephony/CommandsInterface.java
+index 950078f..8466368 100644
+--- a/src/java/com/android/internal/telephony/CommandsInterface.java
++++ b/src/java/com/android/internal/telephony/CommandsInterface.java
+@@ -2021,6 +2021,32 @@ public interface CommandsInterface {
+ 
+     // MTK additions
+ 
++    /**
++     * unlike the register* methods, there's only one Neighboring cell info handler
++     *
++     * AsyncResult.result is an Object[]
++     * ((Object[])AsyncResult.result)[0] is a String containing the RAT
++     * ((Object[])AsyncResult.result)[1] is a String containing the neighboring cell info raw data
++     *
++     * Please note that the delivery of this message may be delayed several
++     * seconds on system startup
++     */
++    void registerForNeighboringInfo(Handler h, int what, Object obj);
++    void unregisterForNeighboringInfo(Handler h);
++
++    /**
++     * unlike the register* methods, there's only one Network info handler
++     *
++     * AsyncResult.result is an Object[]
++     * ((Object[])AsyncResult.result)[0] is a String containing the type
++     * ((Object[])AsyncResult.result)[1] is a String contain the network info raw data
++     *
++     * Please note that the delivery of this message may be delayed several
++     * seconds on system startup
++     */
++    void registerForNetworkInfo(Handler h, int what, Object obj);
++    void unregisterForNetworkInfo(Handler h);
++
+     void setTrm(int mode, Message result);
+ 
+     void setOnPlmnChangeNotification(Handler h, int what, Object obj);
+diff --git a/src/java/com/android/internal/telephony/MediaTekRIL.java b/src/java/com/android/internal/telephony/MediaTekRIL.java
+index 6f378fa..2004773 100644
+--- a/src/java/com/android/internal/telephony/MediaTekRIL.java
++++ b/src/java/com/android/internal/telephony/MediaTekRIL.java
+@@ -1083,6 +1083,22 @@ public class MediaTekRIL extends RIL implements CommandsInterface {
+         int newResponseCode = 0;
+ 
+         switch (response) {
++            case RIL_UNSOL_NEIGHBORING_CELL_INFO:
++                if (RILJ_LOGD) unsljLogvRet(response, ret);
++                if (mNeighboringInfoRegistrants != null) {
++                    mNeighboringInfoRegistrants.notifyRegistrants(
++                                        new AsyncResult(null, ret, null));
++                }
++                break;
++
++            case RIL_UNSOL_NETWORK_INFO:
++                if (RILJ_LOGD) unsljLogvRet(response, ret);
++                if (mNetworkInfoRegistrants != null) {
++                    mNetworkInfoRegistrants.notifyRegistrants(
++                                        new AsyncResult(null, ret, null));
++                }
++                break;
++
+             case RIL_UNSOL_SET_PHONE_RAT_FAMILY_COMPLETE:
+                 if (RILJ_LOGD) unsljLogRet(response, ret);
+                 riljLog("mPhoneRatFamilyreg size :" + mPhoneRatFamilyChangedRegistrants.size());
+-- 
+2.5.0
+

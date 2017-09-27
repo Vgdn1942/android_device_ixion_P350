@@ -1,0 +1,64 @@
+From 61ae91347ce95bb260385d43173cb39b2f8b8bd6 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Sat, 19 Sep 2015 10:56:52 +0800
+Subject: [PATCH] zygote, pm: be compatible with both CM and MTK
+ init.environ.rc
+
+Change-Id: Ia38ed8a8371e96c2fd0b134418aea603236e6f53
+---
+ core/java/com/android/internal/os/ZygoteInit.java         | 11 +++++++----
+ .../java/com/android/server/pm/PackageManagerService.java | 15 ++++++++++++---
+ 2 files changed, 19 insertions(+), 7 deletions(-)
+
+diff --git a/core/java/com/android/internal/os/ZygoteInit.java b/core/java/com/android/internal/os/ZygoteInit.java
+index e714418..1c8fa53 100644
+--- a/core/java/com/android/internal/os/ZygoteInit.java
++++ b/core/java/com/android/internal/os/ZygoteInit.java
+@@ -509,10 +509,13 @@ public class ZygoteInit {
+             Process.setArgV0(parsedArgs.niceName);
+         }
+ 
+-        // Flyme hack: add back the two missing CM-specific packages due to
+-        // Flyme bootloader restriction
+-        final String cmSystemServerClasspath = "/system/framework/org.cyanogenmod.platform.jar:/system/framework/org.cyanogenmod.hardware.jar";
+-        final String systemServerClasspath = cmSystemServerClasspath + ":" + Os.getenv("SYSTEMSERVERCLASSPATH");
++        // XXX: add back the two missing CM-specific packages due to possible
++        // MTK bootloader restriction
++        String tmpSystemServerClasspath = Os.getenv("SYSTEMSERVERCLASSPATH");
++        if (tmpSystemServerClasspath != null && !tmpSystemServerClasspath.contains("org.cyanogenmod")) {
++            tmpSystemServerClasspath = "/system/framework/org.cyanogenmod.platform.jar:/system/framework/org.cyanogenmod.hardware.jar:" + tmpSystemServerClasspath;
++        }
++        final String systemServerClasspath = tmpSystemServerClasspath;
+         if (systemServerClasspath != null) {
+             performSystemServerDexOpt(systemServerClasspath);
+         }
+diff --git a/services/core/java/com/android/server/pm/PackageManagerService.java b/services/core/java/com/android/server/pm/PackageManagerService.java
+index 81685c7..211ec3f 100755
+--- a/services/core/java/com/android/server/pm/PackageManagerService.java
++++ b/services/core/java/com/android/server/pm/PackageManagerService.java
+@@ -1544,10 +1544,19 @@ public class PackageManagerService extends IPackageManager.Stub {
+ 
+             if (systemServerClassPath != null) {
+                 String[] systemServerClassPathElements = splitString(systemServerClassPath, ':');
+-                // Flyme hack: we can't use our boot.img due to locked bootloader,
++                // XXX: we probably can't use our boot.img due to locked bootloader,
+                 // but we can always add back the missing bits here.
+-                alreadyDexOpted.add("/system/framework/org.cyanogenmod.platform.jar");
+-                alreadyDexOpted.add("/system/framework/org.cyanogenmod.hardware.jar");
++                boolean isMTKBootimg = true;
++                for (final String s : alreadyDexOpted) {
++                    if (s.contains("org.cyanogenmod")) {
++                        isMTKBootimg = false;
++                        break;
++                    }
++                }
++                if (isMTKBootimg) {
++                    alreadyDexOpted.add("/system/framework/org.cyanogenmod.platform.jar");
++                    alreadyDexOpted.add("/system/framework/org.cyanogenmod.hardware.jar");
++                }
+                 for (String element : systemServerClassPathElements) {
+                     alreadyDexOpted.add(element);
+                 }
+-- 
+2.5.0
+

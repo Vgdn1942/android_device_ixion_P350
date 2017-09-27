@@ -1,0 +1,3751 @@
+From 9c96f4558d1bc19aa149d07f2dc0cc375373d032 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Sun, 6 Sep 2015 14:11:13 +0800
+Subject: [PATCH] somewhat-minimal bits needed to get arale up'n'running
+
+Change-Id: Ia6ef400996bb7d5ea4905da1a37a801803bb170d
+---
+ .../android/internal/telephony/BaseCommands.java   |  44 +
+ .../internal/telephony/CommandsInterface.java      |  44 +
+ .../com/android/internal/telephony/IccCard.java    |  88 ++
+ src/java/com/android/internal/telephony/Phone.java |  35 +
+ .../com/android/internal/telephony/PhoneBase.java  |  62 +-
+ .../android/internal/telephony/PhoneFactory.java   |  20 +
+ .../com/android/internal/telephony/PhoneProxy.java |  23 +
+ src/java/com/android/internal/telephony/RIL.java   | 249 +++++-
+ .../imsphone/ImsPhoneCommandInterface.java         |  34 +
+ .../telephony/sip/SipCommandInterface.java         |  34 +
+ .../internal/telephony/test/SimulatedCommands.java |  18 +
+ .../internal/telephony/uicc/IccCardProxy.java      | 150 ++++
+ .../android/internal/telephony/uicc/UiccCard.java  | 108 +++
+ .../internal/telephony/EtwsNotification.java       |  42 +
+ .../com/mediatek/internal/telephony/EtwsUtils.java |  31 +
+ .../mediatek/internal/telephony/FemtoCellInfo.aidl |  19 +
+ .../mediatek/internal/telephony/FemtoCellInfo.java | 154 ++++
+ .../internal/telephony/ModemSwitchHandler.java     | 244 ++++++
+ .../internal/telephony/NetworkInfoWithAcT.aidl     |  57 ++
+ .../internal/telephony/NetworkInfoWithAcT.java     | 201 +++++
+ .../internal/telephony/NetworkManager.java         | 101 +++
+ .../telephony/RadioCapabilitySwitchUtil.java       | 310 +++++++
+ .../internal/telephony/worldphone/IWorldPhone.java |  86 ++
+ .../telephony/worldphone/WorldPhoneOm.java         | 912 +++++++++++++++++++++
+ .../telephony/worldphone/WorldPhoneUtil.java       | 246 ++++++
+ .../telephony/worldphone/WorldPhoneWrapper.java    |  86 ++
+ 26 files changed, 3394 insertions(+), 4 deletions(-)
+ create mode 100644 src/java/com/mediatek/internal/telephony/EtwsNotification.java
+ create mode 100644 src/java/com/mediatek/internal/telephony/EtwsUtils.java
+ create mode 100755 src/java/com/mediatek/internal/telephony/FemtoCellInfo.aidl
+ create mode 100755 src/java/com/mediatek/internal/telephony/FemtoCellInfo.java
+ create mode 100755 src/java/com/mediatek/internal/telephony/ModemSwitchHandler.java
+ create mode 100755 src/java/com/mediatek/internal/telephony/NetworkInfoWithAcT.aidl
+ create mode 100755 src/java/com/mediatek/internal/telephony/NetworkInfoWithAcT.java
+ create mode 100755 src/java/com/mediatek/internal/telephony/NetworkManager.java
+ create mode 100755 src/java/com/mediatek/internal/telephony/RadioCapabilitySwitchUtil.java
+ create mode 100755 src/java/com/mediatek/internal/telephony/worldphone/IWorldPhone.java
+ create mode 100755 src/java/com/mediatek/internal/telephony/worldphone/WorldPhoneOm.java
+ create mode 100755 src/java/com/mediatek/internal/telephony/worldphone/WorldPhoneUtil.java
+ create mode 100755 src/java/com/mediatek/internal/telephony/worldphone/WorldPhoneWrapper.java
+
+diff --git a/src/java/com/android/internal/telephony/BaseCommands.java b/src/java/com/android/internal/telephony/BaseCommands.java
+index 3b5cb4e..6298948 100644
+--- a/src/java/com/android/internal/telephony/BaseCommands.java
++++ b/src/java/com/android/internal/telephony/BaseCommands.java
+@@ -97,6 +97,11 @@ public abstract class BaseCommands implements CommandsInterface {
+     protected Registrant mCatCcAlphaRegistrant;
+     protected Registrant mSsRegistrant;
+ 
++    // MTK registrants
++    protected RegistrantList mPhoneRatFamilyChangedRegistrants = new RegistrantList();
++    protected RegistrantList mPlmnChangeNotificationRegistrant = new RegistrantList();
++    protected Registrant mRegistrationSuspendedRegistrant;
++
+     // Preferred network type received from PhoneFactory.
+     // This is used when establishing a connection to the
+     // vendor ril so it starts up in the correct mode.
+@@ -936,4 +941,43 @@ public abstract class BaseCommands implements CommandsInterface {
+         return TelephonyManager.getLteOnGsmModeStatic();
+     }
+ 
++    // MTK additions
++
++    public void setTrm(int mode, Message result) {}
++
++    public void setOnPlmnChangeNotification(Handler h, int what, Object obj) {
++        Registrant r = new Registrant(h, what, obj);
++        mPlmnChangeNotificationRegistrant.add(r);
++    }
++
++    public void unSetOnPlmnChangeNotification(Handler h) {
++        mPlmnChangeNotificationRegistrant.remove(h);
++    }
++
++    public void setOnRegistrationSuspended(Handler h, int what, Object obj) {
++        mRegistrationSuspendedRegistrant = new Registrant(h, what, obj);
++    }
++
++    public void unSetOnRegistrationSuspended(Handler h) {
++        mRegistrationSuspendedRegistrant.clear();
++    }
++
++    @Override
++    public void setPhoneRatFamily(int ratFamily, Message response) {
++    }
++
++    @Override
++    public void getPhoneRatFamily(Message response) {
++    }
++
++    @Override
++    public void registerForPhoneRatFamilyChanged(Handler h, int what, Object obj) {
++        Registrant r = new Registrant(h, what, obj);
++        mPhoneRatFamilyChangedRegistrants.add(r);
++    }
++
++    @Override
++    public void unregisterForPhoneRatFamilyChanged(Handler h) {
++        mPhoneRatFamilyChangedRegistrants.remove(h);
++    }
+ }
+diff --git a/src/java/com/android/internal/telephony/CommandsInterface.java b/src/java/com/android/internal/telephony/CommandsInterface.java
+index 89e30ae..2591053 100644
+--- a/src/java/com/android/internal/telephony/CommandsInterface.java
++++ b/src/java/com/android/internal/telephony/CommandsInterface.java
+@@ -2018,4 +2018,48 @@ public interface CommandsInterface {
+      */
+     void setOnCatSendSmsResult(Handler h, int what, Object obj);
+     void unSetOnCatSendSmsResult(Handler h);
++
++    // MTK additions
++
++    void setTrm(int mode, Message result);
++
++    void setOnPlmnChangeNotification(Handler h, int what, Object obj);
++    void unSetOnPlmnChangeNotification(Handler h);
++    void setOnRegistrationSuspended(Handler h, int what, Object obj);
++    void unSetOnRegistrationSuspended(Handler h);
++    void setResumeRegistration(int sessionId, Message response);
++    void storeModemType(int modemType, Message response);
++    void queryModemType(Message response);
++
++    /**
++     *  Set phone RAT family.
++     *
++     *  @param ratFamily bit mask to identify PhoneRatFamily.PHONE_RAT_FAMILY_2G,
++     *         PhoneRatFamily.PHONE_RAT_FAMILY_3G, PhoneRatFamily.PHONE_RAT_FAMILY_4G
++     *  @param result Callback message.
++     */
++    public void setPhoneRatFamily(int ratFamily, Message result);
++
++    /**
++     *  Get phone RAT family.
++     *
++     *  @param result Callback message.
++     */
++    public void getPhoneRatFamily(Message result);
++
++    /**
++     * Registers the handler when phone RAT family is changed.
++     *
++     * @param h Handler for notification message.
++     * @param what User-defined message code.
++     * @param obj User object.
++     */
++    public void registerForPhoneRatFamilyChanged(Handler h, int what, Object obj);
++
++    /**
++     * Unregister for notifications when phone RAT family is changed.
++     *
++     * @param h Handler to be removed from the registrant list.
++     */
++    public void unregisterForPhoneRatFamilyChanged(Handler h);
+ }
+diff --git a/src/java/com/android/internal/telephony/IccCard.java b/src/java/com/android/internal/telephony/IccCard.java
+index 7d182be..1e8cf81 100644
+--- a/src/java/com/android/internal/telephony/IccCard.java
++++ b/src/java/com/android/internal/telephony/IccCard.java
+@@ -231,4 +231,92 @@ public interface IccCard {
+      * @return true if ICC card is PUK2 blocked
+      */
+     public boolean getIccPuk2Blocked();
++
++    // MTK additions
++
++    // Added by M begin
++    /**
++     * Use to query the network lock type.
++     *
++     * @return the network lock type define in IccCardApplicationStatus.PersoSubState
++     *
++     * @internal
++     */
++    // public PersoSubState getNetworkPersoType();
++
++    /**
++     * Use to query indicated category's ME lock status
++     *
++     * @param category 0:Network, 1:Network subset, 2:Service Provider, 3: Corporate, 4:SIM
++     * @param onComplete
++     *        onComplete.obj will be an AsyncResult
++     *        ((AsyncResult)onComplete.obj).exception == null on success
++     *        ((AsyncResult)onComplete.obj).exception != null on fail
++     *
++     * @return the network lock type define in IccCardApplicationStatus.PersoSubState
++     *
++     * @internal
++     */
++    // public void queryIccNetworkLock(int category, Message onComplete);
++
++    /**
++     * Use to set indicated category's ME lock status
++     *
++     * @param category 0:Network, 1:Network subset, 2:Service Provider, 3: Corporate, 4:SIM
++     * @param lockop 0: Unlock, 1: Lock, 2:Add, 3:Remove, 4:Permanently unlock
++     * @param password password of indicated category lock
++     * @param data_imsi IMSI
++     * @param gid1 GID1 value
++     * @param gid2 GID2 value
++     * @param onComplete
++     *        onComplete.obj will be an AsyncResult
++     *        ((AsyncResult)onComplete.obj).exception == null on success
++     *        ((AsyncResult)onComplete.obj).exception != null on fail
++     *
++     * @return the network lock type define in IccCardApplicationStatus.PersoSubState
++     *
++     * @internal
++     */
++    // public void setIccNetworkLockEnabled(int category,
++    //         int lockop, String password, String data_imsi, String gid1, String gid2, Message onComplete);
++
++    /**
++     * Use to repolling icc card status (Used by SIM ME lock related enhancement feature)
++     *
++     * @param needIntent indicated need an Intent to notify needed to unlock another SIM or not.
++     *                   if yes, will broadcast TelephonyIntents.ACTION_UNLOCK_SIM_LOCK to notify.
++     *                   if no, will notify by original TelephonyIntents.ACTION_SIM_STATE_CHANGED.
++     */
++    // public void repollIccStateForModemSmlChangeFeatrue(boolean needIntent);
++
++    /**
++     * NFC API, use to exchange SIM IO.
++     *
++     * @internal
++     */
++    // public void exchangeSimIo(int fileID, int command,
++    //                                        int p1, int p2, int p3, String pathID, String data, String pin2, Message onComplete);
++
++    /**
++     * NFC API, use to get ATR.
++     *
++     * @internal
++     */
++    // public void iccGetAtr(Message onComplete);
++
++    public String getIccCardType();
++
++     /**
++     * NFC API, use to open logical channel with sw.
++     *
++     * @internal
++     */
++    // public void openLogicalChannelWithSw(String AID, Message onComplete);
++    /**
++     * Notifies handler in case of FDN changed
++     */
++    // public void registerForFdnChanged(Handler h, int what, Object obj);
++    // public void unregisterForFdnChanged(Handler h);
++
++    // Added by M end
+ }
+diff --git a/src/java/com/android/internal/telephony/Phone.java b/src/java/com/android/internal/telephony/Phone.java
+index ea27609..df70c0d 100644
+--- a/src/java/com/android/internal/telephony/Phone.java
++++ b/src/java/com/android/internal/telephony/Phone.java
+@@ -2049,4 +2049,39 @@ public interface Phone {
+      * @return true if IMS is Registered
+      */
+     public boolean isImsRegistered();
++
++    // MTK addditions
++
++    /**
++     *  Set phone RAT family.
++     *
++     *  @param ratFamily bit mask to identify PhoneRatFamily.PHONE_RAT_FAMILY_2G,
++     *         PhoneRatFamily.PHONE_RAT_FAMILY_3G, PhoneRatFamily.PHONE_RAT_FAMILY_4G
++     *  @param response Callback message.
++     */
++    public void setPhoneRatFamily(int ratFamily, Message response);
++
++    /**
++     *  Get phone RAT family.
++     *
++     *  @return a bit mask to identify PhoneRatFamily.PHONE_RAT_FAMILY_2G,
++     *          PhoneRatFamily.PHONE_RAT_FAMILY_3G, PhoneRatFamily.PHONE_RAT_FAMILY_4G
++     */
++    public int getPhoneRatFamily();
++
++    /**
++     * Registers the handler when phone RAT family is changed.
++     *
++     * @param h Handler for notification message.
++     * @param what User-defined message code.
++     * @param obj User object.
++     */
++    public void registerForPhoneRatFamilyChanged(Handler h, int what, Object obj);
++
++    /**
++     * Unregister for notifications when phone RAT family is changed.
++     *
++     * @param h Handler to be removed from the registrant list.
++     */
++    public void unregisterForPhoneRatFamilyChanged(Handler h);
+ }
+diff --git a/src/java/com/android/internal/telephony/PhoneBase.java b/src/java/com/android/internal/telephony/PhoneBase.java
+index aebd7b2..2f35551 100644
+--- a/src/java/com/android/internal/telephony/PhoneBase.java
++++ b/src/java/com/android/internal/telephony/PhoneBase.java
+@@ -42,6 +42,7 @@ import android.telephony.CellIdentityCdma;
+ import android.telephony.CellInfo;
+ import android.telephony.CellInfoCdma;
+ import android.telephony.DataConnectionRealTimeInfo;
++import android.telephony.PhoneRatFamily;
+ import android.telephony.VoLteServiceState;
+ import android.telephony.Rlog;
+ import android.telephony.ServiceState;
+@@ -173,7 +174,21 @@ public abstract class PhoneBase extends Handler implements Phone {
+     protected static final int EVENT_SET_CALL_FORWARD_TIMER_DONE    = 37;
+     protected static final int EVENT_GET_CALL_FORWARD_TIMER_DONE    = 38;
+     protected static final int EVENT_GET_CALLFORWARDING_STATUS      = 39;
+-    protected static final int EVENT_LAST                   = EVENT_GET_CALLFORWARDING_STATUS;
++    // MTK
++    protected static final int EVENT_GET_PHONE_RAT_FAMILY              = 41;
++    protected static final int EVENT_PHONE_RAT_FAMILY_CHANGED_NOTIFY   = 42;
++    protected static final int EVENT_LAST                   = EVENT_PHONE_RAT_FAMILY_CHANGED_NOTIFY;
++
++    // MTK again - wtf
++    /// M: c2k modify, event constants. @{
++    protected static final int EVENT_SET_MEID_DONE                  = 101;
++    protected static final int EVENT_RUIM_READY                     = 102;
++    /// @}
++
++    /** M: for suspend data during plmn list */
++    protected static final int EVENT_GET_AVAILABLE_NETWORK_DONE = 500520;
++    protected static final int EVENT_DC_SWITCH_STATE_CHANGE = 500521;
++    protected static final int EVENT_GET_AVAILABLE_NETWORK = 500522;
+ 
+     // For shared prefs.
+     private static final String GSM_ROAMING_LIST_OVERRIDE_PREFIX = "gsm_roaming_list_";
+@@ -246,6 +261,9 @@ public abstract class PhoneBase extends Handler implements Phone {
+     private boolean mImsServiceReady = false;
+     protected static ImsPhone mImsPhone = null;
+ 
++    // give the empty phone RAT family at initial, we will update it when radio available
++    protected int mPhoneRatFamily = PhoneRatFamily.PHONE_RAT_FAMILY_NONE;
++
+     @Override
+     public String getPhoneName() {
+         return mName;
+@@ -343,6 +361,9 @@ public abstract class PhoneBase extends Handler implements Phone {
+     protected final RegistrantList mVideoCapabilityChangedRegistrants
+             = new RegistrantList();
+ 
++    // MTK
++    protected final RegistrantList mPhoneRatFamilyChangedRegistrants
++            = new RegistrantList();
+ 
+     protected Looper mLooper; /* to insure registrants are in correct thread*/
+ 
+@@ -608,6 +629,19 @@ public abstract class PhoneBase extends Handler implements Phone {
+                 }
+                 break;
+ 
++            case EVENT_PHONE_RAT_FAMILY_CHANGED_NOTIFY:
++                ar = (AsyncResult) msg.obj;
++                Rlog.d(LOG_TAG, "Event EVENT_PHONE_RAT_FAMILY_CHANGED_NOTIFY "
++                        + mPhoneRatFamilyChangedRegistrants.size());
++                if (ar.exception == null) {
++                    PhoneRatFamily rat = (PhoneRatFamily)(ar.result);
++                    Rlog.d(LOG_TAG, "update mPhoneRatFamily, "
++                        + mPhoneRatFamilyChangedRegistrants.size() + ", " + rat);
++                    mPhoneRatFamily = rat.getRatFamily();
++                }
++                mPhoneRatFamilyChangedRegistrants.notifyRegistrants((AsyncResult) msg.obj);
++                break;
++
+             default:
+                 throw new RuntimeException("unexpected event not handled");
+         }
+@@ -2334,6 +2368,32 @@ public abstract class PhoneBase extends Handler implements Phone {
+                 + this);
+     }
+ 
++    // MTK additions
++
++    @Override
++    public void setPhoneRatFamily(int ratFamily, Message response) {
++        mCi.setPhoneRatFamily(ratFamily, response);
++    }
++
++    @Override
++    public int getPhoneRatFamily() {
++        Rlog.d(LOG_TAG, "getPhoneRatFamily:ID:" + mPhoneId + ", RAT:" + mPhoneRatFamily);
++        return mPhoneRatFamily;
++    }
++
++    @Override
++    public void registerForPhoneRatFamilyChanged(Handler h, int what, Object obj) {
++        Registrant r = new Registrant(h, what, obj);
++        mPhoneRatFamilyChangedRegistrants.add(r);
++        mCi.registerForPhoneRatFamilyChanged(this, EVENT_PHONE_RAT_FAMILY_CHANGED_NOTIFY, null);
++    }
++
++    @Override
++    public void unregisterForPhoneRatFamilyChanged(Handler h) {
++        mPhoneRatFamilyChangedRegistrants.remove(h);
++        mCi.unregisterForPhoneRatFamilyChanged(this);
++    }
++
+     public void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
+         pw.println("PhoneBase: subId=" + getSubId());
+         pw.println(" mPhoneId=" + mPhoneId);
+diff --git a/src/java/com/android/internal/telephony/PhoneFactory.java b/src/java/com/android/internal/telephony/PhoneFactory.java
+index 08ea27c..9440e36 100644
+--- a/src/java/com/android/internal/telephony/PhoneFactory.java
++++ b/src/java/com/android/internal/telephony/PhoneFactory.java
+@@ -42,6 +42,10 @@ import com.android.internal.telephony.sip.SipPhoneFactory;
+ import com.android.internal.telephony.uicc.IccCardProxy;
+ import com.android.internal.telephony.uicc.UiccController;
+ 
++import com.mediatek.internal.telephony.worldphone.IWorldPhone;
++import com.mediatek.internal.telephony.worldphone.WorldPhoneUtil;
++import com.mediatek.internal.telephony.worldphone.WorldPhoneWrapper;
++
+ import java.io.FileDescriptor;
+ import java.io.PrintWriter;
+ import java.lang.reflect.Constructor;
+@@ -75,6 +79,9 @@ public class PhoneFactory {
+     static private PhoneNotifier sPhoneNotifier;
+     static private Context sContext;
+ 
++    // MTK
++    static private IWorldPhone sWorldPhone = null;
++
+     //***** Class Methods
+ 
+     public static void makeDefaultPhones(Context context) {
+@@ -236,6 +243,11 @@ public class PhoneFactory {
+                 sSubInfoRecordUpdater = new SubscriptionInfoUpdater(context,
+                         sProxyPhones, sCommandsInterfaces);
+                 SubscriptionController.getInstance().updatePhonesAvailability(sProxyPhones);
++
++                // MTK
++                if (WorldPhoneUtil.isWorldPhoneSupport()) {
++                    sWorldPhone = WorldPhoneWrapper.getWorldPhoneInstance();
++                }
+             }
+         }
+     }
+@@ -257,6 +269,14 @@ public class PhoneFactory {
+         }
+     }
+ 
++    public static IWorldPhone getWorldPhone() {
++        if (sWorldPhone == null) {
++            Rlog.d(LOG_TAG, "sWorldPhone is null");
++        }
++
++        return sWorldPhone;
++    }
++
+     private static <T> T instantiateCustomRIL(
+                       String sRILClassname, Context context, int networkMode, int cdmaSubscription, Integer instanceId)
+                       throws Exception {
+diff --git a/src/java/com/android/internal/telephony/PhoneProxy.java b/src/java/com/android/internal/telephony/PhoneProxy.java
+index e7781be..7e48e07 100644
+--- a/src/java/com/android/internal/telephony/PhoneProxy.java
++++ b/src/java/com/android/internal/telephony/PhoneProxy.java
+@@ -1579,4 +1579,27 @@ public class PhoneProxy extends Handler implements Phone {
+         pw.flush();
+         pw.println("++++++++++++++++++++++++++++++++");
+     }
++
++    // MTK additions
++
++    @Override
++    public void setPhoneRatFamily(int ratFamily, Message response) {
++        mActivePhone.setPhoneRatFamily(ratFamily, response);
++    }
++
++    @Override
++    public int getPhoneRatFamily() {
++        return mActivePhone.getPhoneRatFamily();
++    }
++
++    @Override
++    public void registerForPhoneRatFamilyChanged(Handler h, int what, Object obj) {
++        mActivePhone.registerForPhoneRatFamilyChanged(h, what, obj);
++    }
++
++    @Override
++    public void unregisterForPhoneRatFamilyChanged(Handler h) {
++        mActivePhone.unregisterForPhoneRatFamilyChanged(h);
++    }
++
+ }
+diff --git a/src/java/com/android/internal/telephony/RIL.java b/src/java/com/android/internal/telephony/RIL.java
+index 91630c1..f0d9be0 100644
+--- a/src/java/com/android/internal/telephony/RIL.java
++++ b/src/java/com/android/internal/telephony/RIL.java
+@@ -4378,6 +4378,10 @@ public class RIL extends BaseCommands implements CommandsInterface {
+             case RIL_REQUEST_SETUP_DATA_CALL: return "SETUP_DATA_CALL";
+             case RIL_REQUEST_SIM_IO: return "SIM_IO";
+             case RIL_REQUEST_SEND_USSD: return "SEND_USSD";
++            /* M: SS part */
++            ///M: For query CNAP
++            case RIL_REQUEST_SEND_CNAP: return "SEND_CNAP";
++            /* M: SS part end */
+             case RIL_REQUEST_CANCEL_USSD: return "CANCEL_USSD";
+             case RIL_REQUEST_GET_CLIR: return "GET_CLIR";
+             case RIL_REQUEST_SET_CLIR: return "SET_CLIR";
+@@ -4397,6 +4401,7 @@ public class RIL extends BaseCommands implements CommandsInterface {
+             case RIL_REQUEST_SET_NETWORK_SELECTION_AUTOMATIC: return "SET_NETWORK_SELECTION_AUTOMATIC";
+             case RIL_REQUEST_SET_NETWORK_SELECTION_MANUAL: return "SET_NETWORK_SELECTION_MANUAL";
+             case RIL_REQUEST_QUERY_AVAILABLE_NETWORKS : return "QUERY_AVAILABLE_NETWORKS ";
++            case RIL_REQUEST_ABORT_QUERY_AVAILABLE_NETWORKS : return "ABORT_QUERY_AVAILABLE_NETWORKS";
+             case RIL_REQUEST_DTMF_START: return "DTMF_START";
+             case RIL_REQUEST_DTMF_STOP: return "DTMF_STOP";
+             case RIL_REQUEST_BASEBAND_VERSION: return "BASEBAND_VERSION";
+@@ -4477,6 +4482,135 @@ public class RIL extends BaseCommands implements CommandsInterface {
+             case RIL_REQUEST_GET_HARDWARE_CONFIG: return "GET_HARDWARE_CONFIG";
+             case RIL_REQUEST_SIM_AUTHENTICATION: return "RIL_REQUEST_SIM_AUTHENTICATION";
+             case RIL_REQUEST_SHUTDOWN: return "RIL_REQUEST_SHUTDOWN";
++            case RIL_REQUEST_SET_PHONE_RAT_FAMILY: return "RIL_REQUEST_SET_PHONE_RAT_FAMILY";
++            case RIL_REQUEST_GET_PHONE_RAT_FAMILY: return "RIL_REQUEST_GET_PHONE_RAT_FAMILY";
++
++            /* M: call control part start */
++            case RIL_REQUEST_HANGUP_ALL: return "HANGUP_ALL";
++            case RIL_REQUEST_FORCE_RELEASE_CALL: return "FORCE_RELEASE_CALL";
++            case RIL_REQUEST_SET_CALL_INDICATION: return "SET_CALL_INDICATION";
++            case RIL_REQUEST_EMERGENCY_DIAL: return "EMERGENCY_DIAL";
++            case RIL_REQUEST_SET_ECC_SERVICE_CATEGORY: return "SET_ECC_SERVICE_CATEGORY";
++            case RIL_REQUEST_SET_ECC_LIST: return "SET_ECC_LIST";
++            case RIL_REQUEST_SET_SPEECH_CODEC_INFO: return "SET_SPEECH_CODEC_INFO";
++            /* M: call control part end */
++
++            /// M: IMS feature. @{
++            case RIL_REQUEST_ADD_IMS_CONFERENCE_CALL_MEMBER: return "RIL_REQUEST_ADD_IMS_CONFERENCE_CALL_MEMBER";
++            case RIL_REQUEST_REMOVE_IMS_CONFERENCE_CALL_MEMBER: return "RIL_REQUEST_REMOVE_IMS_CONFERENCE_CALL_MEMBER";
++            case RIL_REQUEST_DIAL_WITH_SIP_URI: return "RIL_REQUEST_DIAL_WITH_SIP_URI";
++            case RIL_REQUEST_RETRIEVE_HELD_CALL: return "RIL_REQUEST_RETRIEVE_HELD_CALL";
++            /// @}
++
++            //MTK-START SIM ME lock
++            case RIL_REQUEST_QUERY_SIM_NETWORK_LOCK: return "QUERY_SIM_NETWORK_LOCK";
++            case RIL_REQUEST_SET_SIM_NETWORK_LOCK: return "SET_SIM_NETWORK_LOCK";
++            //MTK-END SIM ME lock
++            //ISIM
++            case RIL_REQUEST_GENERAL_SIM_AUTH: return "RIL_REQUEST_GENERAL_SIM_AUTH";
++            case RIL_REQUEST_OPEN_ICC_APPLICATION: return "RIL_REQUEST_OPEN_ICC_APPLICATION";
++            case RIL_REQUEST_GET_ICC_APPLICATION_STATUS: return "RIL_REQUEST_GET_ICC_APPLICATION_STATUS";
++            case RIL_REQUEST_SIM_IO_EX: return "SIM_IO_EX";
++
++            // PHB Start
++            case RIL_REQUEST_QUERY_PHB_STORAGE_INFO: return "RIL_REQUEST_QUERY_PHB_STORAGE_INFO";
++            case RIL_REQUEST_WRITE_PHB_ENTRY: return "RIL_REQUEST_WRITE_PHB_ENTRY";
++            case RIL_REQUEST_READ_PHB_ENTRY: return "RIL_REQUEST_READ_PHB_ENTRY";
++            case RIL_REQUEST_QUERY_UPB_CAPABILITY: return "RIL_REQUEST_QUERY_UPB_CAPABILITY";
++            case RIL_REQUEST_EDIT_UPB_ENTRY: return "RIL_REQUEST_EDIT_UPB_ENTRY";
++            case RIL_REQUEST_DELETE_UPB_ENTRY: return "RIL_REQUEST_DELETE_UPB_ENTRY";
++            case RIL_REQUEST_READ_UPB_GAS_LIST: return "RIL_REQUEST_READ_UPB_GAS_LIST";
++            case RIL_REQUEST_READ_UPB_GRP: return "RIL_REQUEST_READ_UPB_GRP";
++            case RIL_REQUEST_WRITE_UPB_GRP: return "RIL_REQUEST_WRITE_UPB_GRP";
++            case RIL_REQUEST_GET_PHB_STRING_LENGTH: return "RIL_REQUEST_GET_PHB_STRING_LENGTH";
++            case RIL_REQUEST_GET_PHB_MEM_STORAGE: return "RIL_REQUEST_GET_PHB_MEM_STORAGE";
++            case RIL_REQUEST_SET_PHB_MEM_STORAGE: return "RIL_REQUEST_SET_PHB_MEM_STORAGE";
++            case RIL_REQUEST_READ_PHB_ENTRY_EXT: return "RIL_REQUEST_READ_PHB_ENTRY_EXT";
++            case RIL_REQUEST_WRITE_PHB_ENTRY_EXT: return "RIL_REQUEST_WRITE_PHB_ENTRY_EXT";
++            // PHB End
++
++            /* M: network part start */
++            case RIL_REQUEST_SET_NETWORK_SELECTION_MANUAL_WITH_ACT: return "SET_NETWORK_SELECTION_MANUAL_WITH_ACT";
++            case RIL_REQUEST_GET_POL_CAPABILITY: return "RIL_REQUEST_GET_POL_CAPABILITY";
++            case RIL_REQUEST_GET_POL_LIST: return "RIL_REQUEST_GET_POL_LIST";
++            case RIL_REQUEST_SET_POL_ENTRY: return "RIL_REQUEST_SET_POL_ENTRY";
++            case RIL_REQUEST_SET_TRM: return "RIL_REQUEST_SET_TRM";
++            case RIL_REQUEST_QUERY_AVAILABLE_NETWORKS_WITH_ACT : return "QUERY_AVAILABLE_NETWORKS_WITH_ACT";
++            //Femtocell (CSG) feature START
++            case RIL_REQUEST_GET_FEMTOCELL_LIST: return "RIL_REQUEST_GET_FEMTOCELL_LIST";
++            case RIL_REQUEST_ABORT_FEMTOCELL_LIST: return "RIL_REQUEST_ABORT_FEMTOCELL_LIST";
++            case RIL_REQUEST_SELECT_FEMTOCELL: return "RIL_REQUEST_SELECT_FEMTOCELL";
++            //Femtocell (CSG) feature END
++            /* M: network part end */
++            case RIL_REQUEST_STK_EVDL_CALL_BY_AP: return "RIL_REQUEST_STK_EVDL_CALL_BY_AP";
++            case RIL_REQUEST_QUERY_MODEM_TYPE: return "RIL_REQUEST_QUERY_MODEM_TYPE";
++            case RIL_REQUEST_STORE_MODEM_TYPE: return "RIL_REQUEST_STORE_MODEM_TYPE";
++            case RIL_REQUEST_SIM_GET_ATR: return "SIM_GET_ATR";
++            case RIL_REQUEST_SIM_OPEN_CHANNEL_WITH_SW: return "SIM_OPEN_CHANNEL_WITH_SW";
++            //VoLTE
++            case RIL_REQUEST_SETUP_DEDICATE_DATA_CALL: return "RIL_REQUEST_SETUP_DEDICATE_DATA_CALL";
++            case RIL_REQUEST_DEACTIVATE_DEDICATE_DATA_CALL: return "RIL_REQUEST_DEACTIVATE_DEDICATE_DATA_CALL";
++            case RIL_REQUEST_MODIFY_DATA_CALL: return "RIL_REQUEST_MODIFY_DATA_CALL";
++            case RIL_REQUEST_ABORT_SETUP_DATA_CALL: return "RIL_REQUEST_ABORT_SETUP_DATA_CALL";
++            case RIL_REQUEST_PCSCF_DISCOVERY_PCO: return "RIL_REQUEST_PCSCF_DISCOVERY_PCO";
++            case RIL_REQUEST_CLEAR_DATA_BEARER: return "RIL_REQUEST_CLEAR_DATA_BEARER";
++
++            // IMS
++            case RIL_REQUEST_SET_IMS_ENABLE: return "RIL_REQUEST_SET_IMS_ENABLE";
++
++            // M: Fast Dormancy
++            case RIL_REQUEST_SET_SCRI: return "RIL_REQUEST_SET_SCRI";
++            case RIL_REQUEST_SET_FD_MODE: return "RIL_REQUEST_SET_FD_MODE";
++            // MTK-START, SMS part
++            case RIL_REQUEST_GET_SMS_PARAMS: return "RIL_REQUEST_GET_SMS_PARAMS";
++            case RIL_REQUEST_SET_SMS_PARAMS: return "RIL_REQUEST_SET_SMS_PARAMS";
++            case RIL_REQUEST_GET_SMS_SIM_MEM_STATUS: return "RIL_REQUEST_GET_SMS_SIM_MEM_STATUS";
++            case RIL_REQUEST_SET_ETWS: return "RIL_REQUEST_SET_ETWS";
++            case RIL_REQUEST_SET_CB_CHANNEL_CONFIG_INFO:
++                return "RIL_REQUEST_SET_CB_CHANNEL_CONFIG_INFO";
++            case RIL_REQUEST_SET_CB_LANGUAGE_CONFIG_INFO:
++                return "RIL_REQUEST_SET_CB_LANGUAGE_CONFIG_INFO";
++            case RIL_REQUEST_GET_CB_CONFIG_INFO: return "RIL_REQUEST_GET_CB_CONFIG_INFO";
++            case RIL_REQUEST_REMOVE_CB_MESSAGE: return "RIL_REQUEST_REMOVE_CB_MESSAGE";
++            // MTK-END, SMS part
++            case RIL_REQUEST_SET_DATA_CENTRIC: return "RIL_REQUEST_SET_DATA_CENTRIC";
++
++            case RIL_REQUEST_MODEM_POWEROFF: return "MODEM_POWEROFF";
++            case RIL_REQUEST_MODEM_POWERON: return "MODEM_POWERON";
++            // M: CC33 LTE.
++            case RIL_REQUEST_SET_DATA_ON_TO_MD: return "RIL_REQUEST_SET_DATA_ON_TO_MD";
++            case RIL_REQUEST_SET_REMOVE_RESTRICT_EUTRAN_MODE: return "RIL_REQUEST_SET_REMOVE_RESTRICT_EUTRAN_MODE";
++            case RIL_REQUEST_BTSIM_CONNECT: return "RIL_REQUEST_BTSIM_CONNECT";
++            case RIL_REQUEST_BTSIM_DISCONNECT_OR_POWEROFF: return "RIL_REQUEST_BTSIM_DISCONNECT_OR_POWEROFF";
++            case RIL_REQUEST_BTSIM_POWERON_OR_RESETSIM: return "RIL_REQUEST_BTSIM_POWERON_OR_RESETSIM";
++            case RIL_REQUEST_BTSIM_TRANSFERAPDU: return "RIL_REQUEST_SEND_BTSIM_TRANSFERAPDU";
++
++            /* M: call control part start */
++            case RIL_REQUEST_SET_IMS_CALL_STATUS: return "RIL_REQUEST_SET_IMS_CALL_STATUS";
++            /* M: call control part end */
++
++            /* M: C2K part start */
++            case RIL_REQUEST_GET_NITZ_TIME: return "RIL_REQUEST_GET_NITZ_TIME";
++            case RIL_REQUEST_QUERY_UIM_INSERTED: return "RIL_REQUEST_QUERY_UIM_INSERTED";
++            case RIL_REQUEST_SWITCH_HPF: return "RIL_REQUEST_SWITCH_HPF";
++            case RIL_REQUEST_SET_AVOID_SYS: return "RIL_REQUEST_SET_AVOID_SYS";
++            case RIL_REQUEST_QUERY_AVOID_SYS: return "RIL_REQUEST_QUERY_AVOID_SYS";
++            case RIL_REQUEST_QUERY_CDMA_NETWORK_INFO: return "RIL_REQUEST_QUERY_CDMA_NETWORK_INFO";
++            case RIL_REQUEST_GET_LOCAL_INFO: return "RIL_REQUEST_GET_LOCAL_INFO";
++            case RIL_REQUEST_UTK_REFRESH: return "RIL_REQUEST_UTK_REFRESH";
++            case RIL_REQUEST_QUERY_SMS_AND_PHONEBOOK_STATUS: return "RIL_REQUEST_QUERY_SMS_AND_PHONEBOOK_STATUS";
++            case RIL_REQUEST_QUERY_NETWORK_REGISTRATION: return "RIL_REQUEST_QUERY_NETWORK_REGISTRATION";
++            case RIL_REQUEST_AGPS_TCP_CONNIND: return "RIL_REQUEST_AGPS_TCP_CONNIND";
++            case RIL_REQUEST_AGPS_SET_MPC_IPPORT: return "RIL_REQUEST_AGPS_SET_MPC_IPPORT";
++            case RIL_REQUEST_AGPS_GET_MPC_IPPORT: return "RIL_REQUEST_AGPS_GET_MPC_IPPORT";
++            case RIL_REQUEST_SET_MEID: return "RIL_REQUEST_SET_MEID";
++            case RIL_REQUEST_SET_REG_RESUME: return "RIL_REQUEST_SET_REG_RESUME";
++            case RIL_REQUEST_ENABLE_REG_PAUSE: return "RIL_REQUEST_ENABLE_REG_PAUSE";
++            case RIL_REQUEST_SET_ETS_DEV: return "RIL_REQUEST_SET_ETS_DEV";
++            case RIL_REQUEST_WRITE_MDN: return "RIL_REQUEST_WRITE_MDN";
++            case RIL_REQUEST_SET_VIA_TRM: return "RIL_REQUEST_SET_VIA_TRM";
++            case RIL_REQUEST_SET_ARSI_THRESHOLD: return "RIL_REQUEST_SET_ARSI_THRESHOLD";
++            /* M: C2K part end */
+             default: return "<unknown request>";
+         }
+     }
+@@ -4534,9 +4668,85 @@ public class RIL extends BaseCommands implements CommandsInterface {
+             case RIL_UNSOL_SRVCC_STATE_NOTIFY:
+                     return "UNSOL_SRVCC_STATE_NOTIFY";
+             case RIL_UNSOL_HARDWARE_CONFIG_CHANGED: return "RIL_UNSOL_HARDWARE_CONFIG_CHANGED";
+-            case RIL_UNSOL_ON_SS: return "UNSOL_ON_SS";
+-            case RIL_UNSOL_STK_CC_ALPHA_NOTIFY: return "UNSOL_STK_CC_ALPHA_NOTIFY";
+-            case RIL_UNSOL_STK_SEND_SMS_RESULT: return "RIL_UNSOL_STK_SEND_SMS_RESULT";
++            case RIL_UNSOL_SET_PHONE_RAT_FAMILY_COMPLETE: return "RIL_UNSOL_SET_PHONE_RAT_FAMILY_COMPLETE";
++            /* M: call control part start */
++            case RIL_UNSOL_CALL_FORWARDING: return "UNSOL_CALL_FORWARDING";
++            case RIL_UNSOL_CRSS_NOTIFICATION: return "UNSOL_CRSS_NOTIFICATION";
++            case RIL_UNSOL_INCOMING_CALL_INDICATION: return "UNSOL_INCOMING_CALL_INDICATION";
++            case RIL_UNSOL_CIPHER_INDICATION: return "UNSOL_CIPHER_INDICATION";
++            case RIL_UNSOL_CNAP: return "UNSOL_CNAP";
++            case RIL_UNSOL_SPEECH_CODEC_INFO: return "UNSOL_SPEECH_CODEC_INFO";
++            /* M: call control part end */
++            //MTK-START multiple application support
++            case RIL_UNSOL_APPLICATION_SESSION_ID_CHANGED: return "RIL_UNSOL_APPLICATION_SESSION_ID_CHANGED";
++            //MTK-END multiple application support
++            case RIL_UNSOL_SIM_MISSING: return "UNSOL_SIM_MISSING";
++            case RIL_UNSOL_VIRTUAL_SIM_ON: return "UNSOL_VIRTUAL_SIM_ON";
++            case RIL_UNSOL_VIRTUAL_SIM_OFF: return "UNSOL_VIRTUAL_SIM_ON_OFF";
++            case RIL_UNSOL_SIM_RECOVERY: return "UNSOL_SIM_RECOVERY";
++            case RIL_UNSOL_SIM_PLUG_OUT: return "UNSOL_SIM_PLUG_OUT";
++            case RIL_UNSOL_SIM_PLUG_IN: return "UNSOL_SIM_PLUG_IN";
++            case RIL_UNSOL_SIM_COMMON_SLOT_NO_CHANGED: return "RIL_UNSOL_SIM_COMMON_SLOT_NO_CHANGED";
++            case RIL_UNSOL_DATA_ALLOWED: return "RIL_UNSOL_DATA_ALLOWED";
++            case RIL_UNSOL_PHB_READY_NOTIFICATION: return "UNSOL_PHB_READY_NOTIFICATION";
++            case RIL_UNSOL_IMEI_LOCK: return "UNSOL_IMEI_LOCK";
++            case RIL_UNSOL_RESPONSE_ACMT: return "UNSOL_ACMT_INFO";
++            case RIL_UNSOL_RESPONSE_PS_NETWORK_STATE_CHANGED: return "UNSOL_RESPONSE_PS_NETWORK_STATE_CHANGED";
++            case RIL_UNSOL_RESPONSE_MMRR_STATUS_CHANGED: return "UNSOL_RESPONSE_MMRR_STATUS_CHANGED";
++            case RIL_UNSOL_NEIGHBORING_CELL_INFO: return "UNSOL_NEIGHBORING_CELL_INFO";
++            case RIL_UNSOL_NETWORK_INFO: return "UNSOL_NETWORK_INFO";
++            case RIL_UNSOL_INVALID_SIM: return "RIL_UNSOL_INVALID_SIM";
++            case RIL_UNSOL_IMS_ENABLE_DONE: return "RIL_UNSOL_IMS_ENABLE_DONE";
++            case RIL_UNSOL_IMS_DISABLE_DONE: return "RIL_UNSOL_IMS_DISABLE_DONE";
++            case RIL_UNSOL_IMS_REGISTRATION_INFO: return "RIL_UNSOL_IMS_REGISTRATION_INFO";
++            case RIL_UNSOL_STK_SETUP_MENU_RESET: return "RIL_UNSOL_STK_SETUP_MENU_RESET";
++            case RIL_UNSOL_RESPONSE_PLMN_CHANGED: return "RIL_UNSOL_RESPONSE_PLMN_CHANGED";
++            case RIL_UNSOL_RESPONSE_REGISTRATION_SUSPENDED: return "RIL_UNSOL_RESPONSE_REGISTRATION_SUSPENDED";
++            //VoLTE
++            case RIL_UNSOL_DEDICATE_BEARER_ACTIVATED: return "RIL_UNSOL_DEDICATE_BEARER_ACTIVATED";
++            case RIL_UNSOL_DEDICATE_BEARER_MODIFIED: return "RIL_UNSOL_DEDICATE_BEARER_MODIFIED";
++            //Remote SIM ME lock related APIs [Start]
++            case RIL_UNSOL_MELOCK_NOTIFICATION: return "RIL_UNSOL_MELOCK_NOTIFICATION";
++            //Remote SIM ME lock related APIs [End]
++            // M: Fast Dormancy
++            case RIL_UNSOL_SCRI_RESULT: return "RIL_UNSOL_SCRI_RESULT";
++            case RIL_UNSOL_STK_EVDL_CALL: return "RIL_UNSOL_STK_EVDL_CALL";
++            case RIL_UNSOL_STK_CALL_CTRL: return "RIL_UNSOL_STK_CALL_CTRL";
++
++            /// M: IMS feature. @{
++            case RIL_UNSOL_ECONF_SRVCC_INDICATION: return "RIL_UNSOL_ECONF_SRVCC_INDICATION";
++            //For updating conference call merged/added result.
++            case RIL_UNSOL_ECONF_RESULT_INDICATION: return "RIL_UNSOL_ECONF_RESULT_INDICATION";
++            //For updating call mode and pau information.
++            case RIL_UNSOL_CALL_INFO_INDICATION : return "RIL_UNSOL_CALL_INFO_INDICATION";
++            /// @}
++
++            case RIL_UNSOL_VOLTE_EPS_NETWORK_FEATURE_INFO: return "RIL_UNSOL_VOLTE_EPS_NETWORK_FEATURE_INFO";
++            case RIL_UNSOL_SRVCC_HANDOVER_INFO_INDICATION: return "RIL_UNSOL_SRVCC_HANDOVER_INFO_INDICATION";
++            // M: CC33 LTE.
++            case RIL_UNSOL_RAC_UPDATE: return "RIL_UNSOL_RAC_UPDATE";
++            case RIL_UNSOL_REMOVE_RESTRICT_EUTRAN: return "RIL_UNSOL_REMOVE_RESTRICT_EUTRAN";
++
++            //MTK-START for MD state change
++            case RIL_UNSOL_MD_STATE_CHANGE: return "RIL_UNSOL_MD_STATE_CHANGE";
++            //MTK-END for MD state change
++
++            case RIL_UNSOL_MO_DATA_BARRING_INFO: return "RIL_UNSOL_MO_DATA_BARRING_INFO";
++            case RIL_UNSOL_SSAC_BARRING_INFO: return "RIL_UNSOL_SSAC_BARRING_INFO";
++            //MTK_TC1_FEATURE for LGE CSMCC_MO_CALL_MODIFIED {
++            case RIL_UNSOL_RESPONSE_MO_CALL_STATE_CHANGED: return "UNSOL_RESPONSE_MO_CALL_STATE_CHANGED";
++            //}
++
++            /* M: C2K part start */
++            case RIL_UNSOL_CDMA_CALL_ACCEPTED: return "RIL_UNSOL_CDMA_CALL_ACCEPTED";
++            case RIL_UNSOL_UTK_SESSION_END: return "RIL_UNSOL_UTK_SESSION_END";
++            case RIL_UNSOL_UTK_PROACTIVE_COMMAND: return "RIL_UNSOL_UTK_PROACTIVE_COMMAND";
++            case RIL_UNSOL_UTK_EVENT_NOTIFY: return "RIL_UNSOL_UTK_EVENT_NOTIFY";
++            case RIL_UNSOL_VIA_GPS_EVENT: return "RIL_UNSOL_VIA_GPS_EVENT";
++            case RIL_UNSOL_VIA_NETWORK_TYPE_CHANGE: return "RIL_UNSOL_VIA_NETWORK_TYPE_CHANGE";
++            case RIL_UNSOL_VIA_PLMN_CHANGE_REG_PAUSE: return "RIL_UNSOL_VIA_PLMN_CHANGE_REG_PAUSE";
++            case RIL_UNSOL_VIA_INVALID_SIM_DETECTED: return "RIL_UNSOL_VIA_INVALID_SIM_DETECTED";
++            /* M: C2K part end */
+             default: return "<unknown response>";
+         }
+     }
+@@ -5098,4 +5308,37 @@ public class RIL extends BaseCommands implements CommandsInterface {
+ 
+         send(rr);
+     }
++
++    // MTK additions
++    public void setTrm(int mode, Message result) {
++        RILRequest rr = RILRequest.obtain(RIL_REQUEST_SET_TRM, null);
++
++        rr.mParcel.writeInt(1);
++        rr.mParcel.writeInt(mode);
++
++        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
++        send(rr);
++    }
++
++    public void setResumeRegistration(int sessionId, Message response) {
++        RILRequest rr = RILRequest.obtain(RIL_REQUEST_RESUME_REGISTRATION, response);
++        rr.mParcel.writeInt(1);
++        rr.mParcel.writeInt(sessionId);
++        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
++        send(rr);
++    }
++
++    public void queryModemType(Message response) {
++        RILRequest rr = RILRequest.obtain(RIL_REQUEST_QUERY_MODEM_TYPE, response);
++        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
++        send(rr);
++    }
++
++    public void storeModemType(int modemType, Message response) {
++        RILRequest rr = RILRequest.obtain(RIL_REQUEST_STORE_MODEM_TYPE, response);
++        rr.mParcel.writeInt(1);
++        rr.mParcel.writeInt(modemType);
++        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
++        send(rr);
++    }
+ }
+diff --git a/src/java/com/android/internal/telephony/imsphone/ImsPhoneCommandInterface.java b/src/java/com/android/internal/telephony/imsphone/ImsPhoneCommandInterface.java
+index 755e87c..72fa066 100644
+--- a/src/java/com/android/internal/telephony/imsphone/ImsPhoneCommandInterface.java
++++ b/src/java/com/android/internal/telephony/imsphone/ImsPhoneCommandInterface.java
+@@ -586,5 +586,39 @@ class ImsPhoneCommandInterface extends BaseCommands implements CommandsInterface
+     public void requestShutdown(Message result) {
+     }
+ 
++    // MTK
++
++    @Override
++    public void setTrm(int mode, Message result) {
++    }
++
++    @Override
++    public void setOnPlmnChangeNotification(Handler h, int what, Object obj) {
++    }
++
++    @Override
++    public void unSetOnPlmnChangeNotification(Handler h) {
++    }
++
++    @Override
++    public void setOnRegistrationSuspended(Handler h, int what, Object obj) {
++    }
++
++    @Override
++    public void unSetOnRegistrationSuspended(Handler h) {
++    }
++
++    @Override
++    public void setResumeRegistration(int sessionId, Message response) {
++    }
++
++    @Override
++    public void queryModemType(Message response) {
++    }
++
++    @Override
++    public void storeModemType(int modemType, Message response) {
++    }
++
+     public boolean needsOldRilFeature(String feature) { return false; }
+ }
+diff --git a/src/java/com/android/internal/telephony/sip/SipCommandInterface.java b/src/java/com/android/internal/telephony/sip/SipCommandInterface.java
+index 65c37ba..b2d0966 100644
+--- a/src/java/com/android/internal/telephony/sip/SipCommandInterface.java
++++ b/src/java/com/android/internal/telephony/sip/SipCommandInterface.java
+@@ -589,5 +589,39 @@ class SipCommandInterface extends BaseCommands implements CommandsInterface {
+     public void requestShutdown(Message result) {
+     }
+ 
++    // MTK
++
++    @Override
++    public void setTrm(int mode, Message result) {
++    }
++
++    @Override
++    public void setOnPlmnChangeNotification(Handler h, int what, Object obj) {
++    }
++
++    @Override
++    public void unSetOnPlmnChangeNotification(Handler h) {
++    }
++
++    @Override
++    public void setOnRegistrationSuspended(Handler h, int what, Object obj) {
++    }
++
++    @Override
++    public void unSetOnRegistrationSuspended(Handler h) {
++    }
++
++    @Override
++    public void setResumeRegistration(int sessionId, Message response) {
++    }
++
++    @Override
++    public void queryModemType(Message response) {
++    }
++
++    @Override
++    public void storeModemType(int modemType, Message response) {
++    }
++
+     public boolean needsOldRilFeature(String feature) { return false; }
+ }
+diff --git a/src/java/com/android/internal/telephony/test/SimulatedCommands.java b/src/java/com/android/internal/telephony/test/SimulatedCommands.java
+index 0181430..06f918d 100644
+--- a/src/java/com/android/internal/telephony/test/SimulatedCommands.java
++++ b/src/java/com/android/internal/telephony/test/SimulatedCommands.java
+@@ -1776,5 +1776,23 @@ public final class SimulatedCommands extends BaseCommands
+         setRadioState(RadioState.RADIO_UNAVAILABLE);
+     }
+ 
++    // MTK additions
++
++    @Override
++    public void setTrm(int mode, Message result) {
++    }
++
++    @Override
++    public void setResumeRegistration(int sessionId, Message response) {
++    }
++
++    @Override
++    public void queryModemType(Message response) {
++    }
++
++    @Override
++    public void storeModemType(int modemType, Message response) {
++    }
++
+     public boolean needsOldRilFeature(String feature) { return false; }
+ }
+diff --git a/src/java/com/android/internal/telephony/uicc/IccCardProxy.java b/src/java/com/android/internal/telephony/uicc/IccCardProxy.java
+index c4c55c6..183ba7e 100755
+--- a/src/java/com/android/internal/telephony/uicc/IccCardProxy.java
++++ b/src/java/com/android/internal/telephony/uicc/IccCardProxy.java
+@@ -990,4 +990,154 @@ public class IccCardProxy extends Handler implements IccCard {
+ 
+         pw.flush();
+     }
++
++    // MTK additions
++
++    // Added by M begin
++    /**
++     * Query the SIM ME Lock type required to unlock.
++     *
++     * @return SIM ME Lock type
++     */
++    /*
++    public PersoSubState getNetworkPersoType() {
++        if (mUiccApplication != null) {
++            return mUiccApplication.getPersoSubState();
++        }
++        return PersoSubState.PERSOSUBSTATE_UNKNOWN;
++    }
++    */
++
++    /**
++     * Check whether ICC network lock is enabled
++     * This is an async call which returns lock state to applications directly
++     */
++    /*
++    @Override
++    public void queryIccNetworkLock(int category, Message onComplete) {
++        if (DBG) log("queryIccNetworkLock(): category =  " + category);
++        synchronized (mLock) {
++            if (mUiccApplication != null) {
++                mUiccApplication.queryIccNetworkLock(category, onComplete);
++            } else if (onComplete != null) {
++                Exception e = new RuntimeException("ICC card is absent.");
++                AsyncResult.forMessage(onComplete).exception = e;
++                onComplete.sendToTarget();
++                return;
++            }
++        }
++    }
++    */
++
++    /**
++     * Set the ICC network lock enabled or disabled
++     * When the operation is complete, onComplete will be sent to its handler
++     */
++    /*
++    @Override
++    public void setIccNetworkLockEnabled(int category,
++            int lockop, String password, String data_imsi, String gid1, String gid2, Message onComplete) {
++        if (DBG) log("SetIccNetworkEnabled(): category = " + category
++            + " lockop = " + lockop + " password = " + password
++            + " data_imsi = " + data_imsi + " gid1 = " + gid1 + " gid2 = " + gid2);
++        synchronized (mLock) {
++            if (mUiccApplication != null) {
++                mUiccApplication.setIccNetworkLockEnabled(category, lockop, password, data_imsi, gid1, gid2, onComplete);
++            } else if (onComplete != null) {
++                Exception e = new RuntimeException("ICC card is absent.");
++                AsyncResult.forMessage(onComplete).exception = e;
++                onComplete.sendToTarget();
++                return;
++            }
++        }
++    }
++    */
++
++    /**
++     * Used by SIM ME lock related enhancement feature(Modem SML change feature).
++     */
++    /*
++    public void repollIccStateForModemSmlChangeFeatrue(boolean needIntent) {
++        if (DBG) log("repollIccStateForModemSmlChangeFeatrue, needIntent = " + needIntent);
++        synchronized (mLock) {
++            mUiccController.repollIccStateForModemSmlChangeFeatrue(mSlotId, needIntent);
++        }
++    }
++
++    public void exchangeSimIo(int fileID, int command,
++                              int p1, int p2, int p3, String pathID, String data, String pin2, Message onComplete) {
++        if (mUiccCard != null && mUiccCard.getCardState() != CardState.CARDSTATE_ABSENT) {
++            mUiccCard.exchangeSimIo(fileID, command, p1, p2, p3, pathID, data, pin2, onComplete);
++        }
++    }
++
++    public void iccGetAtr(Message onComplete) {
++        if (mUiccCard != null && mUiccCard.getCardState() != CardState.CARDSTATE_ABSENT) {
++            mUiccCard.iccGetAtr(onComplete);
++        }
++    }
++
++    public void openLogicalChannelWithSw(String AID, Message onComplete) {
++        if (mUiccCard != null && mUiccCard.getCardState() != CardState.CARDSTATE_ABSENT) {
++            mUiccCard.iccOpenChannelWithSw(AID, onComplete);
++        }
++    }
++    */
++
++    // retrun usim property or use uicccardapplication app type
++    public String getIccCardType() {
++        if (mUiccCard != null && mUiccCard.getCardState() != CardState.CARDSTATE_ABSENT) {
++            return mUiccCard.getIccCardType();
++        }
++        return "";
++    }
++
++    /*
++    public void registerForRecovery(Handler h, int what, Object obj) {
++        synchronized (mLock) {
++            Registrant r = new Registrant(h, what, obj);
++
++            mRecoveryRegistrants.add(r);
++
++            if (getState() == State.READY) {
++                r.notifyRegistrant();
++            }
++        }
++    }
++
++    public void unregisterForRecovery(Handler h) {
++        synchronized (mLock) {
++            mRecoveryRegistrants.remove(h);
++        }
++    }
++    */
++
++    /**
++     * Notifies handler in case of FDN changed
++     */
++    /*
++    @Override
++    public void registerForFdnChanged(Handler h, int what, Object obj) {
++        synchronized (mLock) {
++            synchronized (mLock) {
++                Registrant r = new Registrant(h, what, obj);
++
++                mFdnChangedRegistrants.add(r);
++
++                if (getIccFdnEnabled()) {
++                    r.notifyRegistrant();
++                }
++            }
++        }
++    }
++
++    @Override
++    public void unregisterForFdnChanged(Handler h) {
++        synchronized (mLock) {
++            mFdnChangedRegistrants.remove(h);
++        }
++    }
++    */
++
++    // Added by M end
+ }
+diff --git a/src/java/com/android/internal/telephony/uicc/UiccCard.java b/src/java/com/android/internal/telephony/uicc/UiccCard.java
+index 1c27e44..f970e45 100644
+--- a/src/java/com/android/internal/telephony/uicc/UiccCard.java
++++ b/src/java/com/android/internal/telephony/uicc/UiccCard.java
+@@ -100,6 +100,14 @@ public class UiccCard {
+ 
+     private int mPhoneId;
+ 
++    // MTK
++    static final String[] UICCCARD_PROPERTY_RIL_UICC_TYPE = {
++        "gsm.ril.uicctype",
++        "gsm.ril.uicctype.2",
++        "gsm.ril.uicctype.3",
++        "gsm.ril.uicctype.4",
++    };
++
+     public UiccCard(Context c, CommandsInterface ci, IccCardStatus ics, int phoneId) {
+         mCardState = ics.mCardState;
+         mPhoneId = phoneId;
+@@ -706,4 +714,104 @@ public class UiccCard {
+         }
+         pw.flush();
+     }
++
++    // MTK additions
++
++    // Added by M begin
++    /*
++    public int getSlotId() {
++        return mSlotId;
++    }
++
++    public UiccCard(Context c, CommandsInterface ci, IccCardStatus ics, int slotId, boolean isUpdateSiminfo) {
++        if (DBG) log("Creating simId " + slotId + ",isUpdateSiminfo" + isUpdateSiminfo);
++        mCardState = ics.mCardState;
++        mSlotId = slotId;
++        update(c, ci, ics, isUpdateSiminfo);
++    }
++
++    public void exchangeSimIo(int fileID, int command,
++                                           int p1, int p2, int p3, String pathID, String data, String pin2, Message onComplete) {
++        mCi.iccIO(command, fileID, pathID, p1, p2, p3, data, pin2,
++              mHandler.obtainMessage(EVENT_SIM_IO_DONE, onComplete));
++    }
++
++    public void iccGetAtr(Message onComplete) {
++        mCi.iccGetATR(mHandler.obtainMessage(EVENT_GET_ATR_DONE, onComplete));
++    }
++    */
++
++    public String getIccCardType() {
++        // TODO: port MTK slot id
++        final int mSlotId = 0;
++        final String mIccType = SystemProperties.get(UICCCARD_PROPERTY_RIL_UICC_TYPE[mSlotId]);
++        if (DBG) log("getIccCardType(): iccType = " + mIccType);
++        return mIccType;
++    }
++
++    /*
++    public void iccOpenChannelWithSw(String AID, Message onComplete) {
++        mCi.iccOpenChannelWithSw(AID,
++            mHandler.obtainMessage(EVENT_OPEN_CHANNEL_WITH_SW_DONE, onComplete));
++    }
++
++    public void update(Context c, CommandsInterface ci, IccCardStatus ics, boolean isUpdateSimInfo) {
++        synchronized (mLock) {
++            if (mDestroyed) {
++                loge("Updated after destroyed! Fix me!");
++                return;
++            }
++            CardState oldState = mCardState;
++            mCardState = ics.mCardState;
++            mUniversalPinState = ics.mUniversalPinState;
++            mGsmUmtsSubscriptionAppIndex = ics.mGsmUmtsSubscriptionAppIndex;
++            mCdmaSubscriptionAppIndex = ics.mCdmaSubscriptionAppIndex;
++            mImsSubscriptionAppIndex = ics.mImsSubscriptionAppIndex;
++            mContext = c;
++            mCi = ci;
++            //update applications
++            if (DBG) log(ics.mApplications.length + " applications");
++            for (int i = 0; i < mUiccApplications.length; i++) {
++                if (mUiccApplications[i] == null) {
++                    //Create newly added Applications
++                    if (i < ics.mApplications.length) {
++                        mUiccApplications[i] = new UiccCardApplication(this,
++                                ics.mApplications[i], mContext, mCi);
++                    }
++                } else if (i >= ics.mApplications.length) {
++                    //Delete removed applications
++                    mUiccApplications[i].dispose();
++                    mUiccApplications[i] = null;
++                } else {
++                    //Update the rest
++                    mUiccApplications[i].update(ics.mApplications[i], mContext, mCi);
++                }
++            }
++
++            createAndUpdateCatService();
++            sanitizeApplicationIndexes();
++
++            RadioState radioState = mCi.getRadioState();
++            if (DBG) log("update: radioState=" + radioState + " mLastRadioState="
++                    + mLastRadioState + "isUpdateSimInfo= " + isUpdateSimInfo);
++            // No notifications while radio is off or we just powering up
++            if (isUpdateSimInfo) {
++                if (radioState == RadioState.RADIO_ON && mLastRadioState == RadioState.RADIO_ON) {
++                    if (oldState != CardState.CARDSTATE_ABSENT &&
++                            mCardState == CardState.CARDSTATE_ABSENT) {
++                        if (DBG) log("update: notify card removed");
++                        mAbsentRegistrants.notifyRegistrants();
++                        mHandler.sendMessage(mHandler.obtainMessage(EVENT_CARD_REMOVED, null));
++                    } else if (oldState == CardState.CARDSTATE_ABSENT &&
++                            mCardState != CardState.CARDSTATE_ABSENT) {
++                        if (DBG) log("update: notify card added");
++                        mHandler.sendMessage(mHandler.obtainMessage(EVENT_CARD_ADDED, null));
++                    }
++                }
++            }
++            mLastRadioState = radioState;
++        }
++    }
++    */
++    // Added by M end
+ }
+diff --git a/src/java/com/mediatek/internal/telephony/EtwsNotification.java b/src/java/com/mediatek/internal/telephony/EtwsNotification.java
+new file mode 100644
+index 0000000..064f7eb
+--- /dev/null
++++ b/src/java/com/mediatek/internal/telephony/EtwsNotification.java
+@@ -0,0 +1,42 @@
++package com.mediatek.internal.telephony;
++
++import com.android.internal.telephony.IccUtils;
++
++public class EtwsNotification {
++    public int warningType;
++    public int messageId;
++    public int serialNumber;
++    public String plmnId;
++    public String securityInfo;
++
++    public String toString() {
++        return "EtwsNotification: " + warningType + ", " + messageId + ", " + serialNumber
++                + ", " + plmnId + ", " + securityInfo;
++    }
++
++    public boolean isDuplicatedEtws(EtwsNotification other) {
++        if (this.warningType == other.warningType
++                && this.messageId == other.messageId
++                && this.serialNumber == other.serialNumber
++                && this.plmnId.equals(other.plmnId)) {
++            return true;
++        }
++
++        return false;
++    }
++
++    public byte[] getEtwsPdu() {
++        byte[] etwsPdu = new byte[56];
++        byte[] serialNumberBytes = EtwsUtils.intToBytes(serialNumber);
++        System.arraycopy(serialNumberBytes, 2, etwsPdu, 0, 2);
++        byte[] messageIdBytes = EtwsUtils.intToBytes(messageId);
++        System.arraycopy(messageIdBytes, 2, etwsPdu, 2, 2);
++        byte[] warningTypeBytes = EtwsUtils.intToBytes(warningType);
++        System.arraycopy(warningTypeBytes, 2, etwsPdu, 4, 2);
++        if (securityInfo != null) {
++            System.arraycopy(IccUtils.hexStringToBytes(securityInfo), 0, etwsPdu, 6, 50);
++        }
++
++        return etwsPdu;
++    }
++}
+\ No newline at end of file
+diff --git a/src/java/com/mediatek/internal/telephony/EtwsUtils.java b/src/java/com/mediatek/internal/telephony/EtwsUtils.java
+new file mode 100644
+index 0000000..bed25a0
+--- /dev/null
++++ b/src/java/com/mediatek/internal/telephony/EtwsUtils.java
+@@ -0,0 +1,31 @@
++package com.mediatek.internal.telephony;
++
++public class EtwsUtils {
++    public static final int ETWS_PDU_LENGTH = 56;
++
++    public static byte[] intToBytes(int value) {
++        byte[] ret = new byte[4];
++        for (int i = 0; i < 4; ++i) {
++            ret[3 - i] = (byte) (value & 0xff);
++            value >>= 8;
++        }
++
++        return ret;
++    }
++
++    public static int bytesToInt(byte[] values) {
++        if (values == null || values.length == 0 || values.length > 4) {
++            throw new RuntimeException("valid byte array");
++        }
++
++        int ret = 0;
++        int len = values.length - 1;
++        for (int i = 0; i < len; ++i) {
++            ret |= (values[i] & 0xff);
++            ret <<= 8;
++        }
++        ret |= (values[len] & 0xff);
++
++        return ret;
++    }
++}
+\ No newline at end of file
+diff --git a/src/java/com/mediatek/internal/telephony/FemtoCellInfo.aidl b/src/java/com/mediatek/internal/telephony/FemtoCellInfo.aidl
+new file mode 100755
+index 0000000..2ee8f03
+--- /dev/null
++++ b/src/java/com/mediatek/internal/telephony/FemtoCellInfo.aidl
+@@ -0,0 +1,19 @@
++/*
++** Copyright 2007, The Android Open Source Project
++**
++** Licensed under the Apache License, Version 2.0 (the "License");
++** you may not use this file except in compliance with the License.
++** You may obtain a copy of the License at
++**
++**     http://www.apache.org/licenses/LICENSE-2.0
++**
++** Unless required by applicable law or agreed to in writing, software
++** distributed under the License is distributed on an "AS IS" BASIS,
++** WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++** See the License for the specific language governing permissions and
++** limitations under the License.
++*/
++
++package com.mediatek.internal.telephony;
++
++parcelable FemtoCellInfo;
+diff --git a/src/java/com/mediatek/internal/telephony/FemtoCellInfo.java b/src/java/com/mediatek/internal/telephony/FemtoCellInfo.java
+new file mode 100755
+index 0000000..173f1f2
+--- /dev/null
++++ b/src/java/com/mediatek/internal/telephony/FemtoCellInfo.java
+@@ -0,0 +1,154 @@
++/*
++ * Copyright (C) 2006 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package com.mediatek.internal.telephony;
++
++import android.os.Parcel;
++import android.os.Parcelable;
++
++/**
++ * {@hide}
++ */
++public class FemtoCellInfo implements Parcelable {
++    /* This CSG is Not in EFACSGL nor in EFOCSGL */
++    public static final int CSG_ICON_TYPE_NOT_ALLOWED = 0;
++
++    /* This CSG is in Allowed CSG List (EFACSGL) */
++    public static final int CSG_ICON_TYPE_ALLOWED = 1;
++
++    /* This CSG is in Operator CSG List (EFOCSGL) */
++    public static final int CSG_ICON_TYPE_OPERATOR = 2;
++
++    /* This CSG is in Operator CSGs. However, it is unauthorized, meaning that UE's registration has been rejected by cause #25.*/
++    public static final int CSG_ICON_TYPE_OPERATOR_UNAUTHORIZED = 3;
++
++    private int csgId;
++    private int csgIconType; /* FemtoCellInfo.CSG_ICON_TYPE_xxx */
++    private String homeNodeBName;
++    private String operatorNumeric; /* ex: "46000" */
++    private String operatorAlphaLong; /* ex: "China Mobile" */
++    private int rat = 0; /* ServiceState.RIL_RADIO_TECHNOLOGY_xxx */
++
++/**
++ * Get registered CSG Id
++ * @internal
++ */
++    public int getCsgId() {
++        return csgId;
++    }
++
++/**
++ * Get registered CSG Icon Type
++ * @internal
++ */
++    public int getCsgIconType() {
++        return csgIconType;
++    }
++
++/**
++ * Get Home NodeB Name(if exist)
++ * @internal
++ */
++    public String getHomeNodeBName() {
++        return homeNodeBName;
++    }
++
++/**
++ * Get registered CSG Rat information
++ */
++    public int getCsgRat() {
++        return rat;
++    }
++
++/**
++ * Get registered operator numeric code
++ */
++    public String getOperatorNumeric() {
++        return operatorNumeric;
++    }
++
++/**
++ * Get registered operator alphanumeric long name
++ * @internal
++ */
++    public String getOperatorAlphaLong() {
++        return operatorAlphaLong;
++    }
++
++    public FemtoCellInfo(int csgId, int csgIconType, String homeNodeBName, String operatorNumeric, String operatorAlphaLong, int rat) {
++        this.csgId = csgId;
++        this.csgIconType = csgIconType;
++        this.homeNodeBName = homeNodeBName;
++        this.operatorNumeric = operatorNumeric;
++        this.operatorAlphaLong = operatorAlphaLong;
++        this.rat = rat;
++    }
++
++    public String toString() {
++        return "FemtoCellInfo " + csgId
++                + "/" + csgIconType
++                + "/" + homeNodeBName
++                + "/" + operatorNumeric
++                + "/" + operatorAlphaLong
++                + "/" + rat;
++    }
++
++    /**
++     * Parcelable interface implemented below.
++     * This is a simple effort to make FemtoCellInfo parcelable rather than
++     * trying to make the conventional containing object (AsyncResult),
++     * implement parcelable.
++     */
++
++    public int describeContents() {
++        return 0;
++    }
++
++    /**
++     * Implement the Parcelable interface.
++     * Method to serialize a FemtoCellInfo object.
++     */
++    public void writeToParcel(Parcel dest, int flags) {
++        dest.writeInt(csgId);
++        dest.writeInt(csgIconType);
++        dest.writeString(homeNodeBName);
++        dest.writeString(operatorNumeric);
++        dest.writeString(operatorAlphaLong);
++        dest.writeInt(rat);
++    }
++
++    /**
++     * Implement the Parcelable interface
++     * Method to deserialize a FemtoCellInfo object, or an array thereof.
++     */
++    public static final Creator<FemtoCellInfo> CREATOR =
++        new Creator<FemtoCellInfo>() {
++            public FemtoCellInfo createFromParcel(Parcel in) {
++                FemtoCellInfo femtoCellInfo = new FemtoCellInfo(
++                        in.readInt(), /*csgId*/
++                        in.readInt(), /*csgIconType*/
++                        in.readString(), /*homeNodeBName*/
++                        in.readString(), /*operatorNumeric*/
++                        in.readString(), /*operatorAlphaLong*/
++                        in.readInt()); /*rat*/
++                return femtoCellInfo;
++            }
++
++            public FemtoCellInfo[] newArray(int size) {
++                return new FemtoCellInfo[size];
++            }
++        };
++}
++
+diff --git a/src/java/com/mediatek/internal/telephony/ModemSwitchHandler.java b/src/java/com/mediatek/internal/telephony/ModemSwitchHandler.java
+new file mode 100755
+index 0000000..0f0638d
+--- /dev/null
++++ b/src/java/com/mediatek/internal/telephony/ModemSwitchHandler.java
+@@ -0,0 +1,244 @@
++/* Copyright Statement:
++ *
++ * This software/firmware and related documentation ("MediaTek Software") are
++ * protected under relevant copyright laws. The information contained herein
++ * is confidential and proprietary to MediaTek Inc. and/or its licensors.
++ * Without the prior written permission of MediaTek inc. and/or its licensors,
++ * any reproduction, modification, use or disclosure of MediaTek Software,
++ * and information contained herein, in whole or in part, shall be strictly prohibited.
++ *
++ * MediaTek Inc. (C) 2010. All rights reserved.
++ *
++ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
++ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
++ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
++ * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
++ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
++ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
++ * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
++ * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
++ * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
++ * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
++ * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
++ * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
++ * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
++ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
++ * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
++ * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
++ * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
++ * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
++ *
++ * The following software/firmware and/or related documentation ("MediaTek Software")
++ * have been modified by MediaTek Inc. All revisions are subject to any receiver's
++ * applicable license agreements with MediaTek Inc.
++ */
++
++package com.mediatek.internal.telephony;
++
++import android.content.Context;
++import android.content.Intent;
++import android.os.SystemProperties;
++import android.telephony.Rlog;
++
++import com.android.internal.telephony.CommandsInterface;
++import com.android.internal.telephony.Phone;
++import com.android.internal.telephony.PhoneBase;
++import com.android.internal.telephony.PhoneConstants;
++import com.android.internal.telephony.PhoneFactory;
++import com.android.internal.telephony.PhoneProxy;
++import com.android.internal.telephony.TelephonyIntents;
++import com.android.internal.telephony.TelephonyProperties;
++
++import com.mediatek.internal.telephony.worldphone.WorldPhoneUtil;
++
++public class ModemSwitchHandler {
++    private static final String LOG_TAG = "PHONE";
++
++    /** @internal */
++    public static final int MD_TYPE_UNKNOWN = 0;
++    /** @internal */
++    public static final int MD_TYPE_WG      = 3;
++    /** @internal */
++    public static final int MD_TYPE_TG      = 4;
++    /** @internal */
++    public static final int MD_TYPE_LWG     = 5;
++    /** @internal */
++    public static final int MD_TYPE_LTG     = 6;
++    /** @internal */
++    public static final int MD_TYPE_FDD     = 100;
++    /** @internal */
++    public static final int MD_TYPE_TDD     = 101;
++    private static final int PROJECT_SIM_NUM = WorldPhoneUtil.getProjectSimNum();
++
++    private static int sCurrentModemType = getActiveModemType();
++    private static Phone[] sProxyPhones = null;
++    private static Phone[] sActivePhones = new Phone[PROJECT_SIM_NUM];
++    private static Context sContext = null;
++    private static CommandsInterface[] sCi = new CommandsInterface[PROJECT_SIM_NUM];
++
++    public ModemSwitchHandler() {
++        logd("Constructor invoked");
++        logd("Init modem type: " + sCurrentModemType);
++        sProxyPhones = PhoneFactory.getPhones();
++        for (int i = 0; i < PROJECT_SIM_NUM; i++) {
++            sActivePhones[i] = ((PhoneProxy) sProxyPhones[i]).getActivePhone();
++            sCi[i] = ((PhoneBase) sActivePhones[i]).mCi;
++        }
++        if (PhoneFactory.getDefaultPhone() != null) {
++            sContext = PhoneFactory.getDefaultPhone().getContext();
++        } else {
++            logd("DefaultPhone = null");
++        }
++    }
++
++    /**
++     * Trigger TRM to switch modem type
++     * @param modemType 3 : switch to WG(MD_TYPE_WG)
++     *                  4 : switch to TG(MD_TYPE_TG)
++     *                  5 : switch to FDD CSFB(MD_TYPE_LWG)
++     *                  6 : switch to TDD CSFB(MD_TYPE_LTG)
++     */
++    public static void switchModem(int modemType) {
++        int protocolSim = WorldPhoneUtil.getMajorSim();
++        logd("protocolSim: " + protocolSim);
++        if (protocolSim >= PhoneConstants.SIM_ID_1 && protocolSim <= PhoneConstants.SIM_ID_4) {
++            switchModem(sCi[protocolSim], modemType);
++        } else {
++            switchModem(sCi[PhoneConstants.SIM_ID_1], modemType);
++        }
++    }
++
++    /**
++     * Trigger TRM to switch modem type with desinated RIL instance
++     * @param modemType 3 : switch to WG(MD_TYPE_WG)
++     *                  4 : switch to TG(MD_TYPE_TG)
++     *                  5 : switch to FDD CSFB(MD_TYPE_LWG)
++     *                  6 : switch to TDD CSFB(MD_TYPE_LTG)
++     */
++    public static void switchModem(CommandsInterface ci, int modemType) {
++        logd("[switchModem]");
++        if (modemType == sCurrentModemType) {
++            if (modemType == MD_TYPE_WG) {
++                logd("Already in WG modem");
++            } else if (modemType == MD_TYPE_TG) {
++                logd("Already in TG modem");
++            } else if (modemType == MD_TYPE_LWG) {
++                logd("Already in FDD CSFB modem");
++            } else if (modemType == MD_TYPE_LTG) {
++                logd("Already in TDD CSFB modem");
++            }
++            return;
++        }
++        if (ci.getRadioState() == CommandsInterface.RadioState.RADIO_UNAVAILABLE) {
++            logd("Radio unavailable, can not switch modem");
++            return;
++        }
++        if (modemType == MD_TYPE_WG) {
++            ci.setTrm(9, null);
++        } else if (modemType == MD_TYPE_TG) {
++            ci.setTrm(10, null);
++        } else if (modemType == MD_TYPE_LWG) {
++            ci.setTrm(11, null);
++        } else if (modemType == MD_TYPE_LTG) {
++            ci.setTrm(12, null);
++        } else {
++            logd("Invalid modem type:" + modemType);
++            return;
++        }
++        // Update sCurrentModemType variable & set ril.active.md system property
++        setActiveModemType(modemType);
++
++        // Broadcast modem switch notification
++        logd("Broadcast intent ACTION_MD_TYPE_CHANGE");
++        Intent intent = new Intent(TelephonyIntents.ACTION_MD_TYPE_CHANGE);
++        intent.putExtra(TelephonyIntents.EXTRA_MD_TYPE, modemType);
++        sContext.sendBroadcast(intent);
++    }
++
++    /**
++     * Trigger CCCI to reload modem bin
++     * @param modemType 3 : reload WG(MD_TYPE_WG)
++     *                  4 : reload TG(MD_TYPE_TG)
++     *                  5 : reload FDD CSFB(MD_TYPE_LWG)
++     *                  6 : reload TDD CSFB(MD_TYPE_LTG)
++     */
++    public static void reloadModem(int modemType) {
++        int majorSim = WorldPhoneUtil.getMajorSim();
++        if (majorSim >= PhoneConstants.SIM_ID_1 && majorSim <= PhoneConstants.SIM_ID_4) {
++            reloadModem(sCi[majorSim], modemType);
++        } else {
++            reloadModem(sCi[PhoneConstants.SIM_ID_1], modemType);
++        }
++    }
++
++    /**
++     * Trigger CCCI to reload modem bin with desinated RIL instance
++     * @param modemType 3 : reload WG(MD_TYPE_WG)
++     *                  4 : reload TG(MD_TYPE_TG)
++     *                  5 : reload FDD CSFB(MD_TYPE_LWG)
++     *                  6 : reload TDD CSFB(MD_TYPE_LTG)
++     */
++    public static void reloadModem(CommandsInterface ci, int modemType) {
++        logd("[reloadModem]");
++        if (ci.getRadioState() == CommandsInterface.RadioState.RADIO_UNAVAILABLE) {
++            logd("Radio unavailable, can not reload modem");
++            return;
++        }
++        if (modemType == MD_TYPE_WG) {
++            ci.setTrm(14, null);
++        } else if (modemType == MD_TYPE_TG) {
++            ci.setTrm(15, null);
++        } else if (modemType == MD_TYPE_LWG) {
++            ci.setTrm(16, null);
++        } else if (modemType == MD_TYPE_LTG) {
++            ci.setTrm(17, null);
++        } else {
++            logd("Invalid modem type:" + modemType);
++        }
++    }
++
++    /**
++     * Returns current modem type
++     * @internal
++     * @return 0 : modem type is unknown
++     *         3 : switch to WG(MD_TYPE_WG)
++     *         4 : switch to TG(MD_TYPE_TG)
++     *         5 : switch to FDD CSFB(MD_TYPE_LWG)
++     *         6 : switch to TDD CSFB(MD_TYPE_LTG)
++     */
++    public static int getActiveModemType() {
++        sCurrentModemType = Integer.valueOf(
++                SystemProperties.get(TelephonyProperties.PROPERTY_ACTIVE_MD, Integer.toString(MD_TYPE_UNKNOWN)));
++
++        return sCurrentModemType;
++    }
++
++    public static void setActiveModemType(int modemType) {
++        SystemProperties.set(TelephonyProperties.PROPERTY_ACTIVE_MD, Integer.toString(modemType));
++        sCurrentModemType = modemType;
++        logd("[setActiveModemType] " + modemToString(sCurrentModemType));
++    }
++
++    public static String modemToString(int modemType) {
++        String modemString;
++        if (modemType == MD_TYPE_WG) {
++            modemString = "WG";
++        } else if (modemType == MD_TYPE_TG) {
++            modemString = "TG";
++        } else if (modemType == MD_TYPE_LWG) {
++            modemString = "FDD CSFB";
++        } else if (modemType == MD_TYPE_LTG) {
++            modemString = "TDD CSFB";
++        } else if (modemType == MD_TYPE_UNKNOWN) {
++            modemString = "UNKNOWN";
++        } else {
++            modemString = "Invalid modem type";
++        }
++
++        return modemString;
++    }
++
++    private static void logd(String msg) {
++        Rlog.d(LOG_TAG, "[MSH]" + msg);
++    }
++}
+diff --git a/src/java/com/mediatek/internal/telephony/NetworkInfoWithAcT.aidl b/src/java/com/mediatek/internal/telephony/NetworkInfoWithAcT.aidl
+new file mode 100755
+index 0000000..b604df8
+--- /dev/null
++++ b/src/java/com/mediatek/internal/telephony/NetworkInfoWithAcT.aidl
+@@ -0,0 +1,57 @@
++/* Copyright Statement:
++ *
++ * This software/firmware and related documentation ("MediaTek Software") are
++ * protected under relevant copyright laws. The information contained herein
++ * is confidential and proprietary to MediaTek Inc. and/or its licensors.
++ * Without the prior written permission of MediaTek inc. and/or its licensors,
++ * any reproduction, modification, use or disclosure of MediaTek Software,
++ * and information contained herein, in whole or in part, shall be strictly prohibited.
++ *
++ * MediaTek Inc. (C) 2010. All rights reserved.
++ *
++ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
++ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
++ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
++ * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
++ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
++ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
++ * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
++ * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
++ * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
++ * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
++ * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
++ * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
++ * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
++ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
++ * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
++ * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
++ * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
++ * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
++ */
++
++/*
++ * Copyright (C) 2008 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.mediatek.internal.telephony;
++
++/**
++ * Used to indicate that the NetworkInfo object is parcelable to aidl.
++ * This is a simple effort to make NetworkInfo parcelable rather than
++ * trying to make the conventional containing object (AsyncResult),
++ * implement parcelable.  This functionality is needed for the
++ * NetworkQueryService to fix 1128695
++ */
++parcelable NetworkInfoWithAcT;
+diff --git a/src/java/com/mediatek/internal/telephony/NetworkInfoWithAcT.java b/src/java/com/mediatek/internal/telephony/NetworkInfoWithAcT.java
+new file mode 100755
+index 0000000..12d848e
+--- /dev/null
++++ b/src/java/com/mediatek/internal/telephony/NetworkInfoWithAcT.java
+@@ -0,0 +1,201 @@
++/* Copyright Statement:
++ *
++ * This software/firmware and related documentation ("MediaTek Software") are
++ * protected under relevant copyright laws. The information contained herein
++ * is confidential and proprietary to MediaTek Inc. and/or its licensors.
++ * Without the prior written permission of MediaTek inc. and/or its licensors,
++ * any reproduction, modification, use or disclosure of MediaTek Software,
++ * and information contained herein, in whole or in part, shall be strictly prohibited.
++ *
++ * MediaTek Inc. (C) 2010. All rights reserved.
++ *
++ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
++ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
++ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
++ * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
++ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
++ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
++ * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
++ * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
++ * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
++ * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
++ * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
++ * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
++ * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
++ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
++ * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
++ * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
++ * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
++ * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
++ */
++
++/*
++ * Copyright (C) 2006 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.mediatek.internal.telephony;
++
++import android.os.Parcel;
++import android.os.Parcelable;
++
++/**
++ * Entry of preferred network list in UICC card. ex: EF_PLMNSEL
++ * {@hide}
++ * @internal
++ */
++public class NetworkInfoWithAcT implements Parcelable {
++
++    String operatorAlphaName;
++    String operatorNumeric;
++
++    int nAct;
++    int nPriority; // priority is the index of the plmn in the list.
++
++
++/**
++ * Get Operator alpha name ex: Vodafone
++ * @internal
++ */
++    public String
++    getOperatorAlphaName() {
++        return operatorAlphaName;
++    }
++
++/**
++ * Get member Operator PLMN ID ex: 53001
++ * @internal
++ */
++    public String
++    getOperatorNumeric() {
++        return operatorNumeric;
++    }
++
++/**
++ * Get access techonolgy of the PLMN. It's a bitmap value.  <bit3, bit2,bit1,bit0>  =>  < E-UTRAN_Act ,UTRAN_Act,GSM_Compact_Act ,Gsm_Act >
++ * @internal
++ */
++    public int
++    getAccessTechnology() {
++        return nAct;
++    }
++
++/**
++ * Get priority, index of the PLMN in the list
++ * @internal
++ */
++    public int
++    getPriority() {
++        return nPriority;
++    }
++
++/**
++ * Set Operator alpha name ex: Vodafone
++ *
++ * @internal
++ */
++    public void
++    setOperatorAlphaName(String operatorAlphaName) {
++        this.operatorAlphaName = operatorAlphaName;
++    }
++
++/**
++ * Set member Operator PLMN ID ex: 53001
++ * @internal
++ */
++    public void
++    setOperatorNumeric(String operatorNumeric) {
++        this.operatorNumeric = operatorNumeric;
++    }
++
++/**
++ * Set access techonolgy of the PLMN. It's a bitmap value.  <bit3, bit2,bit1,bit0>  =>  < E-UTRAN_Act ,UTRAN_Act,GSM_Compact_Act ,Gsm_Act >
++ *
++ * @internal
++ */
++    public void
++    setAccessTechnology(int nAct) {
++        this.nAct = nAct;
++    }
++
++/**
++ * Set priority, index of the PLMN in the list
++ * @internal
++ */
++    public void
++    setPriority(int nIndex) {
++        this.nPriority = nIndex;
++    }
++
++    public NetworkInfoWithAcT(String operatorAlphaLong,
++                String operatorNumeric,
++                int nAct,
++                int nPriority) {
++
++        this.operatorAlphaName = operatorAlphaLong;
++        this.operatorNumeric = operatorNumeric;
++        this.nAct = nAct;
++        this.nPriority = nPriority;
++    }
++
++    public String toString() {
++        return "NetworkInfoWithAcT " + operatorAlphaName
++                + "/" + operatorNumeric
++                + "/" + nAct
++                + "/" + nPriority;
++    }
++
++    /**
++     * Parcelable interface implemented below.
++     * This is a simple effort to make NetworkInfo parcelable rather than
++     * trying to make the conventional containing object (AsyncResult),
++     * implement parcelable.  This functionality is needed for the
++     * NetworkQueryService to fix 1128695.
++     */
++
++    public int describeContents() {
++        return 0;
++    }
++
++    /**
++     * Implement the Parcelable interface.
++     * Method to serialize a NetworkInfo object.
++     */
++    public void writeToParcel(Parcel dest, int flags) {
++        dest.writeString(operatorAlphaName);
++        dest.writeString(operatorNumeric);
++        dest.writeInt(nAct);
++        dest.writeInt(nPriority);
++    }
++
++    /**
++     * Implement the Parcelable interface
++     * Method to deserialize a NetworkInfo object, or an array thereof.
++     */
++    public static final Creator<NetworkInfoWithAcT> CREATOR =
++        new Creator<NetworkInfoWithAcT>() {
++            public NetworkInfoWithAcT createFromParcel(Parcel in) {
++                NetworkInfoWithAcT netInfoWithAct = new NetworkInfoWithAcT(
++                        in.readString(), /*operatorAlphaLong*/
++                        in.readString(), /*operatorNumeric*/
++                        in.readInt(), /*operatorNumeric*/
++                        in.readInt()); /*state*/
++                return netInfoWithAct;
++            }
++
++            public NetworkInfoWithAcT[] newArray(int size) {
++                return new NetworkInfoWithAcT[size];
++            }
++        };
++}
+diff --git a/src/java/com/mediatek/internal/telephony/NetworkManager.java b/src/java/com/mediatek/internal/telephony/NetworkManager.java
+new file mode 100755
+index 0000000..3b7c313
+--- /dev/null
++++ b/src/java/com/mediatek/internal/telephony/NetworkManager.java
+@@ -0,0 +1,101 @@
++
++package com.mediatek.internal.telephony;
++
++import android.os.Handler;
++import android.os.Message;
++import android.util.Log;
++import android.content.Context;
++
++import com.android.internal.telephony.CommandsInterface;
++
++public class NetworkManager extends Handler  {
++    static final String LOG_TAG = "GSM";
++    private static NetworkManager sNetworkManager;
++    private Context mContext;
++    private CommandsInterface[] mCi;
++    private int mPhoneCount;
++
++    protected static final int EVENT_GET_AVAILABLE_NW = 1;
++
++    public static NetworkManager init(Context context, int phoneCount, CommandsInterface[] ci) {
++        synchronized (NetworkManager.class) {
++            if (sNetworkManager == null) {
++                sNetworkManager = new NetworkManager(context, phoneCount, ci);
++            }
++            return sNetworkManager;
++        }
++    }
++
++    public static NetworkManager getInstance() {
++        return sNetworkManager;
++    }
++
++    private NetworkManager(Context context , int phoneCount, CommandsInterface[] ci) {
++
++        log("Initialize NetworkManager under airplane mode phoneCount= " + phoneCount);
++
++        mContext = context;
++        mCi = ci;
++        mPhoneCount = phoneCount;
++    }
++
++    /**
++       * To scan all available networks. i.e. PLMN list
++       * @param Message for on complete
++       * @param simId Indicate which sim(slot) to query
++       * @internal
++       */
++    public void getAvailableNetworks(int subId, Message response) {
++    /*
++        int activeSim = -1;
++        for (int i=0; i<PhoneConstants.GEMINI_SIM_NUM;++i) {
++            if (!mGeminiDataMgr.isGprsDetached(i)) {
++                activeSim = i;
++                break;
++            }
++        }
++
++        Rlog.d(LOG_TAG, "getAvailableNetworksGemini activeSIM="+activeSim);
++
++        if (activeSim == -1 || activeSim == simId ||
++                PhoneFactory.isDualTalkMode()) {
++            getPhonebyId(simId).getAvailableNetworks(response);
++        } else {
++            PhoneBase phoneBase = getPhoneBase(activeSim);
++            if (phoneBase instanceof GSMPhone) {
++                Rlog.d(LOG_TAG, "activeSim: "  + activeSim + ", simId: " + simId);
++                mActiveApnTypes = getActiveApnTypesGemini(activeSim);
++                mGeminiDataMgr.cleanupAllConnection(activeSim);
++            }
++            mGettingAvailableNetwork = true;
++            Message msg = obtainMessage(EVENT_GET_AVAILABLE_NW);
++            msg.arg1 = activeSim;
++            msg.arg2 = simId;
++            msg.obj = response;
++            mGeminiDataMgr.registerForDetached(activeSim, this, EVENT_GPRS_DETACHED, msg);
++        }
++        */
++        return;
++    }
++
++    @Override
++    public void handleMessage(Message msg) {
++        switch (msg.what) {
++            case EVENT_GET_AVAILABLE_NW:
++                synchronized (this) {
++
++                }
++                break;
++
++            default:
++                log("Unhandled message with number: " + msg.what);
++                break;
++        }
++    }
++
++    private static void log(String s) {
++        Log.d(LOG_TAG, "[NetworkManager] " + s);
++    }
++}
++
++
+diff --git a/src/java/com/mediatek/internal/telephony/RadioCapabilitySwitchUtil.java b/src/java/com/mediatek/internal/telephony/RadioCapabilitySwitchUtil.java
+new file mode 100755
+index 0000000..28c9bd0
+--- /dev/null
++++ b/src/java/com/mediatek/internal/telephony/RadioCapabilitySwitchUtil.java
+@@ -0,0 +1,310 @@
++/* Copyright Statement:
++ *
++ * This software/firmware and related documentation ("MediaTek Software") are
++ * protected under relevant copyright laws. The information contained herein is
++ * confidential and proprietary to MediaTek Inc. and/or its licensors. Without
++ * the prior written permission of MediaTek inc. and/or its licensors, any
++ * reproduction, modification, use or disclosure of MediaTek Software, and
++ * information contained herein, in whole or in part, shall be strictly
++ * prohibited.
++ *
++ * MediaTek Inc. (C) 2014. All rights reserved.
++ *
++ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
++ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
++ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER
++ * ON AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL
++ * WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR
++ * NONINFRINGEMENT. NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH
++ * RESPECT TO THE SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY,
++ * INCORPORATED IN, OR SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES
++ * TO LOOK ONLY TO SUCH THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO.
++ * RECEIVER EXPRESSLY ACKNOWLEDGES THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO
++ * OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES CONTAINED IN MEDIATEK
++ * SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE
++ * RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
++ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S
++ * ENTIRE AND CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE
++ * RELEASED HEREUNDER WILL BE, AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE
++ * MEDIATEK SOFTWARE AT ISSUE, OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE
++ * CHARGE PAID BY RECEIVER TO MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
++ *
++ * The following software/firmware and/or related documentation ("MediaTek
++ * Software") have been modified by MediaTek Inc. All revisions are subject to
++ * any receiver's applicable license agreements with MediaTek Inc.
++ */
++
++package com.mediatek.internal.telephony;
++
++import android.os.SystemProperties;
++
++import android.telephony.PhoneRatFamily;
++import android.telephony.SubscriptionManager;
++import android.telephony.TelephonyManager;
++import android.util.Log;
++
++import com.android.internal.telephony.Phone;
++import com.android.internal.telephony.PhoneConstants;
++
++import java.util.Arrays;
++
++/**
++ * Utility for capability switch.
++ *
++ */
++public class RadioCapabilitySwitchUtil {
++    private static final String LOG_TAG = "GSM";
++
++    public static final int SIM_OP_INFO_OVERSEA = 0;
++    public static final int SIM_OP_INFO_OP01 = 1;
++    public static final int SIM_OP_INFO_OP02 = 2;
++
++    public static final int SIM_TYPE_SIM = 0;
++    public static final int SIM_TYPE_USIM = 1;
++    public static final int SIM_TYPE_OTHER = 2;
++
++    public static final String MAIN_SIM_PROP = "persist.radio.simswitch.iccid";
++    private static final String PROPERTY_ICCID = "ril.iccid.sim";
++    // OP01 SIMs
++    private static final String[] PLMN_TABLE_TYPE1 = {
++        "46000", "46002", "46007", "46008", "46011",
++        // Lab test IMSI
++        "00101", "00211", "00321", "00431", "00541", "00651",
++        "00761", "00871", "00902", "01012", "01122", "01232",
++        "46004", "46602", "50270", "46003"
++    };
++
++    // non-OP01 SIMs
++    private static final String[] PLMN_TABLE_TYPE3 = {
++        "46001", "46006", "46009", "45407",
++        "46005", "45502"
++    };
++
++    /**
++     * Update current main protocol ICCID.
++     *
++     * @param mProxyPhones Phone array for all phones
++     */
++    public static void updateIccid(Phone[] mProxyPhones) {
++        for (int i = 0; i < mProxyPhones.length; i++) {
++            if ((mProxyPhones[i].getPhoneRatFamily() & PhoneRatFamily.PHONE_RAT_FAMILY_3G)
++                    == PhoneRatFamily.PHONE_RAT_FAMILY_3G) {
++                String currIccId = SystemProperties.get(PROPERTY_ICCID + (i + 1));
++                SystemProperties.set(MAIN_SIM_PROP, currIccId);
++                logd("updateIccid " + currIccId);
++                break;
++            }
++        }
++    }
++
++    /**
++     * Get all SIMs operator and type.
++     *
++     * @param simOpInfo SIM operator info
++     * @param simType SIM type
++     */
++    public static void getSimInfo(int[] simOpInfo, int[] simType) {
++        String[] strMnc = new String[simOpInfo.length];
++        String[] strSimType = new String[simOpInfo.length];
++        String propStr;
++
++        for (int i = 0; i < simOpInfo.length; i++) {
++            if (i == 0) {
++                propStr = "gsm.ril.uicctype";
++            } else {
++                propStr = "gsm.ril.uicctype." + (i + 1);
++            }
++            strSimType[i] = SystemProperties.get(propStr, "");
++            if (strSimType[i].equals("SIM")) {
++                simType[i] = RadioCapabilitySwitchUtil.SIM_TYPE_SIM;
++            } else if (strSimType[i].equals("USIM")) {
++                simType[i] = RadioCapabilitySwitchUtil.SIM_TYPE_USIM;
++            } else {
++                simType[i] = RadioCapabilitySwitchUtil.SIM_TYPE_OTHER;
++            }
++            logd("SimType[" + i + "]= " + strSimType[i] + ", simType[" + i + "]=" + simType[i]);
++            final int tmpMnc = TelephonyManager.getTelephonyProperty("gsm.sim.operator.numeric",
++                    SubscriptionManager.getSubId(i)[0], -1);  // getSubIdUsingPhoneId not implemented
++			strMnc[i] = tmpMnc < 0 ? "" : Integer.toString(tmpMnc);
++            logd("strMnc[" + i + "] from operator.numeric:" + strMnc[i]);
++            if (strMnc[i].equals("")) {
++                if (i == 0) {
++                    propStr = "gsm.sim.ril.mcc.mnc";
++                } else {
++                    propStr = "gsm.sim.ril.mcc.mnc." + (i + 1);
++                }
++                strMnc[i] = SystemProperties.get(propStr, "");
++                logd("strMnc[" + i + "] from ril.mcc.mnc:" + strMnc[i]);
++            }
++            for (String mccmnc : PLMN_TABLE_TYPE1) {
++                if (strMnc[i].equals(mccmnc)) {
++                    simOpInfo[i] = SIM_OP_INFO_OP01;
++					// MTK, just why didn't you break
++					break;
++                }
++            }
++            for (String mccmnc : PLMN_TABLE_TYPE3) {
++                if (strMnc[i].equals(mccmnc)) {
++                    simOpInfo[i] = SIM_OP_INFO_OP02;
++					break;
++                }
++            }
++            logd("strMnc[" + i + "]= " + strMnc[i] + ", simOpInfo[" + i + "]=" + simOpInfo[i]);
++        }
++        logd("getSimInfo(simOpInfo): " + Arrays.toString(simOpInfo));
++        logd("getSimInfo(simType): " + Arrays.toString(simType));
++    }
++
++    /**
++     * Check if need to switch capability.
++     *
++     * @param mProxyPhones Phone array for all phones
++     * @param rats new capability for phones
++     * @return ture or false
++     */
++    public static boolean isNeedSwitchInOpPackage(Phone[] mProxyPhones, PhoneRatFamily[] rats) {
++        String operatorSpec = SystemProperties.get("ro.operator.optr", "");
++        int[] simOpInfo = new int[mProxyPhones.length];
++        int[] simType = new int[mProxyPhones.length];
++
++        logd("Operator Spec:" + operatorSpec);
++		// TODO: fix OP01 and OP02
++		return true;
++
++		/*
++        if (operatorSpec.equals("OP02")) {
++            // disable capability switch in op02 package
++            return false;
++        } else if (operatorSpec.equals("OP01")) {
++            // handle later
++        } else {
++            // OM package, default enable
++            return true;
++        }
++        getSimInfo(simOpInfo, simType);
++        // find target phone ID
++        int targetPhoneId;
++        for (targetPhoneId = 0; targetPhoneId < rats.length; targetPhoneId++) {
++            if ((rats[targetPhoneId].getRatFamily() & PhoneRatFamily.PHONE_RAT_FAMILY_3G)
++                == PhoneRatFamily.PHONE_RAT_FAMILY_3G) {
++                break;
++            }
++        }
++        if (operatorSpec.equals("OP01")) {
++            return checkOp01(targetPhoneId, simOpInfo, simType);
++        } else {
++            return true;
++        }
++		*/
++    }
++
++    /**
++     * Check if any higher priority SIM exists.
++     *
++     * @param curId current phone ID uses main capability
++     * @param op01Usim array to indicate if op01 USIM
++     * @param op01Sim array to indicate if op01 SIM
++     * @param overseaUsim array to indicate if oversea USIM
++     * @param overseaSim array to indicate if oversea SIM
++     * @return higher priority SIM ID
++     */
++	/*
++    public static int getHigherPrioritySimForOp01(int curId, boolean[] op01Usim, boolean[] op01Sim
++            , boolean[] overseaUsim, boolean[] overseaSim) {
++        int targetSim = -1;
++        int phoneNum = op01Usim.length;
++
++        if (op01Usim[curId] == true) {
++            return curId;
++        }
++        for (int i = 0; i < phoneNum; i++) {
++            if (op01Usim[i] == true) {
++                targetSim = i;
++            }
++        }
++        if (targetSim != -1 || op01Sim[curId] == true) {
++            return targetSim;
++        }
++        for (int i = 0; i < phoneNum; i++) {
++            if (op01Sim[i] == true) {
++                targetSim = i;
++            }
++        }
++        if (targetSim != -1 || overseaUsim[curId] == true) {
++            return targetSim;
++        }
++        for (int i = 0; i < phoneNum; i++) {
++            if (overseaUsim[i] == true) {
++                targetSim = i;
++            }
++        }
++        if (targetSim != -1 || overseaSim[curId] == true) {
++            return targetSim;
++        }
++        for (int i = 0; i < phoneNum; i++) {
++            if (overseaSim[i] == true) {
++                targetSim = i;
++            }
++        }
++        return targetSim;
++    }
++
++    private static boolean checkOp01(int targetPhoneId, int[] simOpInfo, int[] simType) {
++        int curPhoneId = Integer.valueOf(
++                SystemProperties.get(PhoneConstants.CAPABILITY_SWITCH_PROP, "1")) - 1;
++
++        logd("checkOp01 : curPhoneId: " + curPhoneId);
++        if (simOpInfo[targetPhoneId] == SIM_OP_INFO_OP01) {
++            if (simType[targetPhoneId] == SIM_TYPE_SIM) {
++                if ((simOpInfo[curPhoneId] == SIM_OP_INFO_OP01)
++                    && simType[curPhoneId] != SIM_TYPE_SIM) {
++                    logd("checkOp01 : case 1,2; stay in current phone");
++                    return false;
++                } else {
++                    // case 3: op01-SIM + op01-SIM
++                    // case 4: op01-SIM + others
++                    logd("checkOp01 : case 3,4");
++                    return true;
++                }
++            } else { // USIM, ISIM...
++                // case 1: op01-USIM + op01-USIM
++                // case 2: op01-USIM + others
++                logd("checkOp01 : case 1,2");
++                return true;
++            }
++        } else if (simOpInfo[targetPhoneId] == SIM_OP_INFO_OVERSEA) {
++            if (simOpInfo[curPhoneId] == SIM_OP_INFO_OP01) {
++                logd("checkOp01 : case 1,2,3,4; stay in current phone");
++                return false;
++            } else if (simType[targetPhoneId] == SIM_TYPE_SIM) {
++                if ((simOpInfo[curPhoneId] == SIM_OP_INFO_OVERSEA)
++                    && simType[curPhoneId] != SIM_TYPE_SIM) {
++                    logd("checkOp01 : case 5,6; stay in current phone");
++                    return false;
++                } else {
++                    // case 7: non-China SIM + non-China SIM
++                    // case 8: non-China SIM + others
++                    logd("checkOp01 : case 7,8");
++                    return true;
++                }
++            } else { // USIM, ISIM...
++                // case 5: non-China USIM + non-China USIM
++                // case 6: non-China USIM + others
++                logd("checkOp01 : case 5,6");
++                return true;
++            }
++        } else {
++            // case 9: non-op01 USIM/SIM + non-op01 USIM/SIM
++            logd("checkOp01 : case 9");
++            return false;
++        }
++    }
++	*/
++
++    private static void logd(String s) {
++        Log.d(LOG_TAG, "[RadioCapSwitchUtil] " + s);
++    }
++}
++
++
+diff --git a/src/java/com/mediatek/internal/telephony/worldphone/IWorldPhone.java b/src/java/com/mediatek/internal/telephony/worldphone/IWorldPhone.java
+new file mode 100755
+index 0000000..94b065e
+--- /dev/null
++++ b/src/java/com/mediatek/internal/telephony/worldphone/IWorldPhone.java
+@@ -0,0 +1,86 @@
++/* Copyright Statement:
++ *
++ * This software/firmware and related documentation ("MediaTek Software") are
++ * protected under relevant copyright laws. The information contained herein
++ * is confidential and proprietary to MediaTek Inc. and/or its licensors.
++ * Without the prior written permission of MediaTek inc. and/or its licensors,
++ * any reproduction, modification, use or disclosure of MediaTek Software,
++ * and information contained herein, in whole or in part, shall be strictly prohibited.
++ *
++ * MediaTek Inc. (C) 2010. All rights reserved.
++ *
++ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
++ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
++ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
++ * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
++ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
++ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
++ * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
++ * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
++ * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
++ * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
++ * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
++ * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
++ * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
++ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
++ * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
++ * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
++ * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
++ * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
++ *
++ * The following software/firmware and/or related documentation ("MediaTek Software")
++ * have been modified by MediaTek Inc. All revisions are subject to any receiver's
++ * applicable license agreements with MediaTek Inc.
++ */
++package com.mediatek.internal.telephony.worldphone;
++
++public interface IWorldPhone {
++    public static final String LOG_TAG = "PHONE";
++
++    public static final int POLICY_OM       = 0;
++    public static final int POLICY_OP01     = 1;
++
++    static final int SELECTION_MODE_MANUAL = 0;
++    static final int SELECTION_MODE_AUTO   = 1;
++
++    static final int UNKNOWN_USER = 0;
++    static final int TYPE1_USER   = 1;
++    static final int TYPE2_USER   = 2;
++    static final int TYPE3_USER   = 3;
++
++    static final int REGION_UNKNOWN  = 0;
++    static final int REGION_DOMESTIC = 1;
++    static final int REGION_FOREIGN  = 2;
++
++    static final int EVENT_RADIO_ON_1 = 0;
++    static final int EVENT_RADIO_ON_2 = 1;
++    static final int EVENT_REG_PLMN_CHANGED_1 = 10;
++    static final int EVENT_REG_PLMN_CHANGED_2 = 11;
++    static final int EVENT_REG_SUSPENDED_1    = 30;
++    static final int EVENT_REG_SUSPENDED_2    = 31;
++    static final int EVENT_STORE_MODEM_TYPE   = 40;
++    static final int EVENT_QUERY_MODEM_TYPE   = 50;
++    static final int EVENT_INVALID_SIM_NOTIFY_1 = 60;
++    static final int EVENT_INVALID_SIM_NOTIFY_2 = 61;
++
++    static final int DEFAULT_MAJOR_SIM    = 0;
++    static final int MAJOR_CAPABILITY_OFF = -1;
++    static final int AUTO_SWITCH_OFF      = -98;
++    static final int MAJOR_SIM_UNKNOWN    = -99;
++
++    static final int CAMP_ON_NOT_DENIED                     = 0;
++    static final int CAMP_ON_DENY_REASON_UNKNOWN            = 1;
++    static final int CAMP_ON_DENY_REASON_NEED_SWITCH_TO_FDD = 2;
++    static final int CAMP_ON_DENY_REASON_NEED_SWITCH_TO_TDD = 3;
++    static final int CAMP_ON_DENY_REASON_DOMESTIC_FDD_MD    = 4;
++
++    static final int ICC_CARD_TYPE_UNKNOWN = 0;
++    static final int ICC_CARD_TYPE_SIM     = 1;
++    static final int ICC_CARD_TYPE_USIM    = 2;
++
++    static final String NO_OP = "OM";
++    static final String ACTION_SHUTDOWN_IPO = "android.intent.action.ACTION_SHUTDOWN_IPO";
++    static final String ACTION_ADB_SWITCH_MODEM = "android.intent.action.ACTION_ADB_SWITCH_MODEM";
++
++    public void setModemSelectionMode(int mode, int modemType);
++}
+diff --git a/src/java/com/mediatek/internal/telephony/worldphone/WorldPhoneOm.java b/src/java/com/mediatek/internal/telephony/worldphone/WorldPhoneOm.java
+new file mode 100755
+index 0000000..c517ad8
+--- /dev/null
++++ b/src/java/com/mediatek/internal/telephony/worldphone/WorldPhoneOm.java
+@@ -0,0 +1,912 @@
++/* Copyright Statement:
++ *
++ * This software/firmware and related documentation ("MediaTek Software") are
++ * protected under relevant copyright laws. The information contained herein
++ * is confidential and proprietary to MediaTek Inc. and/or its licensors.
++ * Without the prior written permission of MediaTek inc. and/or its licensors,
++ * any reproduction, modification, use or disclosure of MediaTek Software,
++ * and information contained herein, in whole or in part, shall be strictly prohibited.
++ *
++ * MediaTek Inc. (C) 2010. All rights reserved.
++ *
++ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
++ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
++ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
++ * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
++ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
++ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
++ * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
++ * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
++ * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
++ * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
++ * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
++ * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
++ * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
++ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
++ * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
++ * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
++ * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
++ * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
++ *
++ * The following software/firmware and/or related documentation ("MediaTek Software")
++ * have been modified by MediaTek Inc. All revisions are subject to any receiver's
++ * applicable license agreements with MediaTek Inc.
++ */
++package com.mediatek.internal.telephony.worldphone;
++
++import android.content.BroadcastReceiver;
++import android.content.Context;
++import android.content.Intent;
++import android.content.IntentFilter;
++import android.os.AsyncResult;
++import android.os.Handler;
++import android.os.Message;
++import android.os.SystemProperties;
++import android.provider.Settings;
++import android.telephony.ServiceState;
++import android.telephony.Rlog;
++
++import com.android.internal.telephony.CommandsInterface;
++import com.android.internal.telephony.IccCardConstants;
++import com.android.internal.telephony.Phone;
++import com.android.internal.telephony.PhoneBase;
++import com.android.internal.telephony.PhoneConstants;
++import com.android.internal.telephony.PhoneFactory;
++import com.android.internal.telephony.PhoneProxy;
++import com.android.internal.telephony.TelephonyIntents;
++import com.android.internal.telephony.uicc.IccRecords;
++import com.android.internal.telephony.uicc.UiccController;
++
++import com.mediatek.internal.telephony.ModemSwitchHandler;
++
++/**
++ *@hide
++ */
++public class WorldPhoneOm extends Handler implements IWorldPhone {
++    private static Object sLock = new Object();
++    private static final int PROJECT_SIM_NUM = WorldPhoneUtil.getProjectSimNum();
++    private static final int[] FDD_STANDBY_TIMER = {
++        60
++    };
++    private static final int[] TDD_STANDBY_TIMER = {
++        40
++    };
++    private static final String[] PLMN_TABLE_TYPE1 = {
++        "46000", "46002", "46007", "46008", "46011"
++    };
++    private static final String[] PLMN_TABLE_TYPE3 = {
++        "46001", "46006", "46009", "45407",
++        "46003", "46005", "45502"
++    };
++    private static final String[] MCC_TABLE_DOMESTIC = {
++        "460"
++    };
++
++    private static Context sContext = null;
++    private static Phone sDefultPhone = null;
++    private static Phone[] sProxyPhones = null;
++    private static Phone[] sActivePhones = new Phone[PROJECT_SIM_NUM];
++    private static CommandsInterface[] sCi = new CommandsInterface[PROJECT_SIM_NUM];
++    private static String sOperatorSpec;
++    private static String sPlmnSs;
++    private static String sLastPlmn;
++    private static String[] sImsi = new String[PROJECT_SIM_NUM];
++    private static String[] sNwPlmnStrings;
++    private static int sVoiceRegState;
++    private static int sDataRegState;
++    // private static int sRilVoiceRegState;
++    // private static int sRilDataRegState;
++    private static int sRilVoiceRadioTechnology;
++    private static int sRilDataRadioTechnology;
++    private static int sUserType;
++    private static int sRegion;
++    private static int sDenyReason;
++    private static int sSuspendId;
++    private static int sMajorSim;
++    private static int sDefaultBootUpModem = ModemSwitchHandler.MD_TYPE_UNKNOWN;
++    private static int[] sIccCardType = new int[PROJECT_SIM_NUM];
++    private static boolean sVoiceCapable;
++    private static boolean[] sIsInvalidSim = new boolean[PROJECT_SIM_NUM];
++    private static boolean[] sSuspendWaitImsi = new boolean[PROJECT_SIM_NUM];
++    private static boolean[] sFirstSelect = new boolean[PROJECT_SIM_NUM];
++    private static UiccController sUiccController = null;
++    private static IccRecords[] sIccRecordsInstance = new IccRecords[PROJECT_SIM_NUM];
++    private static ServiceState sServiceState;
++    private static ModemSwitchHandler sModemSwitchHandler = null;
++    private static int sTddStandByCounter;
++    private static int sFddStandByCounter;
++    private static boolean sWaitInTdd;
++    private static boolean sWaitInFdd;
++
++    public WorldPhoneOm() {
++        logd("Constructor invoked");
++        sOperatorSpec = SystemProperties.get("ro.operator.optr", NO_OP);
++        logd("Operator Spec:" + sOperatorSpec);
++        sDefultPhone = PhoneFactory.getDefaultPhone();
++        sProxyPhones = PhoneFactory.getPhones();
++        for (int i = 0; i < PROJECT_SIM_NUM; i++) {
++            sActivePhones[i] = ((PhoneProxy) sProxyPhones[i]).getActivePhone();
++            sCi[i] = ((PhoneBase) sActivePhones[i]).mCi;
++        }
++        for (int i = 0; i < PROJECT_SIM_NUM; i++) {
++            sCi[i].setOnPlmnChangeNotification(this, EVENT_REG_PLMN_CHANGED_1 + i, null);
++            sCi[i].setOnRegistrationSuspended(this, EVENT_REG_SUSPENDED_1 + i, null);
++            sCi[i].registerForOn(this, EVENT_RADIO_ON_1 + i, null);
++            // sCi[i].setInvalidSimInfo(this, EVENT_INVALID_SIM_NOTIFY_1 + i, null);
++        }
++
++        sModemSwitchHandler = new ModemSwitchHandler();
++        logd(ModemSwitchHandler.modemToString(ModemSwitchHandler.getActiveModemType()));
++
++        IntentFilter intentFilter = new IntentFilter(TelephonyIntents.ACTION_SIM_STATE_CHANGED);
++        intentFilter.addAction(TelephonyIntents.ACTION_SERVICE_STATE_CHANGED);
++        intentFilter.addAction(Intent.ACTION_AIRPLANE_MODE_CHANGED);
++        intentFilter.addAction(ACTION_SHUTDOWN_IPO);
++        intentFilter.addAction(ACTION_ADB_SWITCH_MODEM);
++        intentFilter.addAction(TelephonyIntents.ACTION_SET_PHONE_RAT_FAMILY_DONE);
++        if (sDefultPhone != null) {
++            sContext = sDefultPhone.getContext();
++        } else {
++            logd("DefaultPhone = null");
++        }
++        sVoiceCapable = sContext.getResources().getBoolean(com.android.internal.R.bool.config_voice_capable);
++        sContext.registerReceiver(mWorldPhoneReceiver, intentFilter);
++
++        sTddStandByCounter = 0;
++        sFddStandByCounter = 0;
++        sWaitInTdd = false;
++        sWaitInFdd = false;
++        sRegion = REGION_UNKNOWN;
++        sLastPlmn = null;
++        resetAllProperties();
++        if (WorldPhoneUtil.getModemSelectionMode() == SELECTION_MODE_MANUAL) {
++            logd("Auto select disable");
++            sMajorSim = AUTO_SWITCH_OFF;
++            // Settings.Global.putInt(sContext.getContentResolver(),
++            //         Settings.Global.WORLD_PHONE_AUTO_SELECT_MODE, SELECTION_MODE_MANUAL);
++        } else {
++            logd("Auto select enable");
++            // Settings.Global.putInt(sContext.getContentResolver(),
++            //         Settings.Global.WORLD_PHONE_AUTO_SELECT_MODE, SELECTION_MODE_AUTO);
++        }
++        // FDD_STANDBY_TIMER[sFddStandByCounter] = Settings.Global.getInt(
++        //         sContext.getContentResolver(), Settings.Global.WORLD_PHONE_FDD_MODEM_TIMER, FDD_STANDBY_TIMER[sFddStandByCounter]);
++        // Settings.Global.putInt(sContext.getContentResolver(),
++        //         Settings.Global.WORLD_PHONE_FDD_MODEM_TIMER, FDD_STANDBY_TIMER[sFddStandByCounter]);
++        logd("FDD_STANDBY_TIMER = " + FDD_STANDBY_TIMER[sFddStandByCounter] + "s");
++        logd("sDefaultBootUpModem = " + sDefaultBootUpModem);
++    }
++
++    private final BroadcastReceiver mWorldPhoneReceiver = new  BroadcastReceiver() {
++        public void onReceive(Context context, Intent intent) {
++            logd("[Receiver]+");
++            String action = intent.getAction();
++            logd("Action: " + action);
++            int slotId;
++            if (action.equals(TelephonyIntents.ACTION_SIM_STATE_CHANGED)) {
++                String simStatus = intent.getStringExtra(IccCardConstants.INTENT_KEY_ICC_STATE);
++                slotId = intent.getIntExtra(PhoneConstants.SLOT_KEY, PhoneConstants.SIM_ID_1);
++                logd("slotId: " + slotId + " simStatus: " + simStatus);
++                if (simStatus.equals(IccCardConstants.INTENT_VALUE_ICC_IMSI)) {
++                    if (sMajorSim == MAJOR_SIM_UNKNOWN) {
++                        sMajorSim = WorldPhoneUtil.getMajorSim();
++                    }
++                    sUiccController = UiccController.getInstance();
++                    if (sUiccController != null) {
++                        sIccRecordsInstance[slotId] = sUiccController.getIccRecords(slotId, UiccController.APP_FAM_3GPP);
++                    } else {
++                        logd("Null sUiccController");
++                        return;
++                    }
++                    if (sIccRecordsInstance[slotId] != null) {
++                        sImsi[slotId] = sIccRecordsInstance[slotId].getIMSI();
++                    } else {
++                        logd("Null sIccRecordsInstance");
++                        return;
++                    }
++                    sIccCardType[slotId] = getIccCardType(slotId);
++                    logd("sImsi[" + slotId + "]:" + sImsi[slotId]);
++                    if (slotId == sMajorSim) {
++                        logd("Major SIM");
++                        sUserType = getUserType(sImsi[slotId]);
++                        if (sFirstSelect[slotId]) {
++                            sFirstSelect[slotId] = false;
++                            if (sUserType == TYPE1_USER) {
++                                if (sRegion == REGION_DOMESTIC) {
++                                    handleSwitchModem(ModemSwitchHandler.MD_TYPE_TDD);
++                                } else if (sRegion == REGION_FOREIGN) {
++                                    handleSwitchModem(ModemSwitchHandler.MD_TYPE_FDD);
++                                } else {
++                                    logd("Region unknown");
++                                }
++                            } else if (sUserType == TYPE2_USER || sUserType == TYPE3_USER) {
++                                handleSwitchModem(ModemSwitchHandler.MD_TYPE_FDD);
++                            }
++                        }
++                        if (sSuspendWaitImsi[slotId]) {
++                            sSuspendWaitImsi[slotId] = false;
++                            logd("IMSI fot slot" + slotId + " now ready, resuming PLMN:"
++                                    + sNwPlmnStrings[0] + " with ID:" + sSuspendId);
++                            resumeCampingProcedure(slotId);
++                        }
++                    } else {
++                        logd("Not major SIM");
++                        getUserType(sImsi[slotId]);
++                    }
++                } else if (simStatus.equals(IccCardConstants.INTENT_VALUE_ICC_ABSENT)) {
++                    sLastPlmn = null;
++                    sImsi[slotId] = "";
++                    sFirstSelect[slotId] = true;
++                    sIsInvalidSim[slotId] = false;
++                    sSuspendWaitImsi[slotId] = false;
++                    sIccCardType[slotId] = ICC_CARD_TYPE_UNKNOWN;
++                    if (slotId == sMajorSim) {
++                        logd("Major SIM removed, no world phone service");
++                        removeModemStandByTimer();
++                        sUserType = UNKNOWN_USER;
++                        sDenyReason = CAMP_ON_DENY_REASON_UNKNOWN;
++                        sMajorSim = MAJOR_SIM_UNKNOWN;
++                    } else {
++                        logd("SIM" + slotId + " is not major SIM");
++                    }
++                }
++            } else if (action.equals(TelephonyIntents.ACTION_SERVICE_STATE_CHANGED)) {
++                sServiceState = ServiceState.newFromBundle(intent.getExtras());
++                if (sServiceState != null) {
++                    slotId = intent.getIntExtra(PhoneConstants.SLOT_KEY, PhoneConstants.SIM_ID_1);
++                    sPlmnSs = sServiceState.getOperatorNumeric();
++                    sVoiceRegState = sServiceState.getVoiceRegState();
++                    // sRilVoiceRegState = sServiceState.getRilVoiceRegState();
++                    sRilVoiceRadioTechnology = sServiceState.getRilVoiceRadioTechnology();
++                    sDataRegState = sServiceState.getDataRegState();
++                    // sRilDataRegState = sServiceState.getRilDataRegState();
++                    sRilDataRadioTechnology = sServiceState.getRilDataRadioTechnology();
++                    logd("slotId: " + slotId + ", " + WorldPhoneUtil.iccCardTypeToString(sIccCardType[slotId]));
++                    logd("sMajorSim: " + sMajorSim);
++                    logd(ModemSwitchHandler.modemToString(ModemSwitchHandler.getActiveModemType()));
++                    logd("sPlmnSs: " + sPlmnSs);
++                    logd("sVoiceRegState: " + WorldPhoneUtil.stateToString(sVoiceRegState));
++                    // logd("sRilVoiceRegState: " + WorldPhoneUtil.regStateToString(sRilVoiceRegState));
++                    logd("sRilVoiceRadioTech: " + sServiceState.rilRadioTechnologyToString(sRilVoiceRadioTechnology));
++                    logd("sDataRegState: " + WorldPhoneUtil.stateToString(sDataRegState));
++                    // logd("sRilDataRegState: " + WorldPhoneUtil.regStateToString(sRilDataRegState));
++                    logd("sRilDataRadioTech: " + sServiceState.rilRadioTechnologyToString(sRilDataRadioTechnology));
++                    if (slotId == sMajorSim) {
++                        if (isNoService()) {
++                            handleNoService();
++                        } else if (isInService()) {
++                            sLastPlmn = sPlmnSs;
++                            removeModemStandByTimer();
++                        }
++                    }
++                } else {
++                    logd("Null sServiceState");
++                }
++            } else if (action.equals(ACTION_SHUTDOWN_IPO)) {
++                if (sDefaultBootUpModem == ModemSwitchHandler.MD_TYPE_FDD) {
++                    if (WorldPhoneUtil.isLteSupport()) {
++                        ModemSwitchHandler.reloadModem(sCi[PhoneConstants.SIM_ID_1], ModemSwitchHandler.MD_TYPE_LWG);
++                        logd("Reload to FDD CSFB modem");
++                    } else {
++                        ModemSwitchHandler.reloadModem(sCi[PhoneConstants.SIM_ID_1], ModemSwitchHandler.MD_TYPE_WG);
++                        logd("Reload to WG modem");
++                    }
++                } else if (sDefaultBootUpModem == ModemSwitchHandler.MD_TYPE_TDD) {
++                    if (WorldPhoneUtil.isLteSupport()) {
++                        ModemSwitchHandler.reloadModem(sCi[PhoneConstants.SIM_ID_1], ModemSwitchHandler.MD_TYPE_LTG);
++                        logd("Reload to TDD CSFB modem");
++                    } else {
++                        ModemSwitchHandler.reloadModem(sCi[PhoneConstants.SIM_ID_1], ModemSwitchHandler.MD_TYPE_TG);
++                        logd("Reload to TG modem");
++                    }
++                }
++            } else if (action.equals(ACTION_ADB_SWITCH_MODEM)) {
++                int toModem = intent.getIntExtra(TelephonyIntents.EXTRA_MD_TYPE, ModemSwitchHandler.MD_TYPE_UNKNOWN);
++                logd("toModem: " + toModem);
++                if (toModem == ModemSwitchHandler.MD_TYPE_WG
++                        || toModem == ModemSwitchHandler.MD_TYPE_TG
++                        || toModem == ModemSwitchHandler.MD_TYPE_LWG
++                        || toModem == ModemSwitchHandler.MD_TYPE_LTG) {
++                    setModemSelectionMode(IWorldPhone.SELECTION_MODE_MANUAL, toModem);
++                } else {
++                    setModemSelectionMode(IWorldPhone.SELECTION_MODE_AUTO, toModem);
++                }
++            } else if (action.equals(Intent.ACTION_AIRPLANE_MODE_CHANGED)) {
++                if (intent.getBooleanExtra("state", false) == false) {
++                    logd("Leave flight mode");
++                    sLastPlmn = null;
++                    for (int i = 0; i < PROJECT_SIM_NUM; i++) {
++                        sIsInvalidSim[i] = false;
++                    }
++                } else {
++                    logd("Enter flight mode");
++                    for (int i = 0; i < PROJECT_SIM_NUM; i++) {
++                        sFirstSelect[i] = true;
++                    }
++                }
++            } else if (action.equals(TelephonyIntents.ACTION_SET_PHONE_RAT_FAMILY_DONE)) {
++                if (sMajorSim != AUTO_SWITCH_OFF) {
++                    sMajorSim = WorldPhoneUtil.getMajorSim();
++                }
++                handleSimSwitched();
++            }
++            logd("[Receiver]-");
++        }
++    };
++
++    public void handleMessage(Message msg) {
++        AsyncResult ar = (AsyncResult) msg.obj;
++        switch (msg.what) {
++            case EVENT_RADIO_ON_1:
++                logd("handleMessage : <EVENT_RADIO_ON>");
++                handleRadioOn(PhoneConstants.SIM_ID_1);
++                break;
++            case EVENT_REG_PLMN_CHANGED_1:
++                logd("handleMessage : <EVENT_REG_PLMN_CHANGED>");
++                handlePlmnChange(ar, PhoneConstants.SIM_ID_1);
++                break;
++            case EVENT_REG_SUSPENDED_1:
++                logd("handleMessage : <EVENT_REG_SUSPENDED>");
++                handleRegistrationSuspend(ar, PhoneConstants.SIM_ID_1);
++                break;
++            case EVENT_RADIO_ON_2:
++                logd("handleMessage : <EVENT_RADIO_ON>");
++                handleRadioOn(PhoneConstants.SIM_ID_2);
++                break;
++            case EVENT_REG_PLMN_CHANGED_2:
++                logd("handleMessage : <EVENT_REG_PLMN_CHANGED>");
++                handlePlmnChange(ar, PhoneConstants.SIM_ID_2);
++                break;
++            case EVENT_REG_SUSPENDED_2:
++                logd("handleMessage : <EVENT_REG_SUSPENDED>");
++                handleRegistrationSuspend(ar, PhoneConstants.SIM_ID_2);
++                break;
++            case EVENT_INVALID_SIM_NOTIFY_1:
++                logd("handleMessage : <EVENT_INVALID_SIM_NOTIFY>");
++                handleInvalidSimNotify(PhoneConstants.SIM_ID_1, ar);
++                break;
++            case EVENT_INVALID_SIM_NOTIFY_2:
++                logd("handleMessage : <EVENT_INVALID_SIM_NOTIFY>");
++                handleInvalidSimNotify(PhoneConstants.SIM_ID_2, ar);
++                break;
++            default:
++                logd("Unknown msg:" + msg.what);
++        }
++    }
++
++    private void handleRadioOn(int slotId) {
++        logd("Slot" + slotId);
++        if (sMajorSim == MAJOR_SIM_UNKNOWN) {
++            sMajorSim = WorldPhoneUtil.getMajorSim();
++        }
++    }
++
++    private void handlePlmnChange(AsyncResult ar, int slotId) {
++        logd("Slot" + slotId);
++        if (sMajorSim == MAJOR_SIM_UNKNOWN) {
++            sMajorSim = WorldPhoneUtil.getMajorSim();
++        }
++        if (ar.exception == null && ar.result != null) {
++            String[] plmnString = (String[]) ar.result;
++            if (slotId == sMajorSim) {
++                sNwPlmnStrings = plmnString;
++            }
++            for (int i = 0; i < plmnString.length; i++) {
++                logd("plmnString[" + i + "]=" + plmnString[i]);
++            }
++            if (sMajorSim == slotId && sUserType == TYPE1_USER
++                    && sDenyReason != CAMP_ON_DENY_REASON_NEED_SWITCH_TO_FDD) {
++                searchForDesignateService(plmnString[0]);
++            }
++            // To speed up performance in foreign countries, once get PLMN(no matter which slot)
++            // determine region right away and switch modem type if needed
++            sRegion = getRegion(plmnString[0]);
++            if (sUserType != TYPE3_USER && sRegion == REGION_FOREIGN
++                    && sMajorSim != AUTO_SWITCH_OFF && sMajorSim != MAJOR_CAPABILITY_OFF) {
++                handleSwitchModem(ModemSwitchHandler.MD_TYPE_FDD);
++            }
++        } else {
++            logd("AsyncResult is wrong " + ar.exception);
++        }
++    }
++
++    private void handleRegistrationSuspend(AsyncResult ar, int slotId) {
++        logd("Slot" + slotId);
++        if (ar.exception == null && ar.result != null) {
++            sSuspendId = ((int[]) ar.result)[0];
++            logd("Suspending with Id=" + sSuspendId);
++            if (sMajorSim == slotId) {
++                if (sUserType != UNKNOWN_USER) {
++                    resumeCampingProcedure(slotId);
++                } else {
++                    sSuspendWaitImsi[slotId] = true;
++                    logd("User type unknown, wait for IMSI");
++                }
++            } else {
++                logd("Not major slot, camp on OK");
++                sCi[slotId].setResumeRegistration(sSuspendId, null);
++            }
++        } else {
++            logd("AsyncResult is wrong " + ar.exception);
++        }
++    }
++
++    private void handleInvalidSimNotify(int slotId, AsyncResult ar) {
++        logd("Slot" + slotId);
++        if (ar.exception == null && ar.result != null) {
++            String[] invalidSimInfo = (String[]) ar.result;
++            String plmn = invalidSimInfo[0];
++            int cs_invalid = Integer.parseInt(invalidSimInfo[1]);
++            int ps_invalid = Integer.parseInt(invalidSimInfo[2]);
++            int cause = Integer.parseInt(invalidSimInfo[3]);
++            int testMode = -1;
++            testMode = SystemProperties.getInt("gsm.gcf.testmode", 0);
++            if (testMode != 0) {
++                logd("Invalid SIM notified during test mode: " + testMode);
++                return;
++            }
++            logd("testMode:" + testMode + ", cause: " + cause + ", cs_invalid: " + cs_invalid + ", ps_invalid: " + ps_invalid + ", plmn: " + plmn);
++            if (sVoiceCapable && cs_invalid == 1) {
++                if (sLastPlmn == null) {
++                    logd("CS reject, invalid SIM");
++                    sIsInvalidSim[slotId] = true;
++                    return;
++                }
++            }
++            if (ps_invalid == 1) {
++                if (sLastPlmn == null) {
++                    logd("PS reject, invalid SIM");
++                    sIsInvalidSim[slotId] = true;
++                    return;
++                }
++            }
++        } else {
++            logd("AsyncResult is wrong " + ar.exception);
++        }
++    }
++
++    private void handleSwitchModem(int toModem) {
++        if (sIsInvalidSim[WorldPhoneUtil.getMajorSim()]
++                && WorldPhoneUtil.getModemSelectionMode() == SELECTION_MODE_AUTO) {
++            logd("Invalid SIM, switch not executed!");
++            return;
++        }
++        if (toModem == ModemSwitchHandler.MD_TYPE_TDD) {
++            if (WorldPhoneUtil.isLteSupport()) {
++                toModem = ModemSwitchHandler.MD_TYPE_LTG;
++            } else {
++                toModem = ModemSwitchHandler.MD_TYPE_TG;
++            }
++        } else if (toModem == ModemSwitchHandler.MD_TYPE_FDD) {
++            if (WorldPhoneUtil.isLteSupport()) {
++                toModem = ModemSwitchHandler.MD_TYPE_LWG;
++            } else {
++                toModem = ModemSwitchHandler.MD_TYPE_WG;
++            }
++        }
++        if (sMajorSim == AUTO_SWITCH_OFF) {
++            logd("Storing modem type: " + toModem);
++            sCi[PhoneConstants.SIM_ID_1].storeModemType(toModem, null);
++        } else {
++            if (sDefaultBootUpModem == ModemSwitchHandler.MD_TYPE_UNKNOWN) {
++                logd("Storing modem type: " + toModem);
++                sCi[PhoneConstants.SIM_ID_1].storeModemType(toModem, null);
++            } else if (sDefaultBootUpModem == ModemSwitchHandler.MD_TYPE_FDD) {
++                if (WorldPhoneUtil.isLteSupport()) {
++                    logd("Storing modem type: " + ModemSwitchHandler.MD_TYPE_WG);
++                    sCi[PhoneConstants.SIM_ID_1].storeModemType(ModemSwitchHandler.MD_TYPE_LWG, null);
++                } else {
++                    logd("Storing modem type: " + ModemSwitchHandler.MD_TYPE_LWG);
++                    sCi[PhoneConstants.SIM_ID_1].storeModemType(ModemSwitchHandler.MD_TYPE_WG, null);
++                }
++            } else if (sDefaultBootUpModem == ModemSwitchHandler.MD_TYPE_TDD) {
++                if (WorldPhoneUtil.isLteSupport()) {
++                    logd("Storing modem type: " + ModemSwitchHandler.MD_TYPE_WG);
++                    sCi[PhoneConstants.SIM_ID_1].storeModemType(ModemSwitchHandler.MD_TYPE_LTG, null);
++                } else {
++                    logd("Storing modem type: " + ModemSwitchHandler.MD_TYPE_LWG);
++                    sCi[PhoneConstants.SIM_ID_1].storeModemType(ModemSwitchHandler.MD_TYPE_TG, null);
++                }
++            }
++        }
++        if (toModem == ModemSwitchHandler.getActiveModemType()) {
++            if (toModem == ModemSwitchHandler.MD_TYPE_WG) {
++                logd("Already in WG modem");
++            } else if (toModem == ModemSwitchHandler.MD_TYPE_TG) {
++                logd("Already in TG modem");
++            } else if (toModem == ModemSwitchHandler.MD_TYPE_LWG) {
++                logd("Already in FDD CSFB modem");
++            } else if (toModem == ModemSwitchHandler.MD_TYPE_LTG) {
++                logd("Already in TDD CSFB modem");
++            }
++            return;
++        } else {
++            for (int i = 0; i < PROJECT_SIM_NUM; i++) {
++                if (sActivePhones[i].getState() != PhoneConstants.State.IDLE) {
++                    logd("Phone" + i + " is not idle, modem switch not allowed");
++                    return;
++                }
++            }
++            removeModemStandByTimer();
++            if (toModem == ModemSwitchHandler.MD_TYPE_WG) {
++                logd("Switching to WG modem");
++            } else if (toModem == ModemSwitchHandler.MD_TYPE_TG) {
++                logd("Switching to TG modem");
++            } else if (toModem == ModemSwitchHandler.MD_TYPE_LWG) {
++                logd("Switching to FDD CSFB modem");
++            } else if (toModem == ModemSwitchHandler.MD_TYPE_LTG) {
++                logd("Switching to TDD CSFB modem");
++            }
++            ModemSwitchHandler.switchModem(toModem);
++            resetNetworkProperties();
++        }
++    }
++
++    private void handleSimSwitched() {
++        if (sMajorSim == MAJOR_CAPABILITY_OFF) {
++            logd("Major capability turned off");
++            removeModemStandByTimer();
++            sUserType = UNKNOWN_USER;
++        } else if (sMajorSim == AUTO_SWITCH_OFF) {
++            logd("Auto modem selection disabled");
++            removeModemStandByTimer();
++        } else if (sMajorSim == MAJOR_SIM_UNKNOWN) {
++            logd("Major SIM unknown");
++        } else {
++            logd("Auto modem selection enabled");
++            logd("Major capability in slot" + sMajorSim);
++            if (sImsi[sMajorSim] == null || sImsi[sMajorSim].equals("")) {
++                // may caused by receive 3g switched intent when boot up
++                logd("Major slot IMSI not ready");
++                sUserType = UNKNOWN_USER;
++                return;
++            }
++            sUserType = getUserType(sImsi[sMajorSim]);
++            if (sUserType == TYPE1_USER) {
++                if (sNwPlmnStrings != null) {
++                    sRegion = getRegion(sNwPlmnStrings[0]);
++                }
++                if (sRegion == REGION_DOMESTIC) {
++                    sFirstSelect[sMajorSim] = false;
++                    sIccCardType[sMajorSim] = getIccCardType(sMajorSim);
++                    handleSwitchModem(ModemSwitchHandler.MD_TYPE_TDD);
++                } else if (sRegion == REGION_FOREIGN) {
++                    sFirstSelect[sMajorSim] = false;
++                    handleSwitchModem(ModemSwitchHandler.MD_TYPE_FDD);
++                } else {
++                    logd("Unknown region");
++                }
++            } else if (sUserType == TYPE2_USER || sUserType == TYPE3_USER) {
++                sFirstSelect[sMajorSim] = false;
++                handleSwitchModem(ModemSwitchHandler.MD_TYPE_FDD);
++            } else {
++                logd("Unknown user type");
++            }
++        }
++    }
++
++    private void handleNoService() {
++        logd("[handleNoService]+ Can not find service");
++        logd("Type" + sUserType + " user");
++        logd(WorldPhoneUtil.regionToString(sRegion));
++        int mdType = ModemSwitchHandler.getActiveModemType();
++        logd(ModemSwitchHandler.modemToString(mdType));
++        IccCardConstants.State iccState = ((PhoneProxy) sProxyPhones[sMajorSim]).getIccCard().getState();
++        if (iccState == IccCardConstants.State.READY) {
++            if (sUserType == TYPE1_USER) {
++                if (mdType == ModemSwitchHandler.MD_TYPE_LTG
++                        || mdType == ModemSwitchHandler.MD_TYPE_TG) {
++                    if (TDD_STANDBY_TIMER[sTddStandByCounter] >= 0) {
++                        if (!sWaitInTdd) {
++                            sWaitInTdd = true;
++                            logd("Wait " + TDD_STANDBY_TIMER[sTddStandByCounter] + "s. Timer index = " + sTddStandByCounter);
++                            postDelayed(mTddStandByTimerRunnable, TDD_STANDBY_TIMER[sTddStandByCounter] * 1000);
++                        } else {
++                            logd("Timer already set:" + TDD_STANDBY_TIMER[sTddStandByCounter] + "s");
++                        }
++                    } else {
++                        logd("Standby in TDD modem");
++                    }
++                } else if (mdType == ModemSwitchHandler.MD_TYPE_LWG
++                        || mdType == ModemSwitchHandler.MD_TYPE_WG) {
++                    if (FDD_STANDBY_TIMER[sFddStandByCounter] >= 0) {
++                        if (!sWaitInFdd) {
++                            sWaitInFdd = true;
++                            logd("Wait " + FDD_STANDBY_TIMER[sFddStandByCounter] + "s. Timer index = " + sFddStandByCounter);
++                            postDelayed(mFddStandByTimerRunnable, FDD_STANDBY_TIMER[sFddStandByCounter] * 1000);
++                        } else {
++                            logd("Timer already set:" + FDD_STANDBY_TIMER[sFddStandByCounter] + "s");
++                        }
++                    } else {
++                        logd("Standby in FDD modem");
++                    }
++                }
++            } else if (sUserType == TYPE2_USER || sUserType == TYPE3_USER) {
++                if (mdType == ModemSwitchHandler.MD_TYPE_LWG
++                        || mdType == ModemSwitchHandler.MD_TYPE_WG) {
++                    logd("Standby in FDD modem");
++                } else {
++                    logd("Should not enter this state");
++                }
++            } else {
++                logd("Unknow user type");
++            }
++        } else {
++            logd("IccState not ready");
++        }
++        logd("[handleNoService]-");
++
++        return;
++    }
++
++    private boolean isAllowCampOn(String plmnString, int slotId) {
++        logd("[isAllowCampOn]+ " + plmnString);
++        logd("User type: " + sUserType);
++        logd(WorldPhoneUtil.iccCardTypeToString(sIccCardType[slotId]));
++        sRegion = getRegion(plmnString);
++        int mdType = ModemSwitchHandler.getActiveModemType();
++        logd(ModemSwitchHandler.modemToString(mdType));
++        if (sUserType == TYPE1_USER) {
++            if (sRegion == REGION_DOMESTIC) {
++                if (mdType == ModemSwitchHandler.MD_TYPE_LTG
++                        || mdType == ModemSwitchHandler.MD_TYPE_TG) {
++                    sDenyReason = CAMP_ON_NOT_DENIED;
++                    logd("Camp on OK");
++                    logd("[isAllowCampOn]-");
++                    return true;
++                } else if (mdType == ModemSwitchHandler.MD_TYPE_LWG
++                        || mdType == ModemSwitchHandler.MD_TYPE_WG) {
++                    sDenyReason = CAMP_ON_DENY_REASON_NEED_SWITCH_TO_TDD;
++                    logd("Camp on REJECT");
++                    logd("[isAllowCampOn]-");
++                    return false;
++                }
++            } else if (sRegion == REGION_FOREIGN) {
++                if (mdType == ModemSwitchHandler.MD_TYPE_LTG
++                        || mdType == ModemSwitchHandler.MD_TYPE_TG) {
++                    sDenyReason = CAMP_ON_DENY_REASON_NEED_SWITCH_TO_FDD;
++                    logd("Camp on REJECT");
++                    logd("[isAllowCampOn]-");
++                    return false;
++                } else if (mdType == ModemSwitchHandler.MD_TYPE_LWG
++                        || mdType == ModemSwitchHandler.MD_TYPE_WG) {
++                    sDenyReason = CAMP_ON_NOT_DENIED;
++                    logd("Camp on OK");
++                    logd("[isAllowCampOn]-");
++                    return true;
++                }
++            } else {
++                logd("Unknow region");
++            }
++        } else if (sUserType == TYPE2_USER || sUserType == TYPE3_USER) {
++            if (mdType == ModemSwitchHandler.MD_TYPE_LTG
++                    || mdType == ModemSwitchHandler.MD_TYPE_TG) {
++                sDenyReason = CAMP_ON_DENY_REASON_NEED_SWITCH_TO_FDD;
++                logd("Camp on REJECT");
++                logd("[isAllowCampOn]-");
++                return false;
++            } else if (mdType == ModemSwitchHandler.MD_TYPE_LWG
++                    || mdType == ModemSwitchHandler.MD_TYPE_WG) {
++                sDenyReason = CAMP_ON_NOT_DENIED;
++                logd("Camp on OK");
++                logd("[isAllowCampOn]-");
++                return true;
++            }
++        } else {
++            logd("Unknown user type");
++        }
++        sDenyReason = CAMP_ON_DENY_REASON_UNKNOWN;
++        logd("Camp on REJECT");
++        logd("[isAllowCampOn]-");
++
++        return false;
++    }
++
++    private boolean isInService() {
++        boolean inService = false;
++
++        if (sVoiceRegState == ServiceState.STATE_IN_SERVICE
++                || sDataRegState == ServiceState.STATE_IN_SERVICE) {
++            inService = true;
++        }
++        logd("inService: " + inService);
++
++        return inService;
++    }
++
++    private boolean isNoService() {
++        boolean noService = false;
++
++        if (sVoiceRegState == ServiceState.STATE_OUT_OF_SERVICE
++                // && sRilVoiceRegState == ServiceState.REGISTRATION_STATE_NOT_REGISTERED_AND_NOT_SEARCHING
++                && sDataRegState == ServiceState.STATE_OUT_OF_SERVICE
++                // && sRilDataRegState == ServiceState.REGISTRATION_STATE_NOT_REGISTERED_AND_NOT_SEARCHING) {
++			) {
++            noService = true;
++        } else {
++            noService = false;
++        }
++        logd("noService: " + noService);
++
++        return noService;
++    }
++
++    private int getIccCardType(int slotId) {
++        int simType;
++        String simString = "Unknown";
++
++        simString = ((PhoneProxy) sProxyPhones[slotId]).getIccCard().getIccCardType();
++        if (simString.equals("SIM")) {
++            logd("IccCard type: SIM");
++            simType = ICC_CARD_TYPE_SIM;
++        } else if (simString.equals("USIM")) {
++            logd("IccCard type: USIM");
++            simType = ICC_CARD_TYPE_USIM;
++        } else {
++            logd("IccCard type: Unknown");
++            simType = ICC_CARD_TYPE_UNKNOWN;
++        }
++
++        return simType;
++    }
++
++    private int getRegion(String plmn) {
++        String currentMcc;
++        if (plmn == null) {
++            logd("[getRegion] null PLMN");
++            return REGION_UNKNOWN;
++        }
++        currentMcc = plmn.substring(0, 3);
++        for (String mcc : MCC_TABLE_DOMESTIC) {
++            if (currentMcc.equals(mcc)) {
++                logd("[getRegion] REGION_DOMESTIC");
++                return REGION_DOMESTIC;
++            }
++        }
++        logd("[getRegion] REGION_FOREIGN");
++        return REGION_FOREIGN;
++    }
++
++    private int getUserType(String imsi) {
++        if (imsi != null && !imsi.equals("")) {
++            imsi = imsi.substring(0, 5);
++            for (String mccmnc : PLMN_TABLE_TYPE1) {
++                if (imsi.equals(mccmnc)) {
++                    logd("[getUserType] Type1 user");
++                    return TYPE1_USER;
++                }
++            }
++            for (String mccmnc : PLMN_TABLE_TYPE3) {
++                if (imsi.equals(mccmnc)) {
++                    logd("[getUserType] Type3 user");
++                    return TYPE3_USER;
++                }
++            }
++            logd("[getUserType] Type2 user");
++            return TYPE2_USER;
++        } else {
++            logd("[getUserType] null IMSI");
++            return UNKNOWN_USER;
++        }
++    }
++
++    private void resumeCampingProcedure(int slotId) {
++        logd("Resume camping slot" + slotId);
++        String plmnString = sNwPlmnStrings[0];
++        if (isAllowCampOn(plmnString, slotId)) {
++            removeModemStandByTimer();
++            sCi[slotId].setResumeRegistration(sSuspendId, null);
++        } else {
++            logd("Because: " + WorldPhoneUtil.denyReasonToString(sDenyReason));
++            if (sDenyReason == CAMP_ON_DENY_REASON_NEED_SWITCH_TO_FDD) {
++                handleSwitchModem(ModemSwitchHandler.MD_TYPE_FDD);
++            } else if (sDenyReason == CAMP_ON_DENY_REASON_NEED_SWITCH_TO_TDD) {
++                handleSwitchModem(ModemSwitchHandler.MD_TYPE_TDD);
++            }
++        }
++    }
++
++    private Runnable mTddStandByTimerRunnable = new Runnable() {
++        public void run() {
++            sTddStandByCounter++;
++            if (sTddStandByCounter >= TDD_STANDBY_TIMER.length) {
++                sTddStandByCounter = TDD_STANDBY_TIMER.length - 1;
++            }
++            logd("TDD time out!");
++            handleSwitchModem(ModemSwitchHandler.MD_TYPE_FDD);
++        }
++    };
++
++    private Runnable mFddStandByTimerRunnable = new Runnable() {
++        public void run() {
++            sFddStandByCounter++;
++            if (sFddStandByCounter >= FDD_STANDBY_TIMER.length) {
++                sFddStandByCounter = FDD_STANDBY_TIMER.length - 1;
++            }
++            logd("FDD time out!");
++            handleSwitchModem(ModemSwitchHandler.MD_TYPE_TDD);
++        }
++    };
++
++    private void removeModemStandByTimer() {
++        if (sWaitInTdd) {
++            logd("Remove TDD wait timer. Set sWaitInTdd = false");
++            sWaitInTdd = false;
++            removeCallbacks(mTddStandByTimerRunnable);
++        }
++        if (sWaitInFdd) {
++            logd("Remove FDD wait timer. Set sWaitInFdd = false");
++            sWaitInFdd = false;
++            removeCallbacks(mFddStandByTimerRunnable);
++        }
++    }
++
++    private void resetAllProperties() {
++        logd("[resetAllProperties]");
++        sNwPlmnStrings = null;
++        for (int i = 0; i < PROJECT_SIM_NUM; i++) {
++            sFirstSelect[i] = true;
++        }
++        sDenyReason = CAMP_ON_DENY_REASON_UNKNOWN;
++        resetSimProperties();
++        resetNetworkProperties();
++    }
++
++    private void resetNetworkProperties() {
++        logd("[resetNetworkProperties]");
++        synchronized (sLock) {
++            for (int i = 0; i < PROJECT_SIM_NUM; i++) {
++                sSuspendWaitImsi[i] = false;
++            }
++        }
++    }
++
++    private void resetSimProperties() {
++        logd("[resetSimProperties]");
++        synchronized (sLock) {
++            for (int i = 0; i < PROJECT_SIM_NUM; i++) {
++                sImsi[i] = "";
++                sIccCardType[i] = ICC_CARD_TYPE_UNKNOWN;
++            }
++            sUserType = UNKNOWN_USER;
++            sMajorSim = WorldPhoneUtil.getMajorSim();
++        }
++    }
++
++    private void searchForDesignateService(String strPlmn) {
++        if (strPlmn == null) {
++            logd("[searchForDesignateService]- null source");
++            return;
++        }
++        strPlmn = strPlmn.substring(0, 5);
++        for (String mccmnc : PLMN_TABLE_TYPE1) {
++            if (strPlmn.equals(mccmnc)) {
++                logd("Find TD service");
++                logd("sUserType: " + sUserType + " sRegion: " + sRegion);
++                logd(ModemSwitchHandler.modemToString(ModemSwitchHandler.getActiveModemType()));
++                handleSwitchModem(ModemSwitchHandler.MD_TYPE_TDD);
++                break;
++            }
++        }
++
++        return;
++    }
++
++    public void setModemSelectionMode(int mode, int modemType) {
++        // Settings.Global.putInt(sContext.getContentResolver(),
++        //         Settings.Global.WORLD_PHONE_AUTO_SELECT_MODE, mode);
++        if (mode == SELECTION_MODE_AUTO) {
++            logd("Modem Selection <AUTO>");
++            sMajorSim = WorldPhoneUtil.getMajorSim();
++            handleSimSwitched();
++        } else {
++            logd("Modem Selection <MANUAL>");
++            sMajorSim = AUTO_SWITCH_OFF;
++            handleSwitchModem(modemType);
++        }
++    }
++
++    private static void logd(String msg) {
++        Rlog.d(LOG_TAG, "[WPOM]" + msg);
++    }
++}
+diff --git a/src/java/com/mediatek/internal/telephony/worldphone/WorldPhoneUtil.java b/src/java/com/mediatek/internal/telephony/worldphone/WorldPhoneUtil.java
+new file mode 100755
+index 0000000..f2c5b41
+--- /dev/null
++++ b/src/java/com/mediatek/internal/telephony/worldphone/WorldPhoneUtil.java
+@@ -0,0 +1,246 @@
++/* Copyright Statement:
++ *
++ * This software/firmware and related documentation ("MediaTek Software") are
++ * protected under relevant copyright laws. The information contained herein
++ * is confidential and proprietary to MediaTek Inc. and/or its licensors.
++ * Without the prior written permission of MediaTek inc. and/or its licensors,
++ * any reproduction, modification, use or disclosure of MediaTek Software,
++ * and information contained herein, in whole or in part, shall be strictly prohibited.
++ *
++ * MediaTek Inc. (C) 2010. All rights reserved.
++ *
++ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
++ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
++ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
++ * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
++ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
++ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
++ * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
++ * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
++ * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
++ * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
++ * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
++ * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
++ * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
++ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
++ * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
++ * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
++ * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
++ * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
++ *
++ * The following software/firmware and/or related documentation ("MediaTek Software")
++ * have been modified by MediaTek Inc. All revisions are subject to any receiver's
++ * applicable license agreements with MediaTek Inc.
++ */
++package com.mediatek.internal.telephony.worldphone;
++
++import android.content.Context;
++import android.os.SystemProperties;
++import android.provider.Settings;
++import android.telephony.PhoneRatFamily;
++import android.telephony.Rlog;
++import android.telephony.ServiceState;
++import android.telephony.TelephonyManager;
++
++import com.android.internal.telephony.Phone;
++import com.android.internal.telephony.PhoneBase;
++import com.android.internal.telephony.PhoneConstants;
++import com.android.internal.telephony.PhoneFactory;
++import com.android.internal.telephony.PhoneProxy;
++import com.android.internal.telephony.TelephonyProperties;
++
++
++/**
++ *@hide
++ */
++public class WorldPhoneUtil implements IWorldPhone {
++    private static final int PROJECT_SIM_NUM = TelephonyManager.getDefault().getSimCount();
++    private static final boolean IS_WORLD_PHONE_SUPPORT = true;  // (SystemProperties.getInt(TelephonyProperties.PROPERTY_WORLD_PHONE, 0) == 1);
++    private static final boolean IS_LTE_SUPPORT = (SystemProperties.getInt("ro.mtk_lte_support", 0) == 1);
++    private static Context sContext = null;
++    private static Phone sDefultPhone = null;
++    private static Phone[] sProxyPhones = null;
++    private static Phone[] sActivePhones = new Phone[PROJECT_SIM_NUM];
++
++    public WorldPhoneUtil() {
++        logd("Constructor invoked");
++        sDefultPhone = PhoneFactory.getDefaultPhone();
++        sProxyPhones = PhoneFactory.getPhones();
++        for (int i = 0; i < PROJECT_SIM_NUM; i++) {
++            sActivePhones[i] = ((PhoneProxy) sProxyPhones[i]).getActivePhone();
++        }
++        if (sDefultPhone != null) {
++            sContext = sDefultPhone.getContext();
++        } else {
++            logd("DefaultPhone = null");
++        }
++    }
++
++    public static int getProjectSimNum() {
++        return PROJECT_SIM_NUM;
++    }
++
++    public static int getMajorSim() {
++        if (sProxyPhones == null) {
++            logd("[getMajorSim] sProxyPhones = null");
++            return DEFAULT_MAJOR_SIM;
++        }
++        for (int i = 0; i < PROJECT_SIM_NUM; i++) {
++            if ((((PhoneBase) sActivePhones[i]).getPhoneRatFamily()
++                    & PhoneRatFamily.PHONE_RAT_FAMILY_3G) == PhoneRatFamily.PHONE_RAT_FAMILY_3G) {
++                logd("[getMajorSim]: " + i);
++                return i;
++            }
++        }
++        logd("[getMajorSim]: fail to get major SIM");
++
++        return DEFAULT_MAJOR_SIM;
++    }
++
++    public static int getModemSelectionMode() {
++        if (sContext == null) {
++            logd("sContext = null");
++            return SELECTION_MODE_AUTO;
++        }
++
++		logd("getModemSelectionMode: always auto!");
++		return SELECTION_MODE_AUTO;
++		/*
++        return Settings.Global.getInt(sContext.getContentResolver(),
++                    Settings.Global.WORLD_PHONE_AUTO_SELECT_MODE, SELECTION_MODE_AUTO);
++		*/
++    }
++
++    public static boolean isWorldPhoneSupport() {
++        return IS_WORLD_PHONE_SUPPORT;
++    }
++
++    public static boolean isLteSupport() {
++        return IS_LTE_SUPPORT;
++    }
++
++    public static String regionToString(int region) {
++        String regionString;
++        switch (region) {
++            case REGION_UNKNOWN:
++                regionString = "REGION_UNKNOWN";
++                break;
++            case REGION_DOMESTIC:
++                regionString = "REGION_DOMESTIC";
++                break;
++            case REGION_FOREIGN:
++                regionString = "REGION_FOREIGN";
++                break;
++            default:
++                regionString = "Invalid Region";
++                break;
++        }
++
++        return regionString;
++    }
++
++    public static String stateToString(int state) {
++        String stateString;
++        switch (state) {
++            case ServiceState.STATE_POWER_OFF:
++                stateString = "STATE_POWER_OFF";
++                break;
++            case ServiceState.STATE_IN_SERVICE:
++                stateString = "STATE_IN_SERVICE";
++                break;
++            case ServiceState.STATE_OUT_OF_SERVICE:
++                stateString = "STATE_OUT_OF_SERVICE";
++                break;
++            case ServiceState.STATE_EMERGENCY_ONLY:
++                stateString = "STATE_EMERGENCY_ONLY";
++                break;
++            default:
++                stateString = "Invalid State";
++                break;
++        }
++
++        return stateString;
++    }
++
++    public static String regStateToString(int regState) {
++        String rsString;
++        switch (regState) {
++            case ServiceState.REGISTRATION_STATE_NOT_REGISTERED_AND_NOT_SEARCHING:
++                rsString = "REGISTRATION_STATE_NOT_REGISTERED_AND_NOT_SEARCHING";
++                break;
++            case ServiceState.REGISTRATION_STATE_HOME_NETWORK:
++                rsString = "REGISTRATION_STATE_HOME_NETWORK";
++                break;
++            case ServiceState.REGISTRATION_STATE_NOT_REGISTERED_AND_SEARCHING:
++                rsString = "REGISTRATION_STATE_NOT_REGISTERED_AND_SEARCHING";
++                break;
++            case ServiceState.REGISTRATION_STATE_REGISTRATION_DENIED:
++                rsString = "REGISTRATION_STATE_REGISTRATION_DENIED";
++                break;
++            case ServiceState.REGISTRATION_STATE_UNKNOWN:
++                rsString = "REGISTRATION_STATE_UNKNOWN";
++                break;
++            case ServiceState.REGISTRATION_STATE_ROAMING:
++                rsString = "REGISTRATION_STATE_ROAMING";
++                break;
++            default:
++                rsString = "Invalid RegState";
++                break;
++        }
++
++        return rsString;
++    }
++
++    public static String denyReasonToString(int reason) {
++        String drString;
++        switch (reason) {
++            case CAMP_ON_NOT_DENIED:
++                drString = "CAMP_ON_NOT_DENIED";
++                break;
++            case CAMP_ON_DENY_REASON_UNKNOWN:
++                drString = "CAMP_ON_DENY_REASON_UNKNOWN";
++                break;
++            case CAMP_ON_DENY_REASON_NEED_SWITCH_TO_FDD:
++                drString = "CAMP_ON_DENY_REASON_NEED_SWITCH_TO_FDD";
++                break;
++            case CAMP_ON_DENY_REASON_NEED_SWITCH_TO_TDD:
++                drString = "CAMP_ON_DENY_REASON_NEED_SWITCH_TO_TDD";
++                break;
++            case CAMP_ON_DENY_REASON_DOMESTIC_FDD_MD:
++                drString = "CAMP_ON_DENY_REASON_DOMESTIC_FDD_MD";
++                break;
++            default:
++                drString = "Invalid Reason";
++                break;
++        }
++
++        return drString;
++    }
++
++    public static String iccCardTypeToString(int iccCardType) {
++        String iccTypeString;
++        switch (iccCardType) {
++            case ICC_CARD_TYPE_SIM:
++                iccTypeString = "SIM";
++                break;
++            case ICC_CARD_TYPE_USIM:
++                iccTypeString = "USIM";
++                break;
++            case ICC_CARD_TYPE_UNKNOWN:
++                iccTypeString = "Icc Card Type Unknown";
++                break;
++            default:
++                iccTypeString = "Invalid Icc Card Type";
++                break;
++        }
++
++        return iccTypeString;
++    }
++
++    public void setModemSelectionMode(int mode, int modemType) {
++    }
++
++    private static void logd(String msg) {
++        Rlog.d(LOG_TAG, "[WPP_UTIL]" + msg);
++    }
++}
+diff --git a/src/java/com/mediatek/internal/telephony/worldphone/WorldPhoneWrapper.java b/src/java/com/mediatek/internal/telephony/worldphone/WorldPhoneWrapper.java
+new file mode 100755
+index 0000000..6f7c85f
+--- /dev/null
++++ b/src/java/com/mediatek/internal/telephony/worldphone/WorldPhoneWrapper.java
+@@ -0,0 +1,86 @@
++/* Copyright Statement:
++ *
++ * This software/firmware and related documentation ("MediaTek Software") are
++ * protected under relevant copyright laws. The information contained herein
++ * is confidential and proprietary to MediaTek Inc. and/or its licensors.
++ * Without the prior written permission of MediaTek inc. and/or its licensors,
++ * any reproduction, modification, use or disclosure of MediaTek Software,
++ * and information contained herein, in whole or in part, shall be strictly prohibited.
++ *
++ * MediaTek Inc. (C) 2010. All rights reserved.
++ *
++ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
++ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
++ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
++ * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
++ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
++ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
++ * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
++ * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
++ * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
++ * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
++ * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
++ * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
++ * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
++ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
++ * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
++ * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
++ * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
++ * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
++ *
++ * The following software/firmware and/or related documentation ("MediaTek Software")
++ * have been modified by MediaTek Inc. All revisions are subject to any receiver's
++ * applicable license agreements with MediaTek Inc.
++ */
++package com.mediatek.internal.telephony.worldphone;
++
++import android.os.SystemProperties;
++import android.telephony.Rlog;
++
++
++
++/**
++ *@hide
++ */
++public class WorldPhoneWrapper implements IWorldPhone {
++    private static int sOperatorSpec = -1;
++    private static IWorldPhone sWorldPhoneInstance = null;
++    private static WorldPhoneUtil sWorldPhoneUtil = null;
++
++    public WorldPhoneWrapper() {
++    }
++
++    public static IWorldPhone getWorldPhoneInstance() {
++        if (sWorldPhoneInstance == null) {
++            String optr = SystemProperties.get("ro.operator.optr");
++            if (optr != null && optr.equals("OP01")) {
++                // sOperatorSpec = POLICY_OP01;
++				logd("getWorldPhoneInstance: POLICY_OP01 not implemented!");
++				sOperatorSpec = POLICY_OM;
++            } else {
++                sOperatorSpec = POLICY_OM;
++            }
++            sWorldPhoneUtil = new WorldPhoneUtil();
++            if (sOperatorSpec == POLICY_OP01) {
++                // sWorldPhoneInstance = new WorldPhoneOp01();
++            } else if (sOperatorSpec == POLICY_OM) {
++                sWorldPhoneInstance = new WorldPhoneOm();
++            }
++        }
++        logd("sOperatorSpec: " + sOperatorSpec + ", isLteSupport: " + WorldPhoneUtil.isLteSupport());
++
++        return sWorldPhoneInstance;
++    }
++
++    public void setModemSelectionMode(int mode, int modemType) {
++        if (sOperatorSpec == POLICY_OP01 || sOperatorSpec == POLICY_OM) {
++            sWorldPhoneInstance.setModemSelectionMode(mode, modemType);
++        } else {
++            logd("Unknown World Phone Spec");
++        }
++    }
++
++    private static void logd(String msg) {
++        Rlog.d(LOG_TAG, "[WPO_WRAPPER]" + msg);
++    }
++}
+-- 
+2.5.0
+

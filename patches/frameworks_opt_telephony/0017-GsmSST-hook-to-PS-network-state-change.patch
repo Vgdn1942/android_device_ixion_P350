@@ -1,0 +1,108 @@
+From a93c08f02c41344b1980dcfe93e031c0fea85274 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Fri, 9 Oct 2015 16:25:19 +0800
+Subject: [PATCH] GsmSST: hook to PS network state change
+
+Change-Id: I3821b40de9d8c402dabdf59620142356a18d38a3
+---
+ .../internal/telephony/ServiceStateTracker.java    | 22 ++++++++++++++++
+ .../telephony/gsm/GsmServiceStateTracker.java      | 29 ++++++++++++++++++++++
+ 2 files changed, 51 insertions(+)
+
+diff --git a/src/java/com/android/internal/telephony/ServiceStateTracker.java b/src/java/com/android/internal/telephony/ServiceStateTracker.java
+index 179d4a1..7630879 100644
+--- a/src/java/com/android/internal/telephony/ServiceStateTracker.java
++++ b/src/java/com/android/internal/telephony/ServiceStateTracker.java
+@@ -189,6 +189,28 @@ public abstract class ServiceStateTracker extends Handler {
+     protected static final int EVENT_IMS_STATE_CHANGED                 = 46;
+     protected static final int EVENT_IMS_STATE_DONE                    = 47;
+ 
++    // MTK events
++    protected static final int EVENT_DATA_CONNECTION_DETACHED = 100;
++    protected static final int EVENT_INVALID_SIM_INFO = 101; //ALPS00248788
++    protected static final int EVENT_PS_NETWORK_STATE_CHANGED = 102;
++    protected static final int EVENT_IMEI_LOCK = 103; /* ALPS00296298 */
++    protected static final int EVENT_DISABLE_EMMRRS_STATUS = 104;
++    protected static final int EVENT_ENABLE_EMMRRS_STATUS = 105;
++    protected static final int EVENT_ICC_REFRESH = 106;
++    protected static final int EVENT_FEMTO_CELL_INFO = 107;
++    protected static final int EVENT_GET_CELL_INFO_LIST_BY_RATE = 108;
++    protected static final int EVENT_SET_IMS_ENABLED_DONE = 109;
++    protected static final int EVENT_SET_IMS_DISABLE_DONE = 110;
++    protected static final int EVENT_IMS_DISABLED_URC = 111;
++    protected static final int EVENT_IMS_REGISTRATION_INFO = 112;
++
++    // MTK CDMA events
++    protected static final int EVENT_QUERY_NITZ_TIME        = 200;
++    protected static final int EVENT_GET_NITZ_TIME          = 201;
++    protected static final int EVENT_NETWORK_TYPE_CHANGED   = 202;
++    protected static final int EVENT_ETS_DEV_CHANGED        = 203;
++    protected static final int EVENT_SET_MDN_DONE           = 204;
++
+     protected static final String TIMEZONE_PROPERTY = "persist.sys.timezone";
+ 
+     /**
+diff --git a/src/java/com/android/internal/telephony/gsm/GsmServiceStateTracker.java b/src/java/com/android/internal/telephony/gsm/GsmServiceStateTracker.java
+index 117d054..9fc9290 100644
+--- a/src/java/com/android/internal/telephony/gsm/GsmServiceStateTracker.java
++++ b/src/java/com/android/internal/telephony/gsm/GsmServiceStateTracker.java
+@@ -224,6 +224,20 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
+         mCi.setOnNITZTime(this, EVENT_NITZ_TIME, null);
+         mCi.setOnRestrictedStateChanged(this, EVENT_RESTRICTED_STATE_CHANGED, null);
+ 
++        // MTK
++        mCi.registerForPsNetworkStateChanged(this, EVENT_PS_NETWORK_STATE_CHANGED, null);
++        // mCi.setInvalidSimInfo(this, EVENT_INVALID_SIM_INFO, null); //ALPS00248788
++
++        // mCi.registerForIccRefresh(this, EVENT_ICC_REFRESH, null);
++        /*
++        if (SystemProperties.get("ro.mtk_ims_support").equals("1")) {
++            mCi.registerForImsDisable(this, EVENT_IMS_DISABLED_URC, null);
++            mCi.registerForImsRegistrationInfo(this, EVENT_IMS_REGISTRATION_INFO, null);
++        }
++        if (SystemProperties.get("ro.mtk_femto_cell_support").equals("1"))
++            mCi.registerForFemtoCellInfo(this, EVENT_FEMTO_CELL_INFO, null);
++        */
++
+         // system setting property AIRPLANE_MODE_ON is set in Settings.
+         int airplaneMode = Settings.Global.getInt(
+                 phone.getContext().getContentResolver(),
+@@ -267,6 +281,11 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
+         mCr.unregisterContentObserver(mAutoTimeObserver);
+         mCr.unregisterContentObserver(mAutoTimeZoneObserver);
+         mPhone.getContext().unregisterReceiver(mIntentReceiver);
++
++        // MTK
++        // mCi.unregisterForIccRefresh(this);
++        mCi.unregisterForPsNetworkStateChanged(this);
++
+         super.dispose();
+     }
+ 
+@@ -327,6 +346,10 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
+                 pollState();
+                 break;
+ 
++            case EVENT_PS_NETWORK_STATE_CHANGED:
++                pollState();
++                break;
++
+             case EVENT_GET_SIGNAL_STRENGTH:
+                 // This callback is called when signal strength is polled
+                 // all by itself
+@@ -720,6 +743,12 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
+                                     psc = Integer.parseInt(states[14], 16);
+                                 }
+                             }
++
++                            log("EVENT_POLL_STATE_REGISTRATION mSS getRilVoiceRadioTechnology:" + mSS.getRilVoiceRadioTechnology() +
++                                    ", regState:" + regState +
++                                    ", NewSS RilVoiceRadioTechnology:" + mNewSS.getRilVoiceRadioTechnology() +
++                                    ", lac:" + lac +
++                                    ", cid:" + cid);
+                         } catch (NumberFormatException ex) {
+                             loge("error parsing RegistrationState: " + ex);
+                         }
+-- 
+2.5.0
+

@@ -1,0 +1,162 @@
+From 6bb63e7d5b709679e71a3821ac8829cd988a3031 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Mon, 7 Sep 2015 12:49:04 +0800
+Subject: [PATCH] fix setInitialAttachApn request format for MTK
+
+Change-Id: I574963ad2e026e517883badd99d469ad3e0f153f
+---
+ .../internal/telephony/CommandsInterface.java      |  3 ++
+ .../android/internal/telephony/MediaTekRIL.java    | 34 ++++++++++++++++++++++
+ src/java/com/android/internal/telephony/RIL.java   |  6 ++++
+ .../telephony/dataconnection/DcTrackerBase.java    |  6 ++--
+ .../imsphone/ImsPhoneCommandInterface.java         |  5 ++++
+ .../telephony/sip/SipCommandInterface.java         |  5 ++++
+ .../internal/telephony/test/SimulatedCommands.java |  5 ++++
+ 7 files changed, 62 insertions(+), 2 deletions(-)
+
+diff --git a/src/java/com/android/internal/telephony/CommandsInterface.java b/src/java/com/android/internal/telephony/CommandsInterface.java
+index 2591053..8bde938 100644
+--- a/src/java/com/android/internal/telephony/CommandsInterface.java
++++ b/src/java/com/android/internal/telephony/CommandsInterface.java
+@@ -2062,4 +2062,7 @@ public interface CommandsInterface {
+      * @param h Handler to be removed from the registrant list.
+      */
+     public void unregisterForPhoneRatFamilyChanged(Handler h);
++
++    public void setInitialAttachApn(String apn, String protocol, int authType, String username,
++            String password, String operatorNumeric, boolean canHandleIms, Message result);
+ }
+diff --git a/src/java/com/android/internal/telephony/MediaTekRIL.java b/src/java/com/android/internal/telephony/MediaTekRIL.java
+index 8d07400..6f378fa 100644
+--- a/src/java/com/android/internal/telephony/MediaTekRIL.java
++++ b/src/java/com/android/internal/telephony/MediaTekRIL.java
+@@ -1849,6 +1849,40 @@ public class MediaTekRIL extends RIL implements CommandsInterface {
+         send(rr);
+     }
+ 
++    /** M: add extra parameter */
++    @Override
++    public void setInitialAttachApn(String apn, String protocol, int authType, String username,
++            String password, Message result) {
++        Rlog.e(RILJ_LOG_TAG, "setInitialAttachApn: operatorNumeric is required on MTK!");
++        setInitialAttachApn(apn, protocol, authType, username, password, "", false, result);
++    }
++
++    @Override
++    public void setInitialAttachApn(String apn, String protocol, int authType, String username,
++            String password, String operatorNumeric, boolean canHandleIms, Message result) {
++        RILRequest rr = RILRequest.obtain(RIL_REQUEST_SET_INITIAL_ATTACH_APN, null);
++
++        if (RILJ_LOGD) riljLog("Set RIL_REQUEST_SET_INITIAL_ATTACH_APN");
++
++        rr.mParcel.writeString(apn);
++        rr.mParcel.writeString(protocol);
++        rr.mParcel.writeInt(authType);
++        rr.mParcel.writeString(username);
++        rr.mParcel.writeString(password);
++
++        /** M: start */
++        rr.mParcel.writeString(operatorNumeric);
++        rr.mParcel.writeInt(canHandleIms ? 1 : 0);
++        /* M: end */
++
++        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest)
++                + ", apn:" + apn + ", protocol:" + protocol + ", authType:" + authType
++                + ", username:" + username + ", password:" + password
++                + ", operatorNumeric:" + operatorNumeric + ", canHandleIms:" + canHandleIms);
++
++        send(rr);
++    }
++
+     private static int readRilMessage(InputStream is, byte[] buffer)
+             throws IOException {
+         int countRead;
+diff --git a/src/java/com/android/internal/telephony/RIL.java b/src/java/com/android/internal/telephony/RIL.java
+index f0d9be0..16b41d7 100644
+--- a/src/java/com/android/internal/telephony/RIL.java
++++ b/src/java/com/android/internal/telephony/RIL.java
+@@ -5088,6 +5088,12 @@ public class RIL extends BaseCommands implements CommandsInterface {
+         send(rr);
+     }
+ 
++    @Override
++    public void setInitialAttachApn(String apn, String protocol, int authType, String username,
++            String password, String operatorNumeric, boolean canHandleIms, Message result) {
++        Rlog.e(RILJ_LOG_TAG, "setInitialAttachApn: MTK interface called on generic RIL!");
++    }
++
+     public void setDataProfile(DataProfile[] dps, Message result) {
+         if (RILJ_LOGD) riljLog("Set RIL_REQUEST_SET_DATA_PROFILE");
+ 
+diff --git a/src/java/com/android/internal/telephony/dataconnection/DcTrackerBase.java b/src/java/com/android/internal/telephony/dataconnection/DcTrackerBase.java
+index dcb1703..9d64824 100644
+--- a/src/java/com/android/internal/telephony/dataconnection/DcTrackerBase.java
++++ b/src/java/com/android/internal/telephony/dataconnection/DcTrackerBase.java
+@@ -1806,7 +1806,7 @@ public abstract class DcTrackerBase extends Handler {
+         ApnSetting firstApnSetting = null;
+         String operator = (r != null) ? r.getOperatorNumeric(): "";
+ 
+-        log("setInitialApn: E mPreferredApn=" + mPreferredApn);
++        log("setInitialApn: E operator=" + operator + " mPreferredApn=" + mPreferredApn);
+ 
+         if (apnList != null && !apnList.isEmpty()) {
+             firstApnSetting = apnList.get(0);
+@@ -1858,7 +1858,9 @@ public abstract class DcTrackerBase extends Handler {
+ 
+             mPhone.mCi.setInitialAttachApn(initialAttachApnSetting.apn,
+                     initialAttachApnSetting.protocol, initialAttachApnSetting.authType,
+-                    initialAttachApnSetting.user, initialAttachApnSetting.password, null);
++                    initialAttachApnSetting.user, initialAttachApnSetting.password,
++                    operator, initialAttachApnSetting.canHandleType(PhoneConstants.APN_TYPE_IMS),
++                    null);
+         }
+     }
+ 
+diff --git a/src/java/com/android/internal/telephony/imsphone/ImsPhoneCommandInterface.java b/src/java/com/android/internal/telephony/imsphone/ImsPhoneCommandInterface.java
+index 72fa066..e549ddb 100644
+--- a/src/java/com/android/internal/telephony/imsphone/ImsPhoneCommandInterface.java
++++ b/src/java/com/android/internal/telephony/imsphone/ImsPhoneCommandInterface.java
+@@ -620,5 +620,10 @@ class ImsPhoneCommandInterface extends BaseCommands implements CommandsInterface
+     public void storeModemType(int modemType, Message response) {
+     }
+ 
++    @Override
++    public void setInitialAttachApn(String apn, String protocol, int authType, String username,
++            String password, String operatorNumeric, boolean canHandleIms, Message result) {
++    }
++
+     public boolean needsOldRilFeature(String feature) { return false; }
+ }
+diff --git a/src/java/com/android/internal/telephony/sip/SipCommandInterface.java b/src/java/com/android/internal/telephony/sip/SipCommandInterface.java
+index b2d0966..356e975 100644
+--- a/src/java/com/android/internal/telephony/sip/SipCommandInterface.java
++++ b/src/java/com/android/internal/telephony/sip/SipCommandInterface.java
+@@ -623,5 +623,10 @@ class SipCommandInterface extends BaseCommands implements CommandsInterface {
+     public void storeModemType(int modemType, Message response) {
+     }
+ 
++    @Override
++    public void setInitialAttachApn(String apn, String protocol, int authType, String username,
++            String password, String operatorNumeric, boolean canHandleIms, Message result) {
++    }
++
+     public boolean needsOldRilFeature(String feature) { return false; }
+ }
+diff --git a/src/java/com/android/internal/telephony/test/SimulatedCommands.java b/src/java/com/android/internal/telephony/test/SimulatedCommands.java
+index 06f918d..5ef03fe 100644
+--- a/src/java/com/android/internal/telephony/test/SimulatedCommands.java
++++ b/src/java/com/android/internal/telephony/test/SimulatedCommands.java
+@@ -1794,5 +1794,10 @@ public final class SimulatedCommands extends BaseCommands
+     public void storeModemType(int modemType, Message response) {
+     }
+ 
++    @Override
++    public void setInitialAttachApn(String apn, String protocol, int authType, String username,
++            String password, String operatorNumeric, boolean canHandleIms, Message result) {
++    }
++
+     public boolean needsOldRilFeature(String feature) { return false; }
+ }
+-- 
+2.5.0
+

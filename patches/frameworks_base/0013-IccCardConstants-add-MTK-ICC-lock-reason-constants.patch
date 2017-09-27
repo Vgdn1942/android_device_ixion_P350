@@ -1,0 +1,34 @@
+From 41e89cef2a160a15f83e010a5d8cf2305faeabe9 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Fri, 2 Oct 2015 10:14:37 +0800
+Subject: [PATCH] IccCardConstants: add MTK ICC lock reason constants
+
+Change-Id: I9ae11d471f70d146de05459286869c6647ed92cc
+---
+ .../java/com/android/internal/telephony/IccCardConstants.java  | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/telephony/java/com/android/internal/telephony/IccCardConstants.java b/telephony/java/com/android/internal/telephony/IccCardConstants.java
+index e24664b..09cd10b 100644
+--- a/telephony/java/com/android/internal/telephony/IccCardConstants.java
++++ b/telephony/java/com/android/internal/telephony/IccCardConstants.java
+@@ -51,6 +51,16 @@ public class IccCardConstants {
+     /* PERM_DISABLED means ICC is permanently disabled due to puk fails */
+     public static final String INTENT_VALUE_ABSENT_ON_PERM_DISABLED = "PERM_DISABLED";
+ 
++    // MTK ICC lock reasons
++    /* NETWORK_SUBSET means ICC is locked on NETWORK SUBSET PERSONALIZATION */
++    public static final String INTENT_VALUE_LOCKED_NETWORK_SUBSET = "NETWORK_SUBSET";
++    /* CORPORATE means ICC is locked on CORPORATE PERSONALIZATION */
++    public static final String INTENT_VALUE_LOCKED_CORPORATE = "CORPORATE";
++    /* SERVICE_PROVIDER means ICC is locked on SERVICE_PROVIDER PERSONALIZATION */
++    public static final String INTENT_VALUE_LOCKED_SERVICE_PROVIDER = "SERVICE_PROVIDER";
++    /* SIM means ICC is locked on SIM PERSONALIZATION */
++    public static final String INTENT_VALUE_LOCKED_SIM = "SIM";
++
+     /**
+      * This is combination of IccCardStatus.CardState and IccCardApplicationStatus.AppState
+      * for external apps (like PhoneApp) to use
+-- 
+2.5.0
+

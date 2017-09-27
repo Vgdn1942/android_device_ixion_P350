@@ -1,0 +1,49 @@
+From 8854e848bdfa2755904589f01272eedcaa2ec977 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Wed, 6 Jan 2016 15:42:16 +0800
+Subject: [PATCH] ProximitySensorManager: add MTK/Meizu proximity/tap-to-wake
+ workaround
+
+Change-Id: Ic8c03ce06ef818f441cabfbb151253da5ea14c77
+---
+ src/com/android/server/telecom/ProximitySensorManager.java | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/src/com/android/server/telecom/ProximitySensorManager.java b/src/com/android/server/telecom/ProximitySensorManager.java
+index 217dd3b..c4f67c0 100644
+--- a/src/com/android/server/telecom/ProximitySensorManager.java
++++ b/src/com/android/server/telecom/ProximitySensorManager.java
+@@ -18,6 +18,7 @@ package com.android.server.telecom;
+ 
+ import android.content.Context;
+ import android.os.PowerManager;
++import android.os.SystemProperties;
+ 
+ import cyanogenmod.hardware.CMHardwareManager;
+ 
+@@ -31,6 +32,9 @@ public class ProximitySensorManager extends CallsManagerListenerBase {
+     private boolean mWasTapToWakeEnabled = false;
+     private final CMHardwareManager mHardware;
+ 
++    // MTK/Meizu workaround
++    private static final boolean mIsMTKHardware = !(SystemProperties.get("ro.mediatek.platform", "").equals(""));
++
+     public ProximitySensorManager(Context context) {
+         PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+         mHardware = CMHardwareManager.getInstance(context);
+@@ -47,7 +51,11 @@ public class ProximitySensorManager extends CallsManagerListenerBase {
+     public void onCallRemoved(Call call) {
+         if (CallsManager.getInstance().getCalls().isEmpty()) {
+             Log.i(this, "All calls removed, resetting proximity sensor to default state");
+-            turnOff(true);
++
++            // MTK has screenOnImmediately set to false, at least on Meizu MX4
++            // passing true would result in tap-to-wake or proximity sensor
++            // stopping working if remote hung up.
++            turnOff(!mIsMTKHardware);
+         }
+         super.onCallRemoved(call);
+     }
+-- 
+2.5.0
+

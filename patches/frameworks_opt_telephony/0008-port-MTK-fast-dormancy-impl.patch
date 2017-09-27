@@ -1,0 +1,575 @@
+From 08ef65e265eb85032d435607329c664a0248a20d Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Thu, 1 Oct 2015 21:36:07 +0800
+Subject: [PATCH] port MTK fast dormancy impl
+
+Change-Id: I3052ddd996d7b444101b6fe27a80b698b8a941bd
+---
+ .../android/internal/telephony/BaseCommands.java   |  17 +
+ .../internal/telephony/CommandsInterface.java      |   6 +
+ src/java/com/android/internal/telephony/RIL.java   |  39 ++
+ .../telephony/dataconnection/DcTracker.java        |   9 +
+ .../telephony/dataconnection/FdManager.java        | 421 +++++++++++++++++++++
+ 5 files changed, 492 insertions(+)
+ create mode 100755 src/java/com/mediatek/internal/telephony/dataconnection/FdManager.java
+
+diff --git a/src/java/com/android/internal/telephony/BaseCommands.java b/src/java/com/android/internal/telephony/BaseCommands.java
+index 6298948..7d4a982 100644
+--- a/src/java/com/android/internal/telephony/BaseCommands.java
++++ b/src/java/com/android/internal/telephony/BaseCommands.java
+@@ -101,6 +101,8 @@ public abstract class BaseCommands implements CommandsInterface {
+     protected RegistrantList mPhoneRatFamilyChangedRegistrants = new RegistrantList();
+     protected RegistrantList mPlmnChangeNotificationRegistrant = new RegistrantList();
+     protected Registrant mRegistrationSuspendedRegistrant;
++    // M: fast dormancy.
++    protected Registrant mScriResultRegistrant;
+ 
+     // Preferred network type received from PhoneFactory.
+     // This is used when establishing a connection to the
+@@ -980,4 +982,19 @@ public abstract class BaseCommands implements CommandsInterface {
+     public void unregisterForPhoneRatFamilyChanged(Handler h) {
+         mPhoneRatFamilyChangedRegistrants.remove(h);
+     }
++
++    // M: fast dormancy
++    public void setScriResult(Handler h, int what, Object obj) {
++        mScriResultRegistrant = new Registrant(h, what, obj);
++    }
++
++    public void unSetScriResult(Handler h) {
++        mScriResultRegistrant.clear();
++    }
++
++    public void setScri(boolean forceRelease, Message response){
++    }
++
++    public void setFDMode(int mode, int parameter1, int parameter2, Message response){
++    }
+ }
+diff --git a/src/java/com/android/internal/telephony/CommandsInterface.java b/src/java/com/android/internal/telephony/CommandsInterface.java
+index 8bde938..950078f 100644
+--- a/src/java/com/android/internal/telephony/CommandsInterface.java
++++ b/src/java/com/android/internal/telephony/CommandsInterface.java
+@@ -2065,4 +2065,10 @@ public interface CommandsInterface {
+ 
+     public void setInitialAttachApn(String apn, String protocol, int authType, String username,
+             String password, String operatorNumeric, boolean canHandleIms, Message result);
++
++    // Fast Dormancy
++    void setScri(boolean forceRelease, Message response);
++    void setFDMode(int mode, int parameter1, int parameter2, Message response);
++    public void setScriResult(Handler h, int what, Object obj);
++    public void unSetScriResult(Handler h);
+ }
+diff --git a/src/java/com/android/internal/telephony/RIL.java b/src/java/com/android/internal/telephony/RIL.java
+index a5c54f4..1a73146 100644
+--- a/src/java/com/android/internal/telephony/RIL.java
++++ b/src/java/com/android/internal/telephony/RIL.java
+@@ -5410,4 +5410,43 @@ public class RIL extends BaseCommands implements CommandsInterface {
+ 
+         send(rr);
+     }
++
++    // M: Fast Dormancy
++    public void setScri(boolean forceRelease, Message response) {
++        RILRequest rr = RILRequest.obtain(RIL_REQUEST_SET_SCRI, response);
++
++        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
++
++        rr.mParcel.writeInt(1);
++        rr.mParcel.writeInt(forceRelease ? 1 : 0);
++
++        send(rr);
++    }
++
++    //[New R8 modem FD]
++    public void setFDMode(int mode, int parameter1, int parameter2, Message response) {
++        RILRequest rr = RILRequest.obtain(RIL_REQUEST_SET_FD_MODE, response);
++
++        //AT+EFD=<mode>[,<param1>[,<param2>]]
++        //mode=0:disable modem Fast Dormancy; mode=1:enable modem Fast Dormancy
++        //mode=3:inform modem the screen status; parameter1: screen on or off
++        //mode=2:Fast Dormancy inactivity timer; parameter1:timer_id; parameter2:timer_value
++        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
++
++        if (mode == 0 || mode == 1) {
++            rr.mParcel.writeInt(1);
++            rr.mParcel.writeInt(mode);
++        } else if (mode == 3) {
++            rr.mParcel.writeInt(2);
++            rr.mParcel.writeInt(mode);
++            rr.mParcel.writeInt(parameter1);
++        } else if (mode == 2) {
++            rr.mParcel.writeInt(3);
++            rr.mParcel.writeInt(mode);
++            rr.mParcel.writeInt(parameter1);
++            rr.mParcel.writeInt(parameter2);
++        }
++
++        send(rr);
++    }
+ }
+diff --git a/src/java/com/android/internal/telephony/dataconnection/DcTracker.java b/src/java/com/android/internal/telephony/dataconnection/DcTracker.java
+index e9b893f..082c6df 100755
+--- a/src/java/com/android/internal/telephony/dataconnection/DcTracker.java
++++ b/src/java/com/android/internal/telephony/dataconnection/DcTracker.java
+@@ -88,6 +88,9 @@ import com.android.internal.telephony.uicc.IccUtils;
+ import com.android.internal.util.AsyncChannel;
+ import com.android.internal.util.ArrayUtils;
+ 
++// MTK
++import com.mediatek.internal.telephony.dataconnection.FdManager;
++
+ import java.io.FileDescriptor;
+ import java.io.PrintWriter;
+ import java.nio.ByteBuffer;
+@@ -185,6 +188,9 @@ public final class DcTracker extends DcTrackerBase {
+     private boolean mDeregistrationAlarmState = false;
+     private PendingIntent mImsDeregistrationDelayIntent = null;
+ 
++    // MTK
++    protected FdManager mFdMgr;
++
+     /* IWLAN and WWAN co-exist flag */
+     private boolean mWwanIwlanCoexistFlag = false;
+ 
+@@ -254,6 +260,9 @@ public final class DcTracker extends DcTrackerBase {
+             mPhone.getContext().registerReceiver(mIntentReceiver, filter, null, mPhone);
+         }
+ 
++        // MTK Fast Dormancy
++        mFdMgr = FdManager.getInstance(p);
++
+         // Add Emergency APN to APN setting list by default to support EPDN in sim absent cases
+         initEmergencyApnSetting();
+         addEmergencyApnSetting();
+diff --git a/src/java/com/mediatek/internal/telephony/dataconnection/FdManager.java b/src/java/com/mediatek/internal/telephony/dataconnection/FdManager.java
+new file mode 100755
+index 0000000..4063293
+--- /dev/null
++++ b/src/java/com/mediatek/internal/telephony/dataconnection/FdManager.java
+@@ -0,0 +1,421 @@
++/* Copyright Statement:
++ *
++ * This software/firmware and related documentation ("MediaTek Software") are
++ * protected under relevant copyright laws. The information contained herein is
++ * confidential and proprietary to MediaTek Inc. and/or its licensors. Without
++ * the prior written permission of MediaTek inc. and/or its licensors, any
++ * reproduction, modification, use or disclosure of MediaTek Software, and
++ * information contained herein, in whole or in part, shall be strictly
++ * prohibited.
++ *
++ * MediaTek Inc. (C) 2010. All rights reserved.
++ *
++ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
++ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
++ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER
++ * ON AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL
++ * WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR
++ * NONINFRINGEMENT. NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH
++ * RESPECT TO THE SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY,
++ * INCORPORATED IN, OR SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES
++ * TO LOOK ONLY TO SUCH THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO.
++ * RECEIVER EXPRESSLY ACKNOWLEDGES THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO
++ * OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES CONTAINED IN MEDIATEK
++ * SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE
++ * RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
++ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S
++ * ENTIRE AND CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE
++ * RELEASED HEREUNDER WILL BE, AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE
++ * MEDIATEK SOFTWARE AT ISSUE, OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE
++ * CHARGE PAID BY RECEIVER TO MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
++ *
++ * The following software/firmware and/or related documentation ("MediaTek
++ * Software") have been modified by MediaTek Inc. All revisions are subject to
++ * any receiver's applicable license agreements with MediaTek Inc.
++ */
++
++
++package com.mediatek.internal.telephony.dataconnection;
++
++import android.content.BroadcastReceiver;
++import android.content.ContentResolver;
++import android.content.Context;
++import android.content.Intent;
++import android.content.IntentFilter;
++import android.net.ConnectivityManager;
++import android.os.AsyncResult;
++import android.os.BatteryManager;
++import android.os.Handler;
++import android.os.HandlerThread;
++import android.os.Message;
++import android.os.Messenger;
++import android.os.SystemProperties;
++import android.telephony.Rlog;
++import android.telephony.SubscriptionManager;
++import android.util.Log;
++import android.util.SparseArray;
++
++import com.android.internal.telephony.PhoneBase;
++import com.android.internal.telephony.PhoneConstants;
++import com.android.internal.telephony.PhoneFactory;
++import com.android.internal.telephony.TelephonyIntents;
++import com.android.internal.telephony.gsm.GSMPhone;
++
++//import com.mediatek.settings.FeatureOption;
++//import com.mediatek.common.featureoption.FeatureOption;
++
++import java.util.ArrayList;
++
++public class FdManager extends Handler {
++    // M:Fast Dormancy Manager
++    protected static final boolean DBG = true;
++    protected static final String LOG_TAG = "FdManager";
++    protected static final String PROPERTY_3G_SWITCH = "gsm.3gswitch";
++    protected static final String PROPERTY_MTK_FD_SUPPORT = "ro.mtk_fd_support";
++    protected static final String PROPERTY_RIL_FD_MODE = "ril.fd.mode";
++    protected static final String PROPERTY_FD_ON_CHARGE = "fd.on.charge";
++    protected static final String PROPERTY_FD_SCREEN_OFF_ONLY = "fd.screen.off.only";
++    private static final String STR_PROPERTY_FD_SCREEN_ON_TIMER = "persist.radio.fd.counter";
++    private static final String STR_PROPERTY_FD_SCREEN_ON_R8_TIMER = "persist.radio.fd.r8.counter";
++    private static final String STR_PROPERTY_FD_SCREEN_OFF_TIMER = "persist.radio.fd.off.counter";
++    private static final String
++            STR_PROPERTY_FD_SCREEN_OFF_R8_TIMER = "persist.radio.fd.off.r8.counter";
++
++    private static final int BASE = 0;
++    private static final int EVENT_FD_MODE_SET = BASE + 0;
++
++    public enum FdModeType {
++        DISABLE_MD_FD,
++        ENABLE_MD_FD,
++        SET_FD_INACTIVITY_TIMER,
++        INFO_MD_SCREEN_STATUS
++    }
++
++    public enum FdTimerType {
++        ScreenOffLegacyFd,
++        ScreenOnLegacyFd,
++        ScreenOffR8Fd,
++        ScreenOnR8Fd,
++        SupportedTimerTypes
++    }
++
++    private static final SparseArray<FdManager> sFdManagers = new SparseArray<FdManager>();
++
++    private PhoneBase mPhone;
++    private boolean mChargingMode = false;
++    private boolean mIsTetheredMode = false;
++    private int mEnableFdOnCharging = 0;
++    private boolean mIsScreenOn = true;
++    private static int numberOfSupportedTypes;
++    private static String timerValue[] = {"50", "150", "50", "150"};
++    //Time Unit:0.1 sec => {5sec, 15sec, 5sec, 15sec}
++
++    protected BroadcastReceiver mIntentReceiver = new BroadcastReceiver() {
++        @Override
++        public void onReceive(Context context, Intent intent) {
++            String action = intent.getAction();
++            if (DBG) logd("onReceive: action=" + action);
++            int fdMdEnableMode = Integer.parseInt(SystemProperties.get(PROPERTY_RIL_FD_MODE, "0"));
++            int fdSimId = SystemProperties.getInt(PROPERTY_3G_SWITCH, 1) - 1;
++            if (action.equals(Intent.ACTION_SCREEN_ON)) {
++                mIsScreenOn = true;
++                if (isFdSupport()) {
++                    if (DBG) logd("fdMdEnableMode=" + fdMdEnableMode + ", 3gSimID="
++                            + fdSimId + ", when switching to SCREEN ON");
++                    mIsScreenOn = true;
++                    if (fdMdEnableMode == 1) {
++                        //fdMdEnableMode == 1: It means that the Fast Dormancy polling
++                        //                                  & decision mechanism is implemented by modem side
++                        if (mPhone.getPhoneId() == fdSimId) {
++                            mPhone.mCi.setFDMode(FdModeType.INFO_MD_SCREEN_STATUS.ordinal(), 1, -1,
++                                    obtainMessage(EVENT_FD_MODE_SET));
++
++                            if (isFdScreenOffOnly()) {
++                                if (DBG) {
++                                    logd("Because FD_SCREEN_OFF_ONLY, disable fd when screen on.");
++                                }
++                                updateFdMdEnableStatus(false);
++                            }
++                        }
++                    } else {
++                        logd("Not Support AP-trigger FD now");
++                    }
++                }
++            } else if (action.equals(Intent.ACTION_SCREEN_OFF)) {
++                mIsScreenOn = false;
++                if (isFdSupport()) {
++                    if (fdMdEnableMode == 1) {
++                        if (DBG) logd("fdMdEnableMode=" + fdMdEnableMode + ", 3gSimID="
++                                + fdSimId + ", when switching to SCREEN OFF");
++                        if (mPhone.getPhoneId() == fdSimId) {
++                            mPhone.mCi.setFDMode(FdModeType.INFO_MD_SCREEN_STATUS.ordinal(), 0, -1,
++                                    obtainMessage(EVENT_FD_MODE_SET));
++
++                            if (isFdScreenOffOnly() && checkNeedTurnOn()) {
++                                if (DBG) {
++                                    logd("Because FD_SCREEN_OFF_ONLY, turn on fd when screen off.");
++                                }
++                                updateFdMdEnableStatus(true);
++                            }
++                        }
++                    } else {
++                        logd("Not Support AP-trigger FD now");
++                    }
++                }
++            } else if (action.equals(Intent.ACTION_BATTERY_CHANGED)) {
++                if (isFdSupport()){
++                    int status = intent.getIntExtra("status", 0);
++                    int plugged = intent.getIntExtra("plugged", 0);
++                    boolean previousChargingMode = mChargingMode;
++
++                    String sChargingModeStr = "", sPluggedStr = "";
++                    mChargingMode = status == BatteryManager.BATTERY_STATUS_CHARGING;
++                    sChargingModeStr = mChargingMode ? "Charging" : "Non-Charging";
++
++                    if (plugged == BatteryManager.BATTERY_PLUGGED_AC) {
++                        sPluggedStr="Plugged in AC";
++                    } else if (plugged == BatteryManager.BATTERY_PLUGGED_USB) {
++                        sPluggedStr="Plugged in USB";
++                    }
++
++                    if ((plugged == BatteryManager.BATTERY_PLUGGED_AC)
++                            || (plugged == BatteryManager.BATTERY_PLUGGED_USB)) {
++                        mChargingMode = true;
++                    }
++
++                    int previousEnableFDOnCharging = mEnableFdOnCharging;
++                    mEnableFdOnCharging =
++                            Integer.parseInt(SystemProperties.get(PROPERTY_FD_ON_CHARGE, "0"));
++
++                    if ((previousChargingMode != mChargingMode)
++                            || (previousEnableFDOnCharging != mEnableFdOnCharging)) {
++                        if (DBG) logd("fdMdEnableMode=" + fdMdEnableMode + ", 3gSimID="
++                                + fdSimId + ", when charging state is changed");
++                        if (DBG) logd("previousEnableFdOnCharging=" + previousEnableFDOnCharging
++                                + ", mEnableFdOnCharging=" + mEnableFdOnCharging
++                                + ", when charging state is changed");
++                        if (DBG) logd("previousChargingMode=" + previousChargingMode
++                                + ", mChargingMode=" + mChargingMode + ", status=" + status
++                                + "(" + sPluggedStr + ")");
++                    }
++
++
++                    if (fdMdEnableMode == 1) {
++                        if (mPhone.getPhoneId() == fdSimId) {
++                            if ((previousChargingMode != mChargingMode)
++                                    || (previousEnableFDOnCharging != mEnableFdOnCharging)) {
++                                updateFdMdEnableStatus(checkNeedTurnOn());
++                            }
++                        }
++                    }
++                }
++            } else if (action.equals(ConnectivityManager.ACTION_TETHER_STATE_CHANGED)) {
++                if (isFdSupport()){
++                    logd("Received ConnectivityManager.ACTION_TETHER_STATE_CHANGED");
++                    ArrayList<String> active =
++                            intent.getStringArrayListExtra(ConnectivityManager.EXTRA_ACTIVE_TETHER);
++                    mIsTetheredMode = ((active != null) && (active.size() > 0));
++                    logd("[TETHER_STATE_CHANGED]mIsTetheredMode = " + mIsTetheredMode
++                            + "mChargingMode=" + mChargingMode);
++                    updateFdMdEnableStatus(checkNeedTurnOn());
++                }
++            }
++        }
++    };
++
++
++    public static FdManager getInstance(PhoneBase phone) {
++        if (isFdSupport()) {
++            if (phone.getPhoneId() < 0) {
++                Rlog.e(LOG_TAG, "phoneId " + phone.getPhoneId() + " is invalid!");
++                return null;
++            }
++            FdManager fdMgr = sFdManagers.get(phone.getPhoneId());
++            if (fdMgr == null) {
++                //PhoneBase phone = (PhoneBase) PhoneFactory.getPhone(phone.getPhoneId());
++                if (phone != null) {
++                    Rlog.d(LOG_TAG, "FDManager for phoneId:" + phone.getPhoneId()
++                            + " doesn't exist, create it");
++                    fdMgr = new FdManager(phone);
++                    sFdManagers.put(phone.getPhoneId(), fdMgr);
++                } else {
++                    Rlog.e(LOG_TAG, "FDManager for phoneId:" + phone.getPhoneId()
++                            + " can't get phone to init!");
++                }
++            }
++            return fdMgr;
++        }
++        return null;
++    }
++
++    private FdManager(PhoneBase p) {
++        mPhone = p;
++        logd("FastDormancyManager init");
++
++        IntentFilter filter = new IntentFilter();
++        filter.addAction(Intent.ACTION_SCREEN_ON);
++        filter.addAction(Intent.ACTION_SCREEN_OFF);
++        filter.addAction(Intent.ACTION_BATTERY_CHANGED);
++        filter.addAction(ConnectivityManager.ACTION_TETHER_STATE_CHANGED);
++        mPhone.getContext().registerReceiver(mIntentReceiver, filter, null, mPhone);
++
++        initFdTimer();
++
++    }
++
++    public void dispose() {
++        if (DBG) logd("FD.dispose");
++        if (isFdSupport()) {
++            mPhone.getContext().unregisterReceiver(this.mIntentReceiver);
++            sFdManagers.remove(mPhone.getPhoneId());
++        }
++    }
++
++    private void initFdTimer() {
++        String timerStr[] = new String[4];
++        timerStr[0] = SystemProperties.get(STR_PROPERTY_FD_SCREEN_OFF_TIMER, "5");
++        timerValue[FdTimerType.ScreenOffLegacyFd.ordinal()] =
++                Integer.toString((int)(Double.parseDouble(timerStr[0])*10));
++        timerStr[1] = SystemProperties.get(STR_PROPERTY_FD_SCREEN_ON_TIMER, "15");
++        timerValue[FdTimerType.ScreenOnLegacyFd.ordinal()] =
++                Integer.toString((int)(Double.parseDouble(timerStr[1])*10));
++        timerStr[2] = SystemProperties.get(STR_PROPERTY_FD_SCREEN_OFF_R8_TIMER, "5");
++        timerValue[FdTimerType.ScreenOffR8Fd.ordinal()] =
++                Integer.toString((int)(Double.parseDouble(timerStr[2])*10));
++        timerStr[3] = SystemProperties.get(STR_PROPERTY_FD_SCREEN_ON_R8_TIMER, "15");
++        timerValue[FdTimerType.ScreenOnR8Fd.ordinal()] =
++                Integer.toString((int)(Double.parseDouble(timerStr[3])*10));
++        logd("Default FD timers=" + timerValue[0] + "," + timerValue[1] + ","
++                + timerValue[2] + "," + timerValue[3]);
++
++    }
++
++    public int getNumberOfSupportedTypes() {
++        return FdTimerType.SupportedTimerTypes.ordinal();
++    }
++
++    /**
++       * setFdTimerValue
++       * @param String array for new Timer Value
++       * @param Message for on complete
++       */
++    public int setFdTimerValue(String newTimerValue[], Message onComplete) {
++        int fdMdEnableMode = Integer.parseInt(SystemProperties.get(PROPERTY_RIL_FD_MODE, "0"));
++        int fdSimId = SystemProperties.getInt(PROPERTY_3G_SWITCH, 1) - 1;
++        if (isFdSupport() && fdMdEnableMode == 1 && mPhone.getPhoneId() == fdSimId) {
++            // TODO: remove FeatureOption
++            for (int i=0; i < newTimerValue.length; i++) {
++                timerValue[i] = newTimerValue[i];
++            }
++            mPhone.mCi.setFDMode(FdModeType.SET_FD_INACTIVITY_TIMER.ordinal(),
++                    FdTimerType.ScreenOffLegacyFd.ordinal(),
++                    Integer.parseInt(timerValue[FdTimerType.ScreenOffLegacyFd.ordinal()]), null);
++            mPhone.mCi.setFDMode(FdModeType.SET_FD_INACTIVITY_TIMER.ordinal(),
++                    FdTimerType.ScreenOnLegacyFd.ordinal(),
++                    Integer.parseInt(timerValue[FdTimerType.ScreenOnLegacyFd.ordinal()]), null);
++            mPhone.mCi.setFDMode(FdModeType.SET_FD_INACTIVITY_TIMER.ordinal(),
++                    FdTimerType.ScreenOffR8Fd.ordinal(),
++                    Integer.parseInt(timerValue[FdTimerType.ScreenOffR8Fd.ordinal()]), null);
++            mPhone.mCi.setFDMode(FdModeType.SET_FD_INACTIVITY_TIMER.ordinal(),
++                    FdTimerType.ScreenOnR8Fd.ordinal(),
++                    Integer.parseInt(timerValue[FdTimerType.ScreenOnR8Fd.ordinal()]), onComplete);
++            logd("Set Default FD timers=" + timerValue[0] + "," + timerValue[1] + ","
++                    + timerValue[2] + "," + timerValue[3]);
++        }
++        return 0;
++    }
++
++    /**
++       * setFdTimerValue
++       * @param String array for new Timer Value
++       * @param Message for on complete
++       * @param PhoneBase for input context
++       */
++    public int setFdTimerValue(String newTimerValue[], Message onComplete, PhoneBase phone) {
++        FdManager fdMgr = getInstance(phone);
++        if (fdMgr != null) {
++            fdMgr.setFdTimerValue(newTimerValue, onComplete);
++        } else {
++            logd("setFDTimerValue fail!");
++        }
++        return 0;
++    }
++
++    /**
++       * getFdTimerValue
++       * @return FD Timer String array
++       */
++    public static String[] getFdTimerValue() {
++        return timerValue;
++    }
++
++    @Override
++    public void handleMessage(Message msg) {
++        AsyncResult ar;
++        switch (msg.what) {
++            case EVENT_FD_MODE_SET:
++                ar = (AsyncResult) msg.obj;
++                if (ar.exception != null) {
++                    if (DBG) logd("SET_FD_MODE ERROR");
++                }
++                break;
++            default:
++                Rlog.e("FdManager", "Unidentified event msg=" + msg);
++                break;
++        }
++    }
++
++    private void updateFdMdEnableStatus(boolean enabled) {
++        int fdMdEnableMode = Integer.parseInt(SystemProperties.get(PROPERTY_RIL_FD_MODE, "0"));
++        int fdSimId = SystemProperties.getInt(PROPERTY_3G_SWITCH, 1) - 1;
++        if (DBG) logd("updateFdMdEnableStatus(): enabled=" + enabled + ",fdMdEnableMode="
++                + fdMdEnableMode + ", 3gSimID=" + fdSimId);
++        if (fdMdEnableMode == 1 && mPhone.getPhoneId() == fdSimId) {
++            if (enabled) {
++                mPhone.mCi.setFDMode(FdModeType.ENABLE_MD_FD.ordinal(), -1, -1,
++                        obtainMessage(EVENT_FD_MODE_SET));
++            } else {
++                mPhone.mCi.setFDMode(FdModeType.DISABLE_MD_FD.ordinal(), -1, -1,
++                        obtainMessage(EVENT_FD_MODE_SET));
++            }
++        }
++    }
++
++    // TODO: check onRecordsLoaded
++    public void disableFdWhenTethering() {
++        if (isFdSupport()) {
++            ConnectivityManager connMgr = (ConnectivityManager) mPhone.getContext().getSystemService(Context.CONNECTIVITY_SERVICE);
++            if ((connMgr != null) && (connMgr.getTetheredIfaces() != null)) {
++               mIsTetheredMode = (connMgr.getTetheredIfaces().length > 0);
++            }
++
++           logd("mIsTetheredMode = " + mIsTetheredMode + "mChargingMode=" + mChargingMode);
++           updateFdMdEnableStatus(checkNeedTurnOn());
++        }
++    }
++
++    /**
++     * checkNeedTurnOn.
++     * when Fd Screen Off only mode, check screen state to make sure the turn on or not
++     * @return boolean need or not
++     */
++    private boolean checkNeedTurnOn() {
++        return (!(isFdScreenOffOnly() && mIsScreenOn) &&
++            !(mChargingMode && (mEnableFdOnCharging == 0)) &&
++            !mIsTetheredMode);
++    }
++
++    public static boolean isFdScreenOffOnly() {
++        return SystemProperties.getInt(PROPERTY_FD_SCREEN_OFF_ONLY, 0) == 1;
++    }
++
++    public static boolean isFdSupport() {
++        return SystemProperties.getInt(PROPERTY_MTK_FD_SUPPORT, 1) == 1;
++    }
++
++    protected void logd(String s) {
++        Rlog.d(LOG_TAG, "[GDCT][phoneId" + mPhone.getPhoneId() + "]"+ s);
++    }
++}
++
+-- 
+2.5.0
+

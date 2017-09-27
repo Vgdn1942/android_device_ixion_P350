@@ -1,0 +1,99 @@
+From efb731662a04d3a137ce2ff5783af20d585c2f76 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Sat, 19 Sep 2015 10:44:24 +0800
+Subject: [PATCH] BatteryProperties: HACK to be compatible with both AOSP and
+ MTK healthd
+
+Change-Id: I565078e6aef4472d2f57d7fba1cd883881eb0f10
+---
+ core/java/android/os/BatteryProperties.java | 40 +++++++++++++++++++++--------
+ 1 file changed, 30 insertions(+), 10 deletions(-)
+
+diff --git a/core/java/android/os/BatteryProperties.java b/core/java/android/os/BatteryProperties.java
+index 92ec168..ad07b5c 100644
+--- a/core/java/android/os/BatteryProperties.java
++++ b/core/java/android/os/BatteryProperties.java
+@@ -42,8 +42,16 @@ public class BatteryProperties implements Parcelable {
+     public String dockBatteryTechnology;
+ 
+     // MTK
+-    // FIXME: proper detection of MTK healthd instead of this
+-    private static final boolean MTK_HARDWARE = true;
++    private static final boolean MTK_HEALTHD;
++
++    static {
++        // XXX: Magnificent hack relying on 3rd-party ROMs not including the
++        // (useless anyway) MTK-specific init scripts. Doing a string search
++        // on the healthd binary for some MTK-specific strings may be more
++        // reliable, but it's arguably more overhead.
++        MTK_HEALTHD = new java.io.File("/factory_init.rc").exists()
++                      || new java.io.File("/meta_init.rc").exists();
++    }
+ 
+     public BatteryProperties() {
+     }
+@@ -81,20 +89,26 @@ public class BatteryProperties implements Parcelable {
+         chargerUsbOnline = p.readInt() == 1 ? true : false;
+         chargerWirelessOnline = p.readInt() == 1 ? true : false;
+         batteryStatus = p.readInt();
++        if (MTK_HEALTHD)
+         /* batteryStatus_smb = */ p.readInt();
+         batteryHealth = p.readInt();
+         batteryPresent = p.readInt() == 1 ? true : false;
++        if (MTK_HEALTHD)
+         /* batteryPresent_smb = */ p.readInt() /* == 1 ? true : false */;
+         batteryLevel = p.readInt();
++        if (MTK_HEALTHD)
+         /* batteryLevel_smb = */ p.readInt();
+         batteryVoltage = p.readInt();
++        if (MTK_HEALTHD) {
+         /* batteryCurrentNow = */ p.readInt();
+         /* batteryChargeCounter = */ p.readInt();
++        }
+         batteryTemperature = p.readInt();
++        if (MTK_HEALTHD)
+         /* adjustPower = */ p.readInt();
+         batteryTechnology = p.readString();
+ 
+-        dockBatterySupported = MTK_HARDWARE ? false : p.readInt() == 1 ? true : false;
++        dockBatterySupported = MTK_HEALTHD ? false : p.readInt() == 1 ? true : false;
+         if (dockBatterySupported) {
+             chargerDockAcOnline = p.readInt() == 1 ? true : false;
+             dockBatteryStatus = p.readInt();
+@@ -121,20 +135,26 @@ public class BatteryProperties implements Parcelable {
+         p.writeInt(chargerUsbOnline ? 1 : 0);
+         p.writeInt(chargerWirelessOnline ? 1 : 0);
+         p.writeInt(batteryStatus);
+-        p.writeInt(0);  // batteryStatus_smb
++        if (MTK_HEALTHD)
++            p.writeInt(0);  // batteryStatus_smb
+         p.writeInt(batteryHealth);
+         p.writeInt(batteryPresent ? 1 : 0);
+-        p.writeInt(0);  // batteryPresent_smb
++        if (MTK_HEALTHD)
++            p.writeInt(0);  // batteryPresent_smb
+         p.writeInt(batteryLevel);
+-        p.writeInt(50);  // batteryLevel_smb
++        if (MTK_HEALTHD)
++            p.writeInt(50);  // batteryLevel_smb
+         p.writeInt(batteryVoltage);
+-        p.writeInt(0);  // batteryCurrentNow
+-        p.writeInt(0);  // batteryChargeCounter
++        if (MTK_HEALTHD) {
++            p.writeInt(0);  // batteryCurrentNow
++            p.writeInt(0);  // batteryChargeCounter
++        }
+         p.writeInt(batteryTemperature);
+-        p.writeInt(0);  // adjustPower
++        if (MTK_HEALTHD)
++            p.writeInt(0);  // adjustPower
+         p.writeString(batteryTechnology);
+ 
+-        if (MTK_HARDWARE) {
++        if (MTK_HEALTHD) {
+             return;
+         }
+ 
+-- 
+2.5.0
+

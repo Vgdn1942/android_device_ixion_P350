@@ -1,0 +1,36 @@
+From 2a46c8e77ccee4610e6b5a1625761f91079dd498 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Thu, 7 Jan 2016 17:44:32 +0800
+Subject: [PATCH] ProximitySensorManager: remove turnOff workaround
+
+Change-Id: I6c54f52a0c4da4b239b60de09c8d8a1b562f93dc
+---
+ src/com/android/server/telecom/ProximitySensorManager.java | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/src/com/android/server/telecom/ProximitySensorManager.java b/src/com/android/server/telecom/ProximitySensorManager.java
+index f265195..fc27130 100644
+--- a/src/com/android/server/telecom/ProximitySensorManager.java
++++ b/src/com/android/server/telecom/ProximitySensorManager.java
+@@ -51,14 +51,14 @@ public class ProximitySensorManager extends CallsManagerListenerBase {
+     public void onCallRemoved(Call call) {
+         if (CallsManager.getInstance().getCalls().isEmpty()) {
+             Log.i(this, "All calls removed, resetting proximity sensor to default state");
++            turnOff(true);
+ 
+             // MTK has screenOnImmediately set to false, at least on Meizu MX4
+             // passing true would result in tap-to-wake or proximity sensor
+             // stopping working if remote hung up.
+-            turnOff(!mIsMTKHardware);
+-
+-            // Seems only calling turnOff with false can't eliminate all cases
+-            // of malfunctioning... will have to re-calibrate then.
++            // However it seems only calling turnOff with false can't eliminate
++            // all cases of malfunctioning... so we'd rather keep the original
++            // sources and re-calibrate instead.
+             if (mIsMTKHardware) {
+                 // call into calibration service if one exists
+                 // hopefully none will run into namespace collision with me...
+-- 
+2.5.0
+

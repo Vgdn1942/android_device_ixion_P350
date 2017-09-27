@@ -1,0 +1,29 @@
+From 1dfd41fcda6ba2c7fa903154b5f78421f66ad8fd Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Tue, 20 Oct 2015 10:13:02 +0800
+Subject: [PATCH] Revert "DcTracker: try to minimally fix an NPE"
+
+This reverts commit 7d97f76d08d47038727d870ed0377ca002400412.
+---
+ .../com/android/internal/telephony/dataconnection/DcTracker.java     | 5 -----
+ 1 file changed, 5 deletions(-)
+
+diff --git a/src/java/com/android/internal/telephony/dataconnection/DcTracker.java b/src/java/com/android/internal/telephony/dataconnection/DcTracker.java
+index 6339da8..db1f4f9 100755
+--- a/src/java/com/android/internal/telephony/dataconnection/DcTracker.java
++++ b/src/java/com/android/internal/telephony/dataconnection/DcTracker.java
+@@ -2553,11 +2553,6 @@ public final class DcTracker extends DcTrackerBase {
+      * Data Connections and setup the preferredApn.
+      */
+     private void createAllApnList() {
+-        // so why could this be null?
+-        if (mAllApnSettings == null) {
+-            mAllApnSettings = new ArrayList<ApnSetting>();
+-        }
+-
+         mAllApnSettings.clear();
+         String operator = getOperatorNumeric();
+         int radioTech = mPhone.getServiceState().getRilDataRadioTechnology();
+-- 
+2.5.0
+

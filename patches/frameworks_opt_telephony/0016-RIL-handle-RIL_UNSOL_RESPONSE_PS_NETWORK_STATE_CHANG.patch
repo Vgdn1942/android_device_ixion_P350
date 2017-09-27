@@ -1,0 +1,78 @@
+From 4f47ad791296387c1b01ef3ad21ec55393494c54 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Fri, 9 Oct 2015 16:07:03 +0800
+Subject: [PATCH] RIL: handle RIL_UNSOL_RESPONSE_PS_NETWORK_STATE_CHANGED the
+ MTK way
+
+Change-Id: Iec2dadc3090c53b99e2992d3d4068e0de6d96377
+---
+ src/java/com/android/internal/telephony/BaseCommands.java     | 11 +++++++++++
+ .../com/android/internal/telephony/CommandsInterface.java     |  3 +++
+ src/java/com/android/internal/telephony/MediaTekRIL.java      |  8 +++++---
+ 3 files changed, 19 insertions(+), 3 deletions(-)
+
+diff --git a/src/java/com/android/internal/telephony/BaseCommands.java b/src/java/com/android/internal/telephony/BaseCommands.java
+index 8f3b65b..9d4bee8 100644
+--- a/src/java/com/android/internal/telephony/BaseCommands.java
++++ b/src/java/com/android/internal/telephony/BaseCommands.java
+@@ -111,6 +111,7 @@ public abstract class BaseCommands implements CommandsInterface {
+     protected RegistrantList mNeighboringInfoRegistrants = new RegistrantList();
+     protected RegistrantList mNetworkInfoRegistrants = new RegistrantList();
+     protected RegistrantList mPlmnChangeNotificationRegistrant = new RegistrantList();
++    protected RegistrantList mPsNetworkStateRegistrants = new RegistrantList();
+     protected Registrant mRegistrationSuspendedRegistrant;
+     // M: fast dormancy.
+     protected Registrant mScriResultRegistrant;
+@@ -1064,6 +1065,16 @@ public abstract class BaseCommands implements CommandsInterface {
+         mCommonSlotNoChangedRegistrants.remove(h);
+     }
+ 
++    public void registerForPsNetworkStateChanged(Handler h, int what, Object obj) {
++        Registrant r = new Registrant(h, what, obj);
++
++        mPsNetworkStateRegistrants.add(r);
++    }
++
++    public void unregisterForPsNetworkStateChanged(Handler h) {
++        mPsNetworkStateRegistrants.remove(h);
++    }
++
+     public void registerForNeighboringInfo(Handler h, int what, Object obj) {
+         Registrant r = new Registrant(h, what, obj);
+         mNeighboringInfoRegistrants.add(r);
+diff --git a/src/java/com/android/internal/telephony/CommandsInterface.java b/src/java/com/android/internal/telephony/CommandsInterface.java
+index 2514aa7..564e12b 100644
+--- a/src/java/com/android/internal/telephony/CommandsInterface.java
++++ b/src/java/com/android/internal/telephony/CommandsInterface.java
+@@ -2180,6 +2180,9 @@ public interface CommandsInterface {
+      */
+     void unregisterForCommonSlotNoChanged(Handler h);
+ 
++    void registerForPsNetworkStateChanged(Handler h, int what, Object obj);
++    void unregisterForPsNetworkStateChanged(Handler h);
++
+     /**
+      * unlike the register* methods, there's only one Neighboring cell info handler
+      *
+diff --git a/src/java/com/android/internal/telephony/MediaTekRIL.java b/src/java/com/android/internal/telephony/MediaTekRIL.java
+index 1844728..947fc3f 100644
+--- a/src/java/com/android/internal/telephony/MediaTekRIL.java
++++ b/src/java/com/android/internal/telephony/MediaTekRIL.java
+@@ -1258,9 +1258,11 @@ public class MediaTekRIL extends RIL implements CommandsInterface {
+                 break;
+ 
+             case RIL_UNSOL_RESPONSE_PS_NETWORK_STATE_CHANGED:
+-                rewindAndReplace = true;
+-                newResponseCode = RIL_UNSOL_RESPONSE_VOICE_NETWORK_STATE_CHANGED;
+-                break;
++                if (RILJ_LOGD) unsljLog(response);
++
++                mPsNetworkStateRegistrants
++                    .notifyRegistrants(new AsyncResult(null, null, null));
++            break;
+ 
+             case RIL_UNSOL_SMS_READY_NOTIFICATION:
+                 Rlog.e(RILJ_LOG_TAG, "RIL_UNSOL_SMS_READY_NOTIFICATION: stub!");
+-- 
+2.5.0
+

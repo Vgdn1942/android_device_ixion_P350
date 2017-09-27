@@ -1,0 +1,698 @@
+From 8452a7f721674e00b56c0380a55558e17d7e0de6 Mon Sep 17 00:00:00 2001
+From: Besik13 <egor.besik@gmail.com>
+Date: Sun, 27 Mar 2016 18:22:12 +0300
+Subject: [PATCH] mtk: add pmem support and mtk specific symbols
+
+Change-Id: I3249b345ca4adbec1ea687bf2112ce8c1384539b
+---
+ include/cutils/pmem.h        | 118 +++++++++++++
+ include/linux/android_pmem.h |  93 ++++++++++
+ libcutils/Android.mk         |   4 +
+ libcutils/pmem-dev.cpp       | 408 +++++++++++++++++++++++++++++++++++++++++++
+ libutils/Android.mk          |   4 +
+ libutils/MediatekHacks.cpp   |   3 +
+ 6 files changed, 630 insertions(+)
+ create mode 100644 include/cutils/pmem.h
+ create mode 100644 include/linux/android_pmem.h
+ create mode 100644 libcutils/pmem-dev.cpp
+ create mode 100644 libutils/MediatekHacks.cpp
+
+diff --git a/include/cutils/pmem.h b/include/cutils/pmem.h
+new file mode 100644
+index 0000000..3877c27
+--- /dev/null
++++ b/include/cutils/pmem.h
+@@ -0,0 +1,118 @@
++/* Copyright Statement:
++ *
++ * This software/firmware and related documentation ("MediaTek Software") are
++ * protected under relevant copyright laws. The information contained herein
++ * is confidential and proprietary to MediaTek Inc. and/or its licensors.
++ * Without the prior written permission of MediaTek inc. and/or its licensors,
++ * any reproduction, modification, use or disclosure of MediaTek Software,
++ * and information contained herein, in whole or in part, shall be strictly prohibited.
++ */
++/* MediaTek Inc. (C) 2010. All rights reserved.
++ *
++ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
++ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
++ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
++ * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
++ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
++ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
++ * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
++ * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
++ * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
++ * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
++ * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
++ * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
++ * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
++ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
++ * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
++ * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
++ * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
++ * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
++ *
++ * The following software/firmware and/or related documentation ("MediaTek Software")
++ * have been modified by MediaTek Inc. All revisions are subject to any receiver's
++ * applicable license agreements with MediaTek Inc.
++ */
++
++/*****************************************************************************
++*  Copyright Statement:
++*  --------------------
++*  This software is protected by Copyright and the information contained
++*  herein is confidential. The software may not be copied and the information
++*  contained herein may not be used or disclosed except with the written
++*  permission of MediaTek Inc. (C) 2008
++*
++*  BY OPENING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
++*  THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
++*  RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON
++*  AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
++*  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
++*  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
++*  NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
++*  SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
++*  SUPPLIED WITH THE MEDIATEK SOFTWARE, AND BUYER AGREES TO LOOK ONLY TO SUCH
++*  THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. MEDIATEK SHALL ALSO
++*  NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE RELEASES MADE TO BUYER'S
++*  SPECIFICATION OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
++*
++*  BUYER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND CUMULATIVE
++*  LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
++*  AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
++*  OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY BUYER TO
++*  MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
++*
++*  THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE
++*  WITH THE LAWS OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF
++*  LAWS PRINCIPLES.  ANY DISPUTES, CONTROVERSIES OR CLAIMS ARISING THEREOF AND
++*  RELATED THERETO SHALL BE SETTLED BY ARBITRATION IN SAN FRANCISCO, CA, UNDER
++*  THE RULES OF THE INTERNATIONAL CHAMBER OF COMMERCE (ICC).
++*
++*****************************************************************************/
++
++
++#ifndef _CUTILS_PMEM_H
++#define _CUTILS_PMEM_H
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++/**
++ * Allocates a memory block which is continuous in physical memory.
++ * @param size  number of bytes to allocate
++ * @param pfd   pointer to associate file descriptor
++ * @return a void pointer to the allocated space, or NULL if there is insufficient
++ *         memory available.
++ */
++void* pmem_alloc(size_t size, int *pfd);
++
++/**
++ * Allocates a sync memory block which is continuous in physical memory.
++ * @param size  number of bytes to allocate
++ * @param pfd   pointer to associate file descriptor
++ * @return a void pointer to the allocated space, or NULL if there is insufficient
++ *         memory available.
++ */
++void* pmem_alloc_sync(size_t size, int *pfd);
++
++/**
++ * Deallocates or frees a memory block which is continuous in physical memory.
++ * @param ptr  pointer to previously allocated memory block which is allocated by pmem_alloc().
++ * @param size size of the memory block which is allocated by pmem_alloc().
++ * @param fd   associated file descriptor of the memory block which is allocated by pmem_alloc().
++ * @return 0 if success, or nagtive value if there is error
++ */
++int  pmem_free(void *ptr, size_t size, int fd);
++
++/**
++ * Convert the address of a memory block from virtual address to physical address.
++ * @param fd       associated file descriptor of the memory block which is allocated by pmem_alloc().
++ * @return a void pointer contains the physical address, or NULL if virPtr is invalid.
++ */
++void* pmem_get_phys(int fd);
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif	/* _CUTILS_PMEM_H */
++ 
+diff --git a/include/linux/android_pmem.h b/include/linux/android_pmem.h
+new file mode 100644
+index 0000000..965b511
+--- /dev/null
++++ b/include/linux/android_pmem.h
+@@ -0,0 +1,93 @@
++/* include/linux/android_pmem.h
++ *
++ * Copyright (C) 2007 Google, Inc.
++ *
++ * This software is licensed under the terms of the GNU General Public
++ * License version 2, as published by the Free Software Foundation, and
++ * may be copied, distributed, and modified under those terms.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ */
++
++#ifndef _ANDROID_PMEM_H_
++#define _ANDROID_PMEM_H_
++
++#define PMEM_IOCTL_MAGIC 'p'
++#define PMEM_GET_PHYS		_IOW(PMEM_IOCTL_MAGIC, 1, unsigned int)
++#define PMEM_MAP		_IOW(PMEM_IOCTL_MAGIC, 2, unsigned int)
++#define PMEM_GET_SIZE		_IOW(PMEM_IOCTL_MAGIC, 3, unsigned int)
++#define PMEM_UNMAP		_IOW(PMEM_IOCTL_MAGIC, 4, unsigned int)
++/* This ioctl will allocate pmem space, backing the file, it will fail
++ * if the file already has an allocation, pass it the len as the argument
++ * to the ioctl */
++#define PMEM_ALLOCATE		_IOW(PMEM_IOCTL_MAGIC, 5, unsigned int)
++/* This will connect a one pmem file to another, pass the file that is already
++ * backed in memory as the argument to the ioctl
++ */
++#define PMEM_CONNECT		_IOW(PMEM_IOCTL_MAGIC, 6, unsigned int)
++/* Returns the total size of the pmem region it is sent to as a pmem_region
++ * struct (with offset set to 0). 
++ */
++#define PMEM_GET_TOTAL_SIZE	_IOW(PMEM_IOCTL_MAGIC, 7, unsigned int)
++#define PMEM_CACHE_FLUSH	_IOW(PMEM_IOCTL_MAGIC, 8, unsigned int)
++
++struct android_pmem_platform_data
++{
++	const char* name;
++	/* starting physical address of memory region */
++	unsigned long start;
++	/* size of memory region */
++	unsigned long size;
++	/* set to indicate the region should not be managed with an allocator */
++	unsigned no_allocator;
++	/* set to indicate maps of this region should be cached, if a mix of
++	 * cached and uncached is desired, set this and open the device with
++	 * O_SYNC to get an uncached region */
++	unsigned cached;
++	/* The MSM7k has bits to enable a write buffer in the bus controller*/
++	unsigned buffered;
++};
++
++struct pmem_region {
++	unsigned long offset;
++	unsigned long len;
++};
++
++#ifdef CONFIG_ANDROID_PMEM
++int is_pmem_file(struct file *file);
++int get_pmem_file(int fd, unsigned long *start, unsigned long *vstart,
++		  unsigned long *end, struct file **filp);
++int get_pmem_user_addr(struct file *file, unsigned long *start,
++		       unsigned long *end);
++void put_pmem_file(struct file* file);
++void flush_pmem_file(struct file *file, unsigned long start, unsigned long len);
++int pmem_setup(struct android_pmem_platform_data *pdata,
++	       long (*ioctl)(struct file *, unsigned int, unsigned long),
++	       int (*release)(struct inode *, struct file *));
++int pmem_remap(struct pmem_region *region, struct file *file,
++	       unsigned operation);
++
++#else
++static inline int is_pmem_file(struct file *file) { return 0; }
++static inline int get_pmem_file(int fd, unsigned long *start,
++				unsigned long *vstart, unsigned long *end,
++				struct file **filp) { return -ENOSYS; }
++static inline int get_pmem_user_addr(struct file *file, unsigned long *start,
++				     unsigned long *end) { return -ENOSYS; }
++static inline void put_pmem_file(struct file* file) { return; }
++static inline void flush_pmem_file(struct file *file, unsigned long start,
++				   unsigned long len) { return; }
++static inline int pmem_setup(struct android_pmem_platform_data *pdata,
++	      long (*ioctl)(struct file *, unsigned int, unsigned long),
++	      int (*release)(struct inode *, struct file *)) { return -ENOSYS; }
++
++static inline int pmem_remap(struct pmem_region *region, struct file *file,
++			     unsigned operation) { return -ENOSYS; }
++#endif
++
++#endif //_ANDROID_PPP_H_
++ 
+diff --git a/libcutils/Android.mk b/libcutils/Android.mk
+index bee2bd7..699f910 100644
+--- a/libcutils/Android.mk
++++ b/libcutils/Android.mk
+@@ -118,6 +118,10 @@ LOCAL_SRC_FILES := $(commonSources) \
+         trace.c \
+         uevent.c \
+ 
++ifeq ($(BOARD_HAS_MTK_HARDWARE), true)
++LOCAL_SRC_FILES += pmem-dev.cpp
++endif
++ 
+ LOCAL_SRC_FILES_arm += \
+         arch-arm/memset32.S \
+ 
+diff --git a/libcutils/pmem-dev.cpp b/libcutils/pmem-dev.cpp
+new file mode 100644
+index 0000000..9faf754
+--- /dev/null
++++ b/libcutils/pmem-dev.cpp
+@@ -0,0 +1,408 @@
++/* Copyright Statement:
++ *
++ * This software/firmware and related documentation ("MediaTek Software") are
++ * protected under relevant copyright laws. The information contained herein
++ * is confidential and proprietary to MediaTek Inc. and/or its licensors.
++ * Without the prior written permission of MediaTek inc. and/or its licensors,
++ * any reproduction, modification, use or disclosure of MediaTek Software,
++ * and information contained herein, in whole or in part, shall be strictly prohibited.
++ */
++/* MediaTek Inc. (C) 2010. All rights reserved.
++ *
++ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
++ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
++ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
++ * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
++ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
++ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
++ * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
++ * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
++ * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
++ * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
++ * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
++ * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
++ * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
++ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
++ * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
++ * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
++ * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
++ * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
++ *
++ * The following software/firmware and/or related documentation ("MediaTek Software")
++ * have been modified by MediaTek Inc. All revisions are subject to any receiver's
++ * applicable license agreements with MediaTek Inc.
++ */
++
++/*****************************************************************************
++*  Copyright Statement:
++*  --------------------
++*  This software is protected by Copyright and the information contained
++*  herein is confidential. The software may not be copied and the information
++*  contained herein may not be used or disclosed except with the written
++*  permission of MediaTek Inc. (C) 2008
++*
++*  BY OPENING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
++*  THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
++*  RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON
++*  AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
++*  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
++*  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
++*  NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
++*  SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
++*  SUPPLIED WITH THE MEDIATEK SOFTWARE, AND BUYER AGREES TO LOOK ONLY TO SUCH
++*  THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. MEDIATEK SHALL ALSO
++*  NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE RELEASES MADE TO BUYER'S
++*  SPECIFICATION OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
++*
++*  BUYER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND CUMULATIVE
++*  LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
++*  AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
++*  OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY BUYER TO
++*  MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
++*
++*  THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE
++*  WITH THE LAWS OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF
++*  LAWS PRINCIPLES.  ANY DISPUTES, CONTROVERSIES OR CLAIMS ARISING THEREOF AND
++*  RELATED THERETO SHALL BE SETTLED BY ARBITRATION IN SAN FRANCISCO, CA, UNDER
++*  THE RULES OF THE INTERNATIONAL CHAMBER OF COMMERCE (ICC).
++*
++*****************************************************************************/
++
++#include <sys/types.h>
++#include <sys/stat.h>
++#include <sys/ioctl.h>
++#include <fcntl.h>
++#include <sys/mman.h>
++#include <linux/android_pmem.h>
++#include <cutils/pmem.h>
++#include <utils/Log.h>
++
++#define LOGE    ALOGE
++
++#undef  LOG_TAG
++#define LOG_TAG "utils_pmem"
++
++#include <unwind.h>
++#include <stdlib.h>
++#include <cutils/properties.h>
++
++#define PMEM_DEVICE_NAME "/dev/pmem_multimedia"
++#define IOCTL_FAILED      -1
++#define UNMAP_FAILED      -1
++#define CLOSE_FAILED      -1
++#define INVALID_FD        -1
++//#define PAGE_SIZE       4096
++
++
++static char p_value[PROPERTY_VALUE_MAX] = "";
++static bool p_res = 0;
++
++    
++static size_t align_size(size_t size)
++{
++	return ((size + PAGE_SIZE-1) & ~(PAGE_SIZE-1));
++}
++
++// =============================================================================
++// stack trace functions
++// =============================================================================
++//
++// The statck related function is copy from bionic
++// 
++
++typedef struct
++{
++    size_t count;
++    intptr_t* addrs;
++} stack_crawl_state_t;
++
++/* depends how the system includes define this */
++#ifdef HAVE_UNWIND_CONTEXT_STRUCT
++typedef struct _Unwind_Context __unwind_context;
++#else
++typedef _Unwind_Context __unwind_context;
++#endif
++
++static _Unwind_Reason_Code trace_function(__unwind_context *context, void *arg)
++{
++    stack_crawl_state_t* state = (stack_crawl_state_t*)arg;
++    if (state->count) {
++        intptr_t ip = (intptr_t)_Unwind_GetIP(context);
++        if (ip) {
++            state->addrs[0] = ip;
++            state->addrs++;
++            state->count--;
++            return _URC_NO_REASON;
++        }
++    }
++    /*
++     * If we run out of space to record the address or 0 has been seen, stop
++     * unwinding the stack.
++     */
++    return _URC_END_OF_STACK;
++}
++
++static inline
++int get_backtrace(intptr_t* addrs, size_t max_entries)
++{
++    stack_crawl_state_t state;
++    state.count = max_entries;
++    state.addrs = (intptr_t*)addrs;
++    _Unwind_Backtrace(trace_function, (void*)&state);
++    return max_entries - state.count;
++}
++
++static void dump_stack_trace()
++{
++    intptr_t addrs[20];
++    int c = get_backtrace(addrs, 20);
++    char buf[21];
++    char tmp[21*20];
++    int i;
++
++    tmp[0] = 0; // Need to initialize tmp[0] for the first strcat
++    for (i=0 ; i<c; i++) {
++        snprintf(buf, sizeof buf, "[PMEM]%2d: %08x\n", i, addrs[i]);
++        strlcat(tmp, buf, sizeof tmp);
++    }
++    //__libc_android_log_print(ANDROID_LOG_ERROR, "libc", "call stack:\n%s", tmp);
++    LOGE("[PMEM] call stack:\n%s", tmp);
++}
++
++void* pmem_alloc(size_t size, int *pfd)
++{
++    int         fd;
++    size_t      aligned_size;
++    void*       base;
++    pmem_region region = { 0, 0 };
++    int         err;
++
++    if (NULL == pfd)
++    {
++        return NULL;
++    }
++
++    *pfd = -1;
++    
++    fd = open(PMEM_DEVICE_NAME, (O_RDWR | O_SYNC));
++    if (INVALID_FD == fd)
++    {
++        LOGE("[PMEM] open %s failed!", PMEM_DEVICE_NAME);
++        goto open_failed;
++    }
++
++    aligned_size = align_size(size);
++    base = mmap(0, aligned_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
++    if (MAP_FAILED == base) 
++    {
++        LOGE("[PMEM] mmap size %d failed!", aligned_size);
++        goto mmap_failed;
++    }
++    
++    region.len = aligned_size;
++    err = ioctl(fd, PMEM_MAP, &region);
++    if (IOCTL_FAILED == err)
++    {
++        LOGE("[PMEM] PMEM_MAP size %d failed!", aligned_size);
++        goto pmem_map_failed;
++    }
++
++    property_get("pm.dumpstack", p_value, "0"); //if not set, disable by default 
++    p_res = atoi(p_value);
++    if (p_res) 
++    {
++        LOGE("[PMEM] pmem_alloc: base: 0x%08x, size: %d\n", (int)base, aligned_size);
++        dump_stack_trace();
++    }
++
++    *pfd = fd;
++    
++    return base;
++
++
++insert_failed:
++    ioctl(fd, PMEM_UNMAP, &region);
++pmem_map_failed:
++    munmap(base, aligned_size);
++mmap_failed:
++    close(fd);
++open_failed:
++    return NULL;    
++}
++
++
++void* pmem_alloc_sync(size_t size, int *pfd)
++{
++    int         fd;
++    size_t      aligned_size;
++    void*       base;
++    pmem_region region = { 0, 0 };
++    int         err;
++
++	if (NULL == pfd)
++	{
++		return NULL;
++	}
++
++	*pfd = -1;
++    
++    fd = open(PMEM_DEVICE_NAME, O_RDWR|O_SYNC);
++    if (INVALID_FD == fd)
++    {
++        LOGE("[PMEM] open %s failed!", PMEM_DEVICE_NAME);
++        goto open_failed;
++    }
++
++    aligned_size = align_size(size);
++    base = mmap(0, aligned_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
++    if (MAP_FAILED == base) 
++    {
++        LOGE("[PMEM] mmap size %d failed!", aligned_size);
++        goto mmap_failed;
++    }
++    
++    region.len = aligned_size;
++    err = ioctl(fd, PMEM_MAP, &region);
++    if (IOCTL_FAILED == err)
++    {
++        LOGE("[PMEM] PMEM_MAP size %d failed!", aligned_size);
++        goto pmem_map_failed;
++    }
++
++    property_get("pm.dumpstack", p_value, "0"); //if not set, disable by default 
++    p_res = atoi(p_value);
++    if (p_res) 
++    {
++        LOGE("[PMEM] pmem_alloc_sync: base: 0x%08x, size: %d\n", (int)base, aligned_size);
++        dump_stack_trace();
++    }
++
++    *pfd = fd;
++    return base;
++
++
++insert_failed:
++    ioctl(fd, PMEM_UNMAP, &region);
++pmem_map_failed:
++    munmap(base, aligned_size);
++mmap_failed:
++    close(fd);
++open_failed:
++    return NULL;    
++}
++
++
++int  pmem_free(void *ptr, size_t size, int fd)
++{
++    int err, ret = 0;
++    size_t aligned_size = align_size(size);    
++
++    pmem_region region = { 0, aligned_size };
++    err = ioctl(fd, PMEM_UNMAP, &region);
++    if (IOCTL_FAILED == err)
++    {
++        LOGE("PMEM_UNMAP size %d failed!", size);
++        ret = err;
++    }
++    
++    err = munmap(ptr, aligned_size);
++    if (UNMAP_FAILED == err)
++    {
++        LOGE("mumap size %d failed!", size);
++        ret = err;
++    }    
++
++    err = close(fd);
++    if (CLOSE_FAILED == err)
++    {
++        LOGE("Close file %d failed!", fd);
++        ret = err;
++    }
++
++
++    property_get("pm.dumpstack", p_value, "0"); //if not set, disable by default 
++    p_res = atoi(p_value);
++    if (p_res) 
++    {
++        LOGE("[PMEM] pmem_free: base: 0x%08x, size: %d\n", (int)ptr, aligned_size);
++        dump_stack_trace();
++    }
++
++    
++    return ret;
++}
++
++
++void* pmem_get_phys(int fd)
++{
++    pmem_region pmem_reg;
++    int err = ioctl(fd, PMEM_GET_PHYS, &pmem_reg);
++    if (IOCTL_FAILED == err)
++    {
++        LOGE("PMEM_GET_PHYS failed: 0x%X !", fd);
++        return NULL;
++    }
++
++    return (void*)(pmem_reg.offset);
++}
++
++void pmem_cache_flush(int fd, unsigned int offset, unsigned int length) {
++    pmem_region region = { 0, 0 };
++    int         err = -1; 
++
++    if (fd < 0 || offset == 0 || length == 0) {
++        LOGE("pmem_cache_flush: invalide argument\n");
++        return;
++    }   
++
++    region.offset = offset;
++    region.len = length;
++    err = ioctl(fd, PMEM_CACHE_FLUSH, &region);
++    if (IOCTL_FAILED == err)
++    {   
++        LOGE("PMEM_CACHE_FLUSH offset 0x%08x, size %d failed!\n", offset, length);
++    }
++}
++
++
++
++/* No clean & INV function in ICS */
++#if 0
++void pmem_cache_clean(int fd, unsigned int offset, unsigned int length) {
++    pmem_region region = { 0, 0 };
++    int         err = -1; 
++
++    if (fd < 0 || offset == 0 || length == 0) {
++        LOGE("pmem_cache_clean: invalide argument\n");
++        return;
++    }   
++
++    region.offset = offset;
++    region.len = length;
++    err = ioctl(fd, PMEM_CACHE_CLEAN, &region);
++    if (IOCTL_FAILED == err)
++    {   
++        LOGE("PMEM_CACHE_CLEAN offset 0x%08x, size %d failed!\n", offset, length);
++    }
++}
++
++
++void pmem_cache_inv(int fd, unsigned int offset, unsigned int length) {
++    pmem_region region = { 0, 0 };
++    int         err = -1; 
++
++    if (fd < 0 || offset == 0 || length == 0) {
++        LOGE("pmem_cache_inv: invalide argument\n");
++        return;
++    }   
++
++    region.offset = offset;
++    region.len = length;
++    err = ioctl(fd, PMEM_CACHE_INV, &region);
++    if (IOCTL_FAILED == err)
++    {   
++        LOGE("PMEM_CACHE_INV offset 0x%08x, size %d failed!\n", offset, length);
++    }
++}
++#endif
++ 
+diff --git a/libutils/Android.mk b/libutils/Android.mk
+index 035846b..806881a 100644
+--- a/libutils/Android.mk
++++ b/libutils/Android.mk
+@@ -91,6 +91,10 @@ LOCAL_CFLAGS += -DALIGN_DOUBLE
+ endif
+ LOCAL_CFLAGS += -Werror
+ 
++ifeq ($(BOARD_HAS_MTK_HARDWARE), true)
++LOCAL_SRC_FILES += MediatekHacks.cpp
++endif
++
+ LOCAL_C_INCLUDES += \
+ 		bionic/libc \
+ 		external/zlib
+diff --git a/libutils/MediatekHacks.cpp b/libutils/MediatekHacks.cpp
+new file mode 100644
+index 0000000..e775ee6
+--- /dev/null
++++ b/libutils/MediatekHacks.cpp
+@@ -0,0 +1,3 @@
++extern "C" {
++ void _ZN7android11IDumpTunnel11asInterfaceERKNS_2spINS_7IBinderEEE(){}
++} 
+-- 
+2.5.0
+

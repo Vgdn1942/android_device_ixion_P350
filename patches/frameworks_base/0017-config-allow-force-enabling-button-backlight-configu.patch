@@ -1,0 +1,42 @@
+From 9b991b277e79320b5e9f4580962ad9c92231e106 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Thu, 15 Oct 2015 03:20:07 +0800
+Subject: [PATCH] config: allow force-enabling button backlight configuration
+
+Change-Id: Ic2d8c61d5e0443f7cc2d81d425c4a5e1d9b15e9b
+---
+ core/res/res/values/cm_symbols.xml | 2 ++
+ core/res/res/values/config.xml     | 4 ++++
+ 2 files changed, 6 insertions(+)
+
+diff --git a/core/res/res/values/cm_symbols.xml b/core/res/res/values/cm_symbols.xml
+index 710ba0a..0cb0965 100644
+--- a/core/res/res/values/cm_symbols.xml
++++ b/core/res/res/values/cm_symbols.xml
+@@ -85,6 +85,8 @@
+     <java-symbol type="integer" name="config_buttonBrightnessSettingDefault" />
+     <java-symbol type="integer" name="config_keyboardBrightnessSettingDefault" />
+ 
++    <java-symbol type="bool" name="config_buttonBrightnessForceConfigurable" />
++
+     <java-symbol type="string" name="config_geofenceServicesProvider" />
+     <java-symbol type="string" name="config_comboNetworkLocationProvider" />
+     <java-symbol type="string" name="tethered_notification_no_device_message" />
+diff --git a/core/res/res/values/config.xml b/core/res/res/values/config.xml
+index 59395e2..98dc24d 100755
+--- a/core/res/res/values/config.xml
++++ b/core/res/res/values/config.xml
+@@ -1035,6 +1035,10 @@
+     <integer name="config_keyboardBrightnessSettingDefault">0</integer>
+     <bool name="config_deviceHasVariableButtonBrightness">false</bool>
+ 
++    <!-- True if button brightness should be configurable even if default
++         value is set to 0 -->
++    <bool name="config_buttonBrightnessForceConfigurable">false</bool>
++
+     <!-- Amount of time it takes for the light sensor to warm up in milliseconds.
+          For this time after the screen turns on, the Power Manager
+          will not debounce light sensor readings -->
+-- 
+2.5.0
+

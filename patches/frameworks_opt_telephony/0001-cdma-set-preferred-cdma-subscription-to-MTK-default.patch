@@ -1,0 +1,26 @@
+From 7d09359c6488e7111228cff27f855c4702b67031 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Wed, 2 Sep 2015 13:09:14 +0800
+Subject: [PATCH] cdma: set preferred cdma subscription to MTK default
+
+Change-Id: I07286eb182cbfe7d31e8a3e34636a3caf199da8c
+---
+ .../android/internal/telephony/cdma/CdmaSubscriptionSourceManager.java  | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/java/com/android/internal/telephony/cdma/CdmaSubscriptionSourceManager.java b/src/java/com/android/internal/telephony/cdma/CdmaSubscriptionSourceManager.java
+index f7b8936..059d24d 100644
+--- a/src/java/com/android/internal/telephony/cdma/CdmaSubscriptionSourceManager.java
++++ b/src/java/com/android/internal/telephony/cdma/CdmaSubscriptionSourceManager.java
+@@ -44,7 +44,7 @@ public class CdmaSubscriptionSourceManager extends Handler {
+     public static final int SUBSCRIPTION_SOURCE_UNKNOWN = -1;
+     public static final int SUBSCRIPTION_FROM_RUIM      = 0; /* CDMA subscription from RUIM */
+     public static final int SUBSCRIPTION_FROM_NV        = 1; /* CDMA subscription from NV */
+-    public static final int PREFERRED_CDMA_SUBSCRIPTION = SUBSCRIPTION_FROM_NV;
++    public static final int PREFERRED_CDMA_SUBSCRIPTION = SUBSCRIPTION_FROM_RUIM;
+ 
+     private static CdmaSubscriptionSourceManager sInstance;
+     private static final Object sReferenceCountMonitor = new Object();
+-- 
+2.5.0
+

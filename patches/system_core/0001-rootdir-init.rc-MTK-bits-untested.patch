@@ -1,0 +1,48 @@
+From 59723deb1ecdabc36f2c6f53556f33d5efd88d3b Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Sun, 23 Aug 2015 05:06:07 +0800
+Subject: [PATCH] rootdir/init.rc: MTK bits (untested)
+
+This time it's monumentally cleaner than that of cm-11.0... Did MTK coders
+actually learned to code?
+
+Change-Id: Iba96a78e570e147cf3ae8c176aca33bc47adb75a
+---
+ rootdir/init.rc | 11 +++++++----
+ 1 file changed, 7 insertions(+), 4 deletions(-)
+
+diff --git a/rootdir/init.rc b/rootdir/init.rc
+index 029d7de..6b83ee6 100644
+--- a/rootdir/init.rc
++++ b/rootdir/init.rc
+@@ -568,12 +568,14 @@ service surfaceflinger /system/bin/surfaceflinger
+ service drm /system/bin/drmserver
+     class main
+     user drm
+-    group drm system inet drmrpc
++	# MTK
++    group drm system inet drmrpc sdcard_r
+ 
+ service media /system/bin/mediaserver
+     class main
+-    user media
+-    group audio camera inet net_bt net_bt_admin net_bw_acct drmrpc mediadrm qcom_diag
++	# MTK
++    user root
++    group audio camera inet net_bt net_bt_admin net_bw_acct drmrpc mediadrm media sdcard_r system net_bt_stack qcom_diag
+     ioprio rt 4
+ 
+ # One shot invocation to deal with encrypted volume.
+@@ -593,7 +595,8 @@ service encrypt /system/bin/vdc --wait cryptfs enablecrypto inplace default
+ service bootanim /system/bin/bootanimation
+     class core
+     user graphics
+-    group graphics audio
++	# MTK
++    group graphics media audio
+     disabled
+     oneshot
+ 
+-- 
+2.5.0
+

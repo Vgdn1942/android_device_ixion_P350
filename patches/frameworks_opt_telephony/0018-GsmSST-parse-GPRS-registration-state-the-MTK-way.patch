@@ -1,0 +1,40 @@
+From a58ce0fcb9c8e287ed362f900bfb11dfcb35dd02 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Sun, 11 Oct 2015 00:29:42 +0800
+Subject: [PATCH] GsmSST: parse GPRS registration state the MTK way
+
+Change-Id: Ibda3bbb80781de503de74be4848b45c2c742117b
+---
+ .../internal/telephony/gsm/GsmServiceStateTracker.java     | 14 ++++++++++----
+ 1 file changed, 10 insertions(+), 4 deletions(-)
+
+diff --git a/src/java/com/android/internal/telephony/gsm/GsmServiceStateTracker.java b/src/java/com/android/internal/telephony/gsm/GsmServiceStateTracker.java
+index 9fc9290..f2e3d18 100644
+--- a/src/java/com/android/internal/telephony/gsm/GsmServiceStateTracker.java
++++ b/src/java/com/android/internal/telephony/gsm/GsmServiceStateTracker.java
+@@ -812,12 +812,18 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
+                             if (states.length >= 4 && states[3] != null) {
+                                 type = Integer.parseInt(states[3]);
+                             }
+-                            if ((states.length >= 5 ) &&
++                            if (states.length >= 5 && states[4] != null) {
++                                log("<cell_data_speed_support> " + states[4]);
++                            }
++                            if (states.length >= 6 && states[5] != null) {
++                                log("<max_data_bearer_capability> " + states[5]);
++                            }
++                            if ((states.length >= 7) &&
+                                     (regState == ServiceState.RIL_REG_STATE_DENIED)) {
+-                                mNewReasonDataDenied = Integer.parseInt(states[4]);
++                                mNewReasonDataDenied = Integer.parseInt(states[6]);
+                             }
+-                            if (states.length >= 6) {
+-                                mNewMaxDataCalls = Integer.parseInt(states[5]);
++                            if (states.length >= 8) {
++                                mNewMaxDataCalls = Integer.parseInt(states[7]);
+                             }
+                         } catch (NumberFormatException ex) {
+                             loge("error parsing GprsRegistrationState: " + ex);
+-- 
+2.5.0
+

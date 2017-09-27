@@ -1,0 +1,183 @@
+From f192cd284af85459ee0f458d13cd01151913cebe Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Fri, 2 Oct 2015 01:52:48 +0800
+Subject: [PATCH] RIL: port OPEN_ICC_APPLICATION, ICC_IO_EX and friends
+
+Change-Id: Ied0b53a7351251841a9027e3326520d3ccdfdc67
+---
+ .../android/internal/telephony/BaseCommands.java   | 27 ++++++++++
+ .../internal/telephony/CommandsInterface.java      | 43 ++++++++++++++++
+ src/java/com/android/internal/telephony/RIL.java   | 58 ++++++++++++++++++++++
+ 3 files changed, 128 insertions(+)
+
+diff --git a/src/java/com/android/internal/telephony/BaseCommands.java b/src/java/com/android/internal/telephony/BaseCommands.java
+index 9ba6e6b..e43d7f5 100644
+--- a/src/java/com/android/internal/telephony/BaseCommands.java
++++ b/src/java/com/android/internal/telephony/BaseCommands.java
+@@ -99,6 +99,7 @@ public abstract class BaseCommands implements CommandsInterface {
+ 
+     // MTK registrants
+     protected RegistrantList mPhoneRatFamilyChangedRegistrants = new RegistrantList();
++    protected RegistrantList mSessionChangedRegistrants = new RegistrantList();
+     protected RegistrantList mNeighboringInfoRegistrants = new RegistrantList();
+     protected RegistrantList mNetworkInfoRegistrants = new RegistrantList();
+     protected RegistrantList mPlmnChangeNotificationRegistrant = new RegistrantList();
+@@ -947,6 +948,32 @@ public abstract class BaseCommands implements CommandsInterface {
+ 
+     // MTK additions
+ 
++    //MTK-START Support Multi-Application
++    @Override
++    public void openIccApplication(int application, Message response) {
++    }
++
++    @Override
++    public void getIccApplicationStatus(int sessionId, Message result) {
++    }
++
++    @Override
++    public void iccIOForAppEx(int command, int fileid, String path, int p1, int p2, int p3,
++            String data, String pin2, String aid, int channel, Message response) {
++    }
++
++    @Override
++    public void registerForSessionChanged(Handler h, int what, Object obj) {
++        Registrant r = new Registrant(h, what, obj);
++        mSessionChangedRegistrants.add(r);
++    }
++
++    @Override
++    public void unregisterForSessionChanged(Handler h) {
++        mSessionChangedRegistrants.remove(h);
++    }
++    //MTK-END Support Multi-Application
++
+     public void registerForNeighboringInfo(Handler h, int what, Object obj) {
+         Registrant r = new Registrant(h, what, obj);
+         mNeighboringInfoRegistrants.add(r);
+diff --git a/src/java/com/android/internal/telephony/CommandsInterface.java b/src/java/com/android/internal/telephony/CommandsInterface.java
+index 8466368..871250a 100644
+--- a/src/java/com/android/internal/telephony/CommandsInterface.java
++++ b/src/java/com/android/internal/telephony/CommandsInterface.java
+@@ -2021,6 +2021,49 @@ public interface CommandsInterface {
+ 
+     // MTK additions
+ 
++    //MTK-START multiple application support
++    /**
++     * M: Open application in the UICC
++     *
++     * @param application: application ID
++     * @param response The message to send.
++     */
++    public void openIccApplication(int application, Message response);
++
++    /**
++     * Query application status
++     *
++     * @param sessionId: The channel ID
++     * @param response The message to send.
++     */
++    public void getIccApplicationStatus(int sessionId, Message result);
++
++    /**
++     * parameters equivalent to 27.007 AT+CRLA command
++     * channel is used to assign which application to get EF file.
++     * response.obj will be an AsyncResult
++     * response.obj.userObj will be a IccIoResult on success
++     */
++    void iccIOForAppEx(int command, int fileid, String path, int p1, int p2, int p3,
++            String data, String pin2, String aid, int channel, Message response);
++
++    /**
++     * Register the handler for event notifications for sessionid of an application changed event.
++     *
++     * @param h Handler for notification message.
++     * @param what User-defined message code.
++     * @param obj User object.
++     */
++    void registerForSessionChanged(Handler h, int what, Object obj);
++
++    /**
++     * Unregister the handler for event notifications for sessionid of an application changed event.
++     *
++     * @param h Handler for notification message.
++     */
++    void unregisterForSessionChanged(Handler h);
++    //MTK-END multiple application support
++
+     /**
+      * unlike the register* methods, there's only one Neighboring cell info handler
+      *
+diff --git a/src/java/com/android/internal/telephony/RIL.java b/src/java/com/android/internal/telephony/RIL.java
+index d6b3bc2..7ab605b 100644
+--- a/src/java/com/android/internal/telephony/RIL.java
++++ b/src/java/com/android/internal/telephony/RIL.java
+@@ -5332,6 +5332,64 @@ public class RIL extends BaseCommands implements CommandsInterface {
+     }
+ 
+     // MTK additions
++    //MTK-START Support Multi-Application
++    @Override
++    public void openIccApplication(int application, Message response) {
++        RILRequest rr = RILRequest.obtain(RIL_REQUEST_OPEN_ICC_APPLICATION, response);
++
++        rr.mParcel.writeInt(1);
++        rr.mParcel.writeInt(application);
++
++        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest)
++                + ", application = " + application);
++        send(rr);
++    }
++
++    @Override
++    public void getIccApplicationStatus(int sessionId, Message result) {
++        //Note: This RIL request has not been renamed to ICC,
++        //       but this request is also valid for SIM and RUIM
++        RILRequest rr = RILRequest.obtain(RIL_REQUEST_GET_ICC_APPLICATION_STATUS, result);
++
++        rr.mParcel.writeInt(1);
++        rr.mParcel.writeInt(sessionId);
++
++        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest)
++                + ", session = " + sessionId);
++        send(rr);
++    }
++
++    @Override
++    public void iccIOForAppEx(int command, int fileid, String path, int p1, int p2, int p3,
++            String data, String pin2, String aid, int channel , Message result) {
++        //Note: This RIL request has not been renamed to ICC,
++        //       but this request is also valid for SIM and RUIM
++        RILRequest rr
++                = RILRequest.obtain(RIL_REQUEST_SIM_IO_EX, result);
++
++        rr.mParcel.writeInt(command);
++        rr.mParcel.writeInt(fileid);
++        rr.mParcel.writeString(path);
++        rr.mParcel.writeInt(p1);
++        rr.mParcel.writeInt(p2);
++        rr.mParcel.writeInt(p3);
++        rr.mParcel.writeString(data);
++        rr.mParcel.writeString(pin2);
++        rr.mParcel.writeString(aid);
++        rr.mParcel.writeInt(channel);
++
++        if (RILJ_LOGD) riljLog(rr.serialString() + "> iccIO: "
++                + requestToString(rr.mRequest)
++                + " 0x" + Integer.toHexString(command)
++                + " 0x" + Integer.toHexString(fileid) + " "
++                + " path: " + path + ","
++                + p1 + "," + p2 + "," + p3 + ",channel:" + channel
++                + " aid: " + aid);
++
++        send(rr);
++    }
++    //MTK-END Support Multi-Application
++
+     public void setTrm(int mode, Message result) {
+         RILRequest rr = RILRequest.obtain(RIL_REQUEST_SET_TRM, null);
+ 
+-- 
+2.5.0
+

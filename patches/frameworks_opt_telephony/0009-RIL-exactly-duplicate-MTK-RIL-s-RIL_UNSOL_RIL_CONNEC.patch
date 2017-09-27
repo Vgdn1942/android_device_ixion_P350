@@ -1,0 +1,47 @@
+From 066abc0076a023763a6c901e9590c60e9e1281a1 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Fri, 2 Oct 2015 01:21:33 +0800
+Subject: [PATCH] RIL: exactly duplicate MTK RIL's RIL_UNSOL_RIL_CONNECTED
+ behavior
+
+Change-Id: I9a45279d13350c7bd5e43cd0e0521af245a8760d
+---
+ src/java/com/android/internal/telephony/RIL.java | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/src/java/com/android/internal/telephony/RIL.java b/src/java/com/android/internal/telephony/RIL.java
+index 1a73146..d6b3bc2 100644
+--- a/src/java/com/android/internal/telephony/RIL.java
++++ b/src/java/com/android/internal/telephony/RIL.java
+@@ -290,6 +290,10 @@ public class RIL extends BaseCommands implements CommandsInterface {
+     // divide the response array without prior knowledge of the number of elements.
+     protected int mQANElements = 4;
+ 
++    // MTK
++    // save the status of screen
++    private boolean isScreenOn = true;
++
+     //***** Events
+ 
+     static final int EVENT_SEND                 = 1;
+@@ -2484,6 +2488,9 @@ public class RIL extends BaseCommands implements CommandsInterface {
+     }
+ 
+     protected void sendScreenState(boolean on) {
++        // MTK
++        isScreenOn = on;
++
+         RILRequest rr = RILRequest.obtain(RIL_REQUEST_SCREEN_STATE, null);
+         rr.mParcel.writeInt(1);
+         rr.mParcel.writeInt(on ? 1 : 0);
+@@ -3400,6 +3407,7 @@ public class RIL extends BaseCommands implements CommandsInterface {
+                 setCdmaSubscriptionSource(mCdmaSubscription, null);
+                 setCellInfoListRate(Integer.MAX_VALUE, null);
+                 notifyRegistrantsRilConnectionChanged(((int[])ret)[0]);
++                sendScreenState(isScreenOn);
+                 break;
+             }
+             case RIL_UNSOL_CELL_INFO_LIST: {
+-- 
+2.5.0
+

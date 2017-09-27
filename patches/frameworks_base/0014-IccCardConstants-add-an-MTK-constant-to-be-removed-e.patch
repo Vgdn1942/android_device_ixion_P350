@@ -1,0 +1,27 @@
+From 42b9945c333c1c84617fc33c489bba29a287d9db Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Sat, 3 Oct 2015 13:50:36 +0800
+Subject: [PATCH] IccCardConstants: add an MTK constant (to be removed
+ eventually)
+
+Change-Id: I531ac976d1eb014958603a6003f94d8eeab37f6c
+---
+ telephony/java/com/android/internal/telephony/IccCardConstants.java | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/telephony/java/com/android/internal/telephony/IccCardConstants.java b/telephony/java/com/android/internal/telephony/IccCardConstants.java
+index 09cd10b..79063f5 100644
+--- a/telephony/java/com/android/internal/telephony/IccCardConstants.java
++++ b/telephony/java/com/android/internal/telephony/IccCardConstants.java
+@@ -52,6 +52,8 @@ public class IccCardConstants {
+     public static final String INTENT_VALUE_ABSENT_ON_PERM_DISABLED = "PERM_DISABLED";
+ 
+     // MTK ICC lock reasons
++    /* NETWORK means ICC is locked on NETWORK PERSONALIZATION */
++    public static final String INTENT_VALUE_LOCKED_NETWORK = "NETWORK";
+     /* NETWORK_SUBSET means ICC is locked on NETWORK SUBSET PERSONALIZATION */
+     public static final String INTENT_VALUE_LOCKED_NETWORK_SUBSET = "NETWORK_SUBSET";
+     /* CORPORATE means ICC is locked on CORPORATE PERSONALIZATION */
+-- 
+2.5.0
+

@@ -1,0 +1,27 @@
+From 6cabb9e1f4ce9a0ccf1e08db4dfe8716deeaf7ae Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Mon, 7 Sep 2015 13:08:52 +0800
+Subject: [PATCH] ril: correct way to be compatible
+
+Change-Id: I48cb7a875ffaf70f6c3db91e1dda811881cf7aef
+---
+ src/java/com/android/internal/telephony/RIL.java | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/java/com/android/internal/telephony/RIL.java b/src/java/com/android/internal/telephony/RIL.java
+index 16b41d7..209189c 100644
+--- a/src/java/com/android/internal/telephony/RIL.java
++++ b/src/java/com/android/internal/telephony/RIL.java
+@@ -5091,7 +5091,8 @@ public class RIL extends BaseCommands implements CommandsInterface {
+     @Override
+     public void setInitialAttachApn(String apn, String protocol, int authType, String username,
+             String password, String operatorNumeric, boolean canHandleIms, Message result) {
+-        Rlog.e(RILJ_LOG_TAG, "setInitialAttachApn: MTK interface called on generic RIL!");
++        // On generic RIL implementation we just ignore the MTK-specific parameters
++        setInitialAttachApn(apn, protocol, authType, username, password, result);
+     }
+ 
+     public void setDataProfile(DataProfile[] dps, Message result) {
+-- 
+2.5.0
+

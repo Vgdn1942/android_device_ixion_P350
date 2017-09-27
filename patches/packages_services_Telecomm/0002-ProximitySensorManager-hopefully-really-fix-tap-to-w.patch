@@ -1,0 +1,33 @@
+From da2c84d29914c4b5a32fbd3b67686ee2c6100d98 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Thu, 7 Jan 2016 02:53:36 +0800
+Subject: [PATCH] ProximitySensorManager: (hopefully) really fix tap-to-wake
+ and proximity
+
+Change-Id: I2b3613cbfedef4bb4f381e6354449e990eb6d57c
+---
+ src/com/android/server/telecom/ProximitySensorManager.java | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/src/com/android/server/telecom/ProximitySensorManager.java b/src/com/android/server/telecom/ProximitySensorManager.java
+index c4f67c0..f265195 100644
+--- a/src/com/android/server/telecom/ProximitySensorManager.java
++++ b/src/com/android/server/telecom/ProximitySensorManager.java
+@@ -56,6 +56,14 @@ public class ProximitySensorManager extends CallsManagerListenerBase {
+             // passing true would result in tap-to-wake or proximity sensor
+             // stopping working if remote hung up.
+             turnOff(!mIsMTKHardware);
++
++            // Seems only calling turnOff with false can't eliminate all cases
++            // of malfunctioning... will have to re-calibrate then.
++            if (mIsMTKHardware) {
++                // call into calibration service if one exists
++                // hopefully none will run into namespace collision with me...
++                SystemProperties.set("ctl.start", "ps_calibrate");
++            }
+         }
+         super.onCallRemoved(call);
+     }
+-- 
+2.5.0
+

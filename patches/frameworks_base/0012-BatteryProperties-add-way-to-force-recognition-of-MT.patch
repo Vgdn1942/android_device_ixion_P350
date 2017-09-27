@@ -1,0 +1,28 @@
+From 9c27e4671d6c31f80907bec041e63bbed53c1643 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Tue, 29 Sep 2015 22:30:46 +0800
+Subject: [PATCH] BatteryProperties: add way to force recognition of MTK
+ healthd
+
+Change-Id: I12981869df9a7562fa2958850c9aba4a8d3ea66b
+---
+ core/java/android/os/BatteryProperties.java | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/core/java/android/os/BatteryProperties.java b/core/java/android/os/BatteryProperties.java
+index ad07b5c..76568df 100644
+--- a/core/java/android/os/BatteryProperties.java
++++ b/core/java/android/os/BatteryProperties.java
+@@ -50,7 +50,8 @@ public class BatteryProperties implements Parcelable {
+         // on the healthd binary for some MTK-specific strings may be more
+         // reliable, but it's arguably more overhead.
+         MTK_HEALTHD = new java.io.File("/factory_init.rc").exists()
+-                      || new java.io.File("/meta_init.rc").exists();
++                      || new java.io.File("/meta_init.rc").exists()
++                      || new java.io.File("/_have_mtk_healthd").exists();
+     }
+ 
+     public BatteryProperties() {
+-- 
+2.5.0
+

@@ -1,0 +1,26 @@
+From 7f7b9eb7f2bb61b8e7a74111cd1fc03e0932d28c Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Sun, 6 Sep 2015 10:06:22 +0800
+Subject: [PATCH] RIL: don't send the initial power off request for MTK
+
+Change-Id: I0fae0d5fb5b0fbb83e7cfe9205465af660a361a7
+---
+ src/java/com/android/internal/telephony/RIL.java | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/java/com/android/internal/telephony/RIL.java b/src/java/com/android/internal/telephony/RIL.java
+index 330679e..91630c1 100644
+--- a/src/java/com/android/internal/telephony/RIL.java
++++ b/src/java/com/android/internal/telephony/RIL.java
+@@ -3388,7 +3388,7 @@ public class RIL extends BaseCommands implements CommandsInterface {
+                 if (RILJ_LOGD) unsljLogRet(response, ret);
+ 
+                 // Initial conditions
+-                setRadioPower(false, null);
++                // setRadioPower(false, null);
+                 setPreferredNetworkType(mPreferredNetworkType, null);
+                 setCdmaSubscriptionSource(mCdmaSubscription, null);
+                 setCellInfoListRate(Integer.MAX_VALUE, null);
+-- 
+2.5.0
+

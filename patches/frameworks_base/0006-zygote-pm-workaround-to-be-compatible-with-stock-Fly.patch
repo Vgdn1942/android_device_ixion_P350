@@ -1,0 +1,46 @@
+From ee39cf8fca91a62357c1cbfdfa8da7f44497ac37 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Fri, 11 Sep 2015 01:39:28 +0800
+Subject: [PATCH] zygote, pm: workaround to be compatible with stock Flyme
+ boot.img
+
+Change-Id: I07c33de45cfb49889cf2efca5c52a766d19be439
+---
+ core/java/com/android/internal/os/ZygoteInit.java                   | 5 ++++-
+ services/core/java/com/android/server/pm/PackageManagerService.java | 4 ++++
+ 2 files changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/core/java/com/android/internal/os/ZygoteInit.java b/core/java/com/android/internal/os/ZygoteInit.java
+index bd0fafc..e714418 100644
+--- a/core/java/com/android/internal/os/ZygoteInit.java
++++ b/core/java/com/android/internal/os/ZygoteInit.java
+@@ -509,7 +509,10 @@ public class ZygoteInit {
+             Process.setArgV0(parsedArgs.niceName);
+         }
+ 
+-        final String systemServerClasspath = Os.getenv("SYSTEMSERVERCLASSPATH");
++        // Flyme hack: add back the two missing CM-specific packages due to
++        // Flyme bootloader restriction
++        final String cmSystemServerClasspath = "/system/framework/org.cyanogenmod.platform.jar:/system/framework/org.cyanogenmod.hardware.jar";
++        final String systemServerClasspath = cmSystemServerClasspath + ":" + Os.getenv("SYSTEMSERVERCLASSPATH");
+         if (systemServerClasspath != null) {
+             performSystemServerDexOpt(systemServerClasspath);
+         }
+diff --git a/services/core/java/com/android/server/pm/PackageManagerService.java b/services/core/java/com/android/server/pm/PackageManagerService.java
+index f712eb7..81685c7 100755
+--- a/services/core/java/com/android/server/pm/PackageManagerService.java
++++ b/services/core/java/com/android/server/pm/PackageManagerService.java
+@@ -1544,6 +1544,10 @@ public class PackageManagerService extends IPackageManager.Stub {
+ 
+             if (systemServerClassPath != null) {
+                 String[] systemServerClassPathElements = splitString(systemServerClassPath, ':');
++                // Flyme hack: we can't use our boot.img due to locked bootloader,
++                // but we can always add back the missing bits here.
++                alreadyDexOpted.add("/system/framework/org.cyanogenmod.platform.jar");
++                alreadyDexOpted.add("/system/framework/org.cyanogenmod.hardware.jar");
+                 for (String element : systemServerClassPathElements) {
+                     alreadyDexOpted.add(element);
+                 }
+-- 
+2.5.0
+

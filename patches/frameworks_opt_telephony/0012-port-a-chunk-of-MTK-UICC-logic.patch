@@ -1,0 +1,1570 @@
+From f27887441e94898691b3d133af89a200bbde9906 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Fri, 2 Oct 2015 22:00:13 +0800
+Subject: [PATCH] port a chunk of MTK UICC logic
+
+Change-Id: If160c622f83dbec212336007b93592f78d1c4f96
+---
+ .../android/internal/telephony/BaseCommands.java   |  90 +++++
+ .../internal/telephony/CommandsInterface.java      | 103 +++++
+ .../android/internal/telephony/HardwareConfig.java |   2 +
+ .../android/internal/telephony/MediaTekRIL.java    | 119 +++++-
+ src/java/com/android/internal/telephony/RIL.java   | 102 +++++
+ .../telephony/dataconnection/DcTracker.java        |   1 +
+ .../imsphone/ImsPhoneCommandInterface.java         |   8 +
+ .../telephony/sip/SipCommandInterface.java         |   8 +
+ .../internal/telephony/test/SimulatedCommands.java |  10 +
+ .../internal/telephony/uicc/IccConstants.java      |  27 ++
+ .../internal/telephony/uicc/IccFileHandler.java    | 215 ++++++++++-
+ .../android/internal/telephony/uicc/UiccCard.java  |  21 +-
+ .../internal/telephony/uicc/UiccController.java    | 421 ++++++++++++++++++++-
+ .../internal/telephony/uicc/UsimFileHandler.java   |   7 +
+ 14 files changed, 1098 insertions(+), 36 deletions(-)
+
+diff --git a/src/java/com/android/internal/telephony/BaseCommands.java b/src/java/com/android/internal/telephony/BaseCommands.java
+index e43d7f5..8f3b65b 100644
+--- a/src/java/com/android/internal/telephony/BaseCommands.java
++++ b/src/java/com/android/internal/telephony/BaseCommands.java
+@@ -100,6 +100,14 @@ public abstract class BaseCommands implements CommandsInterface {
+     // MTK registrants
+     protected RegistrantList mPhoneRatFamilyChangedRegistrants = new RegistrantList();
+     protected RegistrantList mSessionChangedRegistrants = new RegistrantList();
++    protected RegistrantList mSimMissing = new RegistrantList();
++    protected RegistrantList mSimRecovery = new RegistrantList();
++    protected RegistrantList mVirtualSimOn = new RegistrantList();
++    protected RegistrantList mVirtualSimOff = new RegistrantList();
++    protected RegistrantList mSimPlugOutRegistrants = new RegistrantList();
++    protected RegistrantList mSimPlugInRegistrants = new RegistrantList();
++    protected RegistrantList mCommonSlotNoChangedRegistrants = new RegistrantList();
++    protected RegistrantList mDataAllowedRegistrants = new RegistrantList();
+     protected RegistrantList mNeighboringInfoRegistrants = new RegistrantList();
+     protected RegistrantList mNetworkInfoRegistrants = new RegistrantList();
+     protected RegistrantList mPlmnChangeNotificationRegistrant = new RegistrantList();
+@@ -118,6 +126,12 @@ public abstract class BaseCommands implements CommandsInterface {
+     // RIL Version
+     protected int mRilVersion = -1;
+ 
++    // MTK states
++    /* M: call control part start */
++    protected boolean mbWaitingForECFURegistrants = false;
++    protected Object mCfuReturnValue = null; ///* M: SS part */
++    /* M: call control part end */
++
+     public BaseCommands(Context context) {
+         mContext = context;  // May be null (if so we won't log statistics)
+     }
+@@ -974,6 +988,82 @@ public abstract class BaseCommands implements CommandsInterface {
+     }
+     //MTK-END Support Multi-Application
+ 
++    //MTK-START Support SIM ME lock
++    @Override
++    public void queryNetworkLock(int categrory, Message response){};
++
++    @Override
++    public void setNetworkLock(int catagory, int lockop, String password,
++            String data_imsi, String gid1, String gid2, Message response){};
++    //MTK-END Support SIM ME lock
++
++    @Override
++    public void doGeneralSimAuthentication(int sessionId, int mode , int tag, String param1,
++                                          String param2, Message response) {
++    }
++
++    public void registerForSimMissing(Handler h, int what, Object obj) {
++        Registrant r = new Registrant(h, what, obj);
++        mSimMissing.add(r);
++    }
++    public void unregisterForSimMissing(Handler h) {
++        mSimMissing.remove(h);
++    }
++
++    public void registerForSimRecovery(Handler h, int what, Object obj) {
++        Registrant r = new Registrant(h, what, obj);
++        mSimRecovery.add(r);
++    }
++
++    public void unregisterForSimRecovery(Handler h) {
++        mSimRecovery.remove(h);
++    }
++
++    public void registerForVirtualSimOn(Handler h, int what, Object obj) {
++        Registrant r = new Registrant(h, what, obj);
++        mVirtualSimOn.add(r);
++    }
++
++    public void unregisterForVirtualSimOn(Handler h) {
++        mVirtualSimOn.remove(h);
++    }
++
++    public void registerForVirtualSimOff(Handler h, int what, Object obj) {
++        Registrant r = new Registrant(h, what, obj);
++        mVirtualSimOff.add(r);
++    }
++
++    public void unregisterForVirtualSimOff(Handler h) {
++        mVirtualSimOff.remove(h);
++    }
++
++    public void registerForSimPlugOut(Handler h, int what, Object obj) {
++        Registrant r = new Registrant(h, what, obj);
++        mSimPlugOutRegistrants.add(r);
++    }
++
++    public void unregisterForSimPlugOut(Handler h) {
++        mSimPlugOutRegistrants.remove(h);
++    }
++
++    public void registerForSimPlugIn(Handler h, int what, Object obj) {
++        Registrant r = new Registrant(h, what, obj);
++        mSimPlugInRegistrants.add(r);
++    }
++
++    public void unregisterForSimPlugIn(Handler h) {
++        mSimPlugInRegistrants.remove(h);
++    }
++
++    public void registerForCommonSlotNoChanged(Handler h, int what, Object obj) {
++        Registrant r = new Registrant(h, what, obj);
++        mCommonSlotNoChangedRegistrants.add(r);
++    }
++
++    public void unregisterForCommonSlotNoChanged(Handler h) {
++        mCommonSlotNoChangedRegistrants.remove(h);
++    }
++
+     public void registerForNeighboringInfo(Handler h, int what, Object obj) {
+         Registrant r = new Registrant(h, what, obj);
+         mNeighboringInfoRegistrants.add(r);
+diff --git a/src/java/com/android/internal/telephony/CommandsInterface.java b/src/java/com/android/internal/telephony/CommandsInterface.java
+index 871250a..71e70ff 100644
+--- a/src/java/com/android/internal/telephony/CommandsInterface.java
++++ b/src/java/com/android/internal/telephony/CommandsInterface.java
+@@ -2065,6 +2065,109 @@ public interface CommandsInterface {
+     //MTK-END multiple application support
+ 
+     /**
++     * Query network lock status according to indicated category.
++     *
++     * @param categrory network lock category
++     *                  0 for Network personalisation category
++     *                  1 for Network subset personalisation category
++     *                  2 for Service provider personalisation category
++     *                  3 for Corporate(GID) personalisation category
++     *                  4 for SIM/USIM(IMSI) personalisation category
++     * @param response Callback message containing response structure.
++     */
++    void queryNetworkLock(int categrory, Message response);
++
++    /**
++     * Query network lock status according to indicated category.
++     *
++     * @param categrory network lock category
++     *                  "0" for Network personalisation category
++     *                  "1" for Network subset personalisation category
++     *                  "2" for Service provider personalisation category
++     *                  "3" for Corporate(GID) personalisation category
++     *                  "4" for SIM/USIM(IMSI) personalisation category
++     * @param lockop lock operation
++     *               "0" for unlock opreation
++     *               "1" for lock opreation
++     *               "2" for add lock opreation
++     *               "3" for remove lock opreation
++     *               "4" for disable lock category opreation
++     * @param password password of indicated network lock
++     * @param data_imsi IMSI value used to setup lock
++     * @param gid1 GID1 value used to setup lock
++     * @param gid2 GID2 value used to setup lock
++     * @param response Callback message containing response structure.
++     */
++    void setNetworkLock(int catagory, int lockop, String password,
++            String data_imsi, String gid1, String gid2, Message response);
++
++
++    /**
++     * Request security context authentication for SIM/USIM/ISIM
++     */
++    public void doGeneralSimAuthentication(int sessionId, int mode , int tag, String param1,
++                                                    String param2, Message response);
++
++    void iccGetATR(Message result);
++    void iccOpenChannelWithSw(String AID, Message result);
++
++    void registerForSimMissing(Handler h, int what, Object obj);
++    void unregisterForSimMissing(Handler h);
++
++    void registerForSimRecovery(Handler h, int what, Object obj);
++    void unregisterForSimRecovery(Handler h);
++
++    public void registerForVirtualSimOn(Handler h, int what, Object obj);
++    public void unregisterForVirtualSimOn(Handler h);
++
++    public void registerForVirtualSimOff(Handler h, int what, Object obj);
++    public void unregisterForVirtualSimOff(Handler h);
++
++    /**
++     * Sets the handler for event notifications for SIM plug-out event.
++     *
++     * @param h Handler for notification message.
++     * @param what User-defined message code.
++     * @param obj User object.
++     */
++    void registerForSimPlugOut(Handler h, int what, Object obj);
++
++    /**
++     * Unregister the handler for event notifications for SIM plug-out event.
++     *
++     * @param h Handler for notification message.
++     */
++    void unregisterForSimPlugOut(Handler h);
++
++    /**
++     * Sets the handler for event notifications for SIM plug-in event.
++     *
++     * @param h Handler for notification message.
++     * @param what User-defined message code.
++     * @param obj User object.
++     */
++    void registerForSimPlugIn(Handler h, int what, Object obj);
++
++    /**
++     * Unregister the handler for event notifications for SIM plug-in event.
++     *
++     * @param h Handler for notification message.
++     */
++    void unregisterForSimPlugIn(Handler h);
++
++    /**
++     * Sets the handler for event notifications for SIM common slot no changed.
++     *
++     */
++    void registerForCommonSlotNoChanged(Handler h, int what, Object obj);
++
++    /**
++     * Unregister the handler for event notifications for SIM common slot no changed.
++     *
++     */
++    void unregisterForCommonSlotNoChanged(Handler h);
++
++    /**
+      * unlike the register* methods, there's only one Neighboring cell info handler
+      *
+      * AsyncResult.result is an Object[]
+diff --git a/src/java/com/android/internal/telephony/HardwareConfig.java b/src/java/com/android/internal/telephony/HardwareConfig.java
+index 0f855de..9a35a01 100644
+--- a/src/java/com/android/internal/telephony/HardwareConfig.java
++++ b/src/java/com/android/internal/telephony/HardwareConfig.java
+@@ -161,6 +161,7 @@ public class HardwareConfig {
+             maxActiveVoiceCall = maxV;
+             maxActiveDataCall = maxD;
+             maxStandby = maxS;
++            Rlog.d(LOG_TAG, "assignModem: result=" + this.toString());
+         }
+     }
+ 
+@@ -169,6 +170,7 @@ public class HardwareConfig {
+             uuid = id;
+             modemUuid = link;
+             state = state;
++            Rlog.d(LOG_TAG, "assignSim: result=" + this.toString());
+         }
+     }
+ 
+diff --git a/src/java/com/android/internal/telephony/MediaTekRIL.java b/src/java/com/android/internal/telephony/MediaTekRIL.java
+index 2004773..1844728 100644
+--- a/src/java/com/android/internal/telephony/MediaTekRIL.java
++++ b/src/java/com/android/internal/telephony/MediaTekRIL.java
+@@ -1119,6 +1119,106 @@ public class MediaTekRIL extends RIL implements CommandsInterface {
+                 */
+                 break;
+ 
++            case RIL_UNSOL_STK_EVDL_CALL:
++                Rlog.e(RILJ_LOG_TAG, "RIL_UNSOL_STK_EVDL_CALL: stub!");
++                /*
++                if (false == SystemProperties.get("ro.mtk_bsp_package").equals("1")) {
++                    if (RILJ_LOGD) unsljLogvRet(response, ret);
++                    if (mStkEvdlCallRegistrant != null) {
++                        mStkEvdlCallRegistrant.notifyRegistrant(new AsyncResult(null, ret, null));
++                    }
++                }
++                */
++                break;
++
++            case RIL_UNSOL_STK_CALL_CTRL:
++                if (RILJ_LOGD) {
++                    unsljLogvRet(response, ret);
++                }
++                Rlog.e(RILJ_LOG_TAG, "RIL_UNSOL_STK_CALL_CTRL: stub!");
++                /*
++                if (mStkCallCtrlRegistrant != null) {
++                    mStkCallCtrlRegistrant.notifyRegistrant(new AsyncResult(null, ret, null));
++                }
++                */
++                break;
++
++            case RIL_UNSOL_STK_SETUP_MENU_RESET:
++                if (RILJ_LOGD) unsljLogRet(response, ret);
++                Rlog.e(RILJ_LOG_TAG, "RIL_UNSOL_STK_SETUP_MENU_RESET: stub!");
++                /*
++                if (mStkSetupMenuResetRegistrant != null) {
++                    mStkSetupMenuResetRegistrant.notifyRegistrant(new AsyncResult(null, ret, null));
++                }
++                */
++                break;
++
++            //MTK-START multiple application support
++            case RIL_UNSOL_APPLICATION_SESSION_ID_CHANGED: {
++                if (RILJ_LOGD) unsljLog(response);
++                if (mSessionChangedRegistrants != null) {
++                    mSessionChangedRegistrants.notifyRegistrants(new AsyncResult(null, ret, null));
++                }
++                break;
++            }
++            //MTK-END multiple application support
++
++            case RIL_UNSOL_SIM_MISSING:
++                if (RILJ_LOGD) unsljLogRet(response, ret);
++                if (mSimMissing != null) {
++                    mSimMissing.notifyRegistrants(
++                                        new AsyncResult(null, ret, null));
++                }
++                break;
++
++            case RIL_UNSOL_SIM_RECOVERY:
++                if (RILJ_LOGD) unsljLogRet(response, ret);
++                if (mSimRecovery != null) {
++                    mSimRecovery.notifyRegistrants(
++                                        new AsyncResult(null, ret, null));
++                }
++                break;
++
++            case RIL_UNSOL_VIRTUAL_SIM_ON:
++                if (RILJ_LOGD) unsljLogRet(response, ret);
++                if (mVirtualSimOn != null) {
++                    mVirtualSimOn.notifyRegistrants(
++                                        new AsyncResult(null, ret, null));
++                }
++                break;
++
++            case RIL_UNSOL_VIRTUAL_SIM_OFF:
++                if (RILJ_LOGD) unsljLogRet(response, ret);
++                if (mVirtualSimOff != null) {
++                    mVirtualSimOff.notifyRegistrants(
++                        new AsyncResult(null, ret, null));
++                }
++                break;
++
++            case RIL_UNSOL_SIM_PLUG_OUT:
++                if (RILJ_LOGD) unsljLogRet(response, ret);
++                if (mSimPlugOutRegistrants != null) {
++                    mSimPlugOutRegistrants.notifyRegistrants(
++                        new AsyncResult(null, ret, null));
++                }
++                mCfuReturnValue = null;
++                break;
++
++            case RIL_UNSOL_SIM_PLUG_IN:
++                if (RILJ_LOGD) unsljLogRet(response, ret);
++                if (mSimPlugInRegistrants != null) {
++                    mSimPlugInRegistrants.notifyRegistrants(
++                        new AsyncResult(null, ret, null));
++                }
++                break;
++
++            case RIL_UNSOL_SIM_COMMON_SLOT_NO_CHANGED:
++                if (RILJ_LOGD) unsljLog(response);
++                if (mCommonSlotNoChangedRegistrants != null) {
++                    mCommonSlotNoChangedRegistrants.notifyRegistrants(new AsyncResult(null, null, null));
++                }
++                break;
++
+             case RIL_UNSOL_RESPONSE_PLMN_CHANGED:
+                 if (RILJ_LOGD) unsljLogvRet(response, ret);
+                 if (mPlmnChangeNotificationRegistrant != null) {
+@@ -1133,6 +1233,17 @@ public class MediaTekRIL extends RIL implements CommandsInterface {
+                 }
+                 break;
+ 
++            // M: Fast Dormancy
++            case RIL_UNSOL_SCRI_RESULT:
++                Integer scriResult = (((int[]) ret)[0]);
++                riljLog("s:" + scriResult + ":" + (((int[]) ret)[0]));
++                if (RILJ_LOGD) unsljLogRet(response, ret);
++
++                if (mScriResultRegistrant != null) {
++                   mScriResultRegistrant.notifyRegistrant(new AsyncResult(null, scriResult, null));
++                }
++                break;
++
+             /*
+             case RIL_UNSOL_CALL_PROGRESS_INFO:
+                 rewindAndReplace = true;
+@@ -1151,14 +1262,6 @@ public class MediaTekRIL extends RIL implements CommandsInterface {
+                 newResponseCode = RIL_UNSOL_RESPONSE_VOICE_NETWORK_STATE_CHANGED;
+                 break;
+ 
+-            case RIL_UNSOL_SIM_INSERTED_STATUS:
+-            case RIL_UNSOL_SIM_MISSING:
+-            case RIL_UNSOL_SIM_PLUG_OUT:
+-            case RIL_UNSOL_SIM_PLUG_IN:
+-                rewindAndReplace = true;
+-                newResponseCode = RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED;
+-                break;
+-
+             case RIL_UNSOL_SMS_READY_NOTIFICATION:
+                 Rlog.e(RILJ_LOG_TAG, "RIL_UNSOL_SMS_READY_NOTIFICATION: stub!");
+                 /*if (mGsmSmsRegistrant != null) {
+diff --git a/src/java/com/android/internal/telephony/RIL.java b/src/java/com/android/internal/telephony/RIL.java
+index 7ab605b..be26c8f 100644
+--- a/src/java/com/android/internal/telephony/RIL.java
++++ b/src/java/com/android/internal/telephony/RIL.java
+@@ -5390,6 +5390,108 @@ public class RIL extends BaseCommands implements CommandsInterface {
+     }
+     //MTK-END Support Multi-Application
+ 
++    @Override
++    public void queryNetworkLock(int category, Message response) {
++        RILRequest rr = RILRequest.obtain(RIL_REQUEST_QUERY_SIM_NETWORK_LOCK, response);
++
++        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
++
++        riljLog("queryNetworkLock:" + category);
++
++        rr.mParcel.writeInt(1);
++        rr.mParcel.writeInt(category);
++
++        send(rr);
++    }
++
++    @Override
++    public void setNetworkLock(int catagory, int lockop, String password,
++                        String data_imsi, String gid1, String gid2, Message response) {
++        RILRequest rr = RILRequest.obtain(RIL_REQUEST_SET_SIM_NETWORK_LOCK, response);
++
++        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
++
++        riljLog("setNetworkLock:" + catagory + ", " + lockop + ", " + password + ", " + data_imsi
++                + ", " + gid1 + ", " + gid2);
++
++        rr.mParcel.writeInt(6);
++        rr.mParcel.writeString(Integer.toString(catagory));
++        rr.mParcel.writeString(Integer.toString(lockop));
++        if (null != password) {
++            rr.mParcel.writeString(password);
++        } else {
++            rr.mParcel.writeString("");
++        }
++        rr.mParcel.writeString(data_imsi);
++        rr.mParcel.writeString(gid1);
++        rr.mParcel.writeString(gid2);
++
++        send(rr);
++    }
++
++    @Override
++    public void doGeneralSimAuthentication(int sessionId, int mode , int tag, String param1,
++                                         String param2, Message response) {
++
++        RILRequest rr = RILRequest.obtain(RIL_REQUEST_GENERAL_SIM_AUTH, response);
++
++        rr.mParcel.writeInt(sessionId);
++        rr.mParcel.writeInt(mode);
++
++        // Calcuate param1 length in byte length
++        if (param1 != null && param1.length() > 0) {
++            String length = Integer.toHexString(param1.length() / 2);
++            length = (((length.length() % 2 == 1) ? "0" : "") + length);
++            // Session id is equal to 0, for backward compability, we use old AT command
++            // old AT command no need to include param's length
++            rr.mParcel.writeString(((sessionId == 0) ? param1 : (length + param1)));
++        } else {
++            rr.mParcel.writeString(param1);
++        }
++
++        // Calcuate param2 length in byte length
++        if (param2 != null && param2.length() > 0) {
++            String length = Integer.toHexString(param2.length() / 2);
++            length = (((length.length() % 2 == 1) ? "0" : "") + length);
++            // Session id is equal to 0, for backward compability, we use old AT command
++            // old AT command no need to include param's length
++            rr.mParcel.writeString(((sessionId == 0) ? param2 : (length + param2)));
++        } else {
++            rr.mParcel.writeString(param2);
++        }
++
++        if (mode == 1) {
++            rr.mParcel.writeInt(tag);
++        }
++
++
++        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest) + ": " +
++            "session = " + sessionId + ",mode = " + mode + ",tag = " + tag + ", "  + param1 + ", " + param2);
++
++        send(rr);
++    }
++
++    @Override
++    public void iccGetATR(Message result) {
++        RILRequest rr = RILRequest.obtain(RIL_REQUEST_SIM_GET_ATR, result);
++
++        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
++
++        send(rr);
++    }
++
++    @Override
++    public void iccOpenChannelWithSw(String AID, Message result) {
++        RILRequest rr = RILRequest.obtain(RIL_REQUEST_SIM_OPEN_CHANNEL_WITH_SW, result);
++
++        rr.mParcel.writeString(AID);
++
++        if (RILJ_LOGD) riljLog(rr.serialString() + "> iccOpenChannelWithSw: " + requestToString(rr.mRequest)
++                + " " + AID);
++
++        send(rr);
++    }
++
+     public void setTrm(int mode, Message result) {
+         RILRequest rr = RILRequest.obtain(RIL_REQUEST_SET_TRM, null);
+ 
+diff --git a/src/java/com/android/internal/telephony/dataconnection/DcTracker.java b/src/java/com/android/internal/telephony/dataconnection/DcTracker.java
+index 082c6df..db1f4f9 100755
+--- a/src/java/com/android/internal/telephony/dataconnection/DcTracker.java
++++ b/src/java/com/android/internal/telephony/dataconnection/DcTracker.java
+@@ -879,6 +879,7 @@ public final class DcTracker extends DcTrackerBase {
+         IccRecords r = mIccRecords.get();
+         boolean recordsLoaded = false;
+         if (r != null) {
++            log("isDataAllowed mIccRecords=IccRecords {" + r.toString() + "}");
+             recordsLoaded = r.getRecordsLoaded();
+             if (DBG) log("isDataAllowed getRecordsLoaded=" + recordsLoaded);
+         }
+diff --git a/src/java/com/android/internal/telephony/imsphone/ImsPhoneCommandInterface.java b/src/java/com/android/internal/telephony/imsphone/ImsPhoneCommandInterface.java
+index e549ddb..9226a8b 100644
+--- a/src/java/com/android/internal/telephony/imsphone/ImsPhoneCommandInterface.java
++++ b/src/java/com/android/internal/telephony/imsphone/ImsPhoneCommandInterface.java
+@@ -589,6 +589,14 @@ class ImsPhoneCommandInterface extends BaseCommands implements CommandsInterface
+     // MTK
+ 
+     @Override
++    public void iccGetATR(Message response) {
++    }
++
++    @Override
++    public void iccOpenChannelWithSw(String AID, Message result){
++    }
++
++    @Override
+     public void setTrm(int mode, Message result) {
+     }
+ 
+diff --git a/src/java/com/android/internal/telephony/sip/SipCommandInterface.java b/src/java/com/android/internal/telephony/sip/SipCommandInterface.java
+index 356e975..f14bf69 100644
+--- a/src/java/com/android/internal/telephony/sip/SipCommandInterface.java
++++ b/src/java/com/android/internal/telephony/sip/SipCommandInterface.java
+@@ -592,6 +592,14 @@ class SipCommandInterface extends BaseCommands implements CommandsInterface {
+     // MTK
+ 
+     @Override
++    public void iccGetATR(Message response) {
++    }
++
++    @Override
++    public void iccOpenChannelWithSw(String AID, Message result){
++    }
++
++    @Override
+     public void setTrm(int mode, Message result) {
+     }
+ 
+diff --git a/src/java/com/android/internal/telephony/test/SimulatedCommands.java b/src/java/com/android/internal/telephony/test/SimulatedCommands.java
+index 5ef03fe..afddcdc 100644
+--- a/src/java/com/android/internal/telephony/test/SimulatedCommands.java
++++ b/src/java/com/android/internal/telephony/test/SimulatedCommands.java
+@@ -1779,6 +1779,16 @@ public final class SimulatedCommands extends BaseCommands
+     // MTK additions
+ 
+     @Override
++    public void iccGetATR(Message response) {
++        unimplemented(response);
++    }
++
++    @Override
++    public void iccOpenChannelWithSw(String AID, Message response) {
++        unimplemented(response);
++    }
++
++    @Override
+     public void setTrm(int mode, Message result) {
+     }
+ 
+diff --git a/src/java/com/android/internal/telephony/uicc/IccConstants.java b/src/java/com/android/internal/telephony/uicc/IccConstants.java
+index facc918..b20ca1d 100644
+--- a/src/java/com/android/internal/telephony/uicc/IccConstants.java
++++ b/src/java/com/android/internal/telephony/uicc/IccConstants.java
+@@ -112,4 +112,31 @@ public interface IccConstants {
+ 
+     //UICC access
+     static final String DF_ADF = "7FFF";
++
++    // MTK
++    static final int EF_ECC = 0x6FB7;
++
++    // USIM SIM file ids from TS 31.102
++    static final int EF_PSISMSC = 0x6FE5;
++    static final int EF_GBABP = 0x6fD6;
++    // [ALPS01206315] Support EF_SMSP (EF ids from 11.11/31.102)
++    static final int EF_SMSP = 0x6F42;
++    static final int EF_ELP = 0x2F05;
++    // ALPS00302702 RAT balancing
++    static public final int EF_RAT = 0x4F36; // ADF(USIM)/7F66/5F30/4F36
++    static final String DF_USIM = "7FFF";
++    static final int EF_GID2 = 0x6F3F;
++
++    // MTK-START [ALPS00092673] Orange feature merge back added by mtk80589 in 2011.11.15
++    /*
++      Detail description:
++      This feature provides a interface to get menu title string from EF_SUME
++    */
++    // SET UP MENU ELEMENTS
++    static final int EF_SUME = 0x6F54;
++    // MTK-END [ALPS00092673] Orange feature merge back added by mtk80589 in 2011.11.15
++
++    //ISIM access file ids from TS 31.103
++    static final int EF_ISIM_GBABP = 0x6fd5;
++    static final int EF_ISIM_GBANL = 0x6fd7;
+ }
+diff --git a/src/java/com/android/internal/telephony/uicc/IccFileHandler.java b/src/java/com/android/internal/telephony/uicc/IccFileHandler.java
+index 24d948c..975fde9 100644
+--- a/src/java/com/android/internal/telephony/uicc/IccFileHandler.java
++++ b/src/java/com/android/internal/telephony/uicc/IccFileHandler.java
+@@ -18,6 +18,7 @@ package com.android.internal.telephony.uicc;
+ 
+ import android.os.*;
+ import com.android.internal.telephony.CommandsInterface;
++import com.android.internal.telephony.PhoneConstants;
+ 
+ import java.util.ArrayList;
+ 
+@@ -92,6 +93,9 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
+     /** Finished retrieving size of record for EFimg now. */
+     static protected final int EVENT_GET_RECORD_SIZE_IMG_DONE = 11;
+ 
++    // MTK
++    static protected final int EVENT_SELECT_EF_FILE = 100;
++
+      // member variables
+     protected final CommandsInterface mCi;
+     protected final UiccCardApplication mParentApp;
+@@ -104,6 +108,10 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
+         boolean mLoadAll;
+         String mPath;
+ 
++        // MTK
++        int mChannel;
++        int mMode;
++
+         // Variables used to load part records
+         boolean mLoadPart;
+         ArrayList<Integer> mRecordNums;
+@@ -120,6 +128,8 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
+             mLoadAll = false;
+             mLoadPart = false;
+             mPath = null;
++            mChannel = 0;
++            mMode = -1;
+         }
+ 
+         LoadLinearFixedContext(int efid, int recordNum, String path, Message onLoaded) {
+@@ -129,6 +139,8 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
+             mLoadAll = false;
+             mLoadPart = false;
+             mPath = path;
++            mChannel = 0;
++            mMode = -1;
+         }
+ 
+         LoadLinearFixedContext(int efid, String path, Message onLoaded) {
+@@ -138,6 +150,8 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
+             mLoadPart = false;
+             mOnLoaded = onLoaded;
+             mPath = path;
++            mChannel = 0;
++            mMode = -1;
+         }
+ 
+         LoadLinearFixedContext(int efid, Message onLoaded) {
+@@ -147,6 +161,8 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
+             mLoadPart = false;
+             mOnLoaded = onLoaded;
+             mPath = null;
++            mChannel = 0;
++            mMode = -1;
+         }
+ 
+         LoadLinearFixedContext(int efid, ArrayList<Integer> recordNums, String path,
+@@ -161,6 +177,31 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
+             mCountLoadrecords = recordNums.size();
+             mOnLoaded = onLoaded;
+             mPath = path;
++            mChannel = 0;
++            mMode = -1;
++        }
++
++        // MTK
++        LoadLinearFixedContext(int efid, int recordNum, Message onLoaded, int channel) {
++            mEfid = efid;
++            mRecordNum = recordNum;
++            mOnLoaded = onLoaded;
++            mLoadAll = false;
++            mLoadPart = false;
++            mPath = null;
++            mChannel = channel;
++            mMode = -1;
++        }
++
++        LoadLinearFixedContext(int efid, Message onLoaded, int channel) {
++            mEfid = efid;
++            mRecordNum = 1;
++            mOnLoaded = onLoaded;
++            mLoadAll = true;
++            mLoadPart = false;
++            mPath = null;
++            mChannel = channel;
++            mMode = -1;
+         }
+ 
+         private void initLCResults(int size) {
+@@ -496,6 +537,7 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
+         int fileid;
+         int recordSize[];
+         String path = null;
++        int channel = 0;
+ 
+         try {
+             switch (msg.what) {
+@@ -591,12 +633,22 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
+                  if (path == null) {
+                      path = getEFPath(lc.mEfid);
+                  }
+-                 mCi.iccIOForApp(COMMAND_READ_RECORD, lc.mEfid, path,
+-                         lc.mRecordNum,
+-                         READ_RECORD_MODE_ABSOLUTE,
+-                         lc.mRecordSize, null, null, mAid,
+-                         obtainMessage(EVENT_READ_RECORD_DONE, lc));
+-                 break;
++
++
++                 if (lc.mMode != -1) {
++                    mCi.iccIOForAppEx(COMMAND_READ_RECORD, lc.mEfid, getSmsEFPath(lc.mMode),
++                            lc.mRecordNum,
++                            READ_RECORD_MODE_ABSOLUTE,
++                            lc.mRecordSize, null, null, mAid, lc.mChannel,
++                            obtainMessage(EVENT_READ_RECORD_DONE, lc));
++                } else {
++                    mCi.iccIOForAppEx(COMMAND_READ_RECORD, lc.mEfid, path,
++                            lc.mRecordNum,
++                            READ_RECORD_MODE_ABSOLUTE,
++                            lc.mRecordSize, null, null, mAid, lc.mChannel,
++                            obtainMessage(EVENT_READ_RECORD_DONE, lc));
++                }
++                break;
+             case EVENT_GET_BINARY_SIZE_DONE:
+                 ar = (AsyncResult)msg.obj;
+                 response = (Message) ar.userObj;
+@@ -609,6 +661,7 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
+                 data = result.payload;
+ 
+                 fileid = msg.arg1;
++                channel = msg.arg2;
+ 
+                 if (UiccTlvData.isUiccTlvData(data)) {
+ 
+@@ -634,8 +687,8 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
+                     throw new IccFileTypeMismatch();
+                 }
+ 
+-                mCi.iccIOForApp(COMMAND_READ_BINARY, fileid, getEFPath(fileid),
+-                                0, 0, size, null, null, mAid,
++                mCi.iccIOForAppEx(COMMAND_READ_BINARY, fileid, getEFPath(fileid),
++                                0, 0, size, null, null, mAid, channel,
+                                 obtainMessage(EVENT_READ_BINARY_DONE,
+                                               fileid, 0, response));
+             break;
+@@ -665,11 +718,20 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
+                             path = getEFPath(lc.mEfid);
+                         }
+ 
+-                        mCi.iccIOForApp(COMMAND_READ_RECORD, lc.mEfid, path,
+-                                    lc.mRecordNum,
+-                                    READ_RECORD_MODE_ABSOLUTE,
+-                                    lc.mRecordSize, null, null, mAid,
+-                                    obtainMessage(EVENT_READ_RECORD_DONE, lc));
++                        if (lc.mMode != -1) {
++                            mCi.iccIOForAppEx(COMMAND_READ_RECORD, lc.mEfid,
++                                        getSmsEFPath(lc.mMode),
++                                        lc.mRecordNum,
++                                        READ_RECORD_MODE_ABSOLUTE,
++                                        lc.mRecordSize, null, null, mAid, lc.mChannel,
++                                        obtainMessage(EVENT_READ_RECORD_DONE, lc));
++                        } else {
++                            mCi.iccIOForAppEx(COMMAND_READ_RECORD, lc.mEfid, path,
++                                        lc.mRecordNum,
++                                        READ_RECORD_MODE_ABSOLUTE,
++                                        lc.mRecordSize, null, null, mAid, lc.mChannel,
++                                        obtainMessage(EVENT_READ_RECORD_DONE, lc));
++                        }
+                     }
+                 } else if (lc.mLoadPart) {
+                     lc.results.set(lc.mRecordNum - 1, result.payload);
+@@ -680,9 +742,20 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
+                             if (path == null) {
+                                 path = getEFPath(lc.mEfid);
+                             }
+-                            mCi.iccIOForApp(COMMAND_READ_RECORD, lc.mEfid, path, lc.mRecordNum,
+-                                    READ_RECORD_MODE_ABSOLUTE, lc.mRecordSize, null, null, mAid,
+-                                    obtainMessage(EVENT_READ_RECORD_DONE, lc));
++                            if (lc.mMode != -1) {
++                                mCi.iccIOForAppEx(COMMAND_READ_RECORD, lc.mEfid,
++                                            getSmsEFPath(lc.mMode),
++                                            lc.mRecordNum,
++                                            READ_RECORD_MODE_ABSOLUTE,
++                                            lc.mRecordSize, null, null, mAid, lc.mChannel,
++                                            obtainMessage(EVENT_READ_RECORD_DONE, lc));
++                            } else {
++                                mCi.iccIOForAppEx(COMMAND_READ_RECORD, lc.mEfid, path,
++                                            lc.mRecordNum,
++                                            READ_RECORD_MODE_ABSOLUTE,
++                                        lc.mRecordSize, null, null, mAid, lc.mChannel,
++                                            obtainMessage(EVENT_READ_RECORD_DONE, lc));
++                            }
+                         } else {
+                             sendResult(response, lc.results, null);
+                         }
+@@ -757,4 +830,114 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
+ 
+     protected abstract void loge(String s);
+ 
++    // MTK
++    public void loadEFLinearFixedAll(int fileid, Message onLoaded, boolean is7FFF) {
++        Message response = obtainMessage(EVENT_GET_RECORD_SIZE_DONE,
++                        new LoadLinearFixedContext(fileid, onLoaded));
++
++        mCi.iccIOForApp(COMMAND_GET_RESPONSE, fileid, getEFPath(fileid, is7FFF),
++                        0, 0, GET_RESPONSE_EF_SIZE_BYTES, null, null, mAid, response);
++    }
++
++    public void loadEFLinearFixedAll(int fileid, int mode , Message onLoaded) {
++        LoadLinearFixedContext lc = new LoadLinearFixedContext(fileid, onLoaded);
++        lc.mMode = mode;
++        Message response = obtainMessage(EVENT_GET_RECORD_SIZE_DONE, lc);
++
++        mCi.iccIOForApp(COMMAND_GET_RESPONSE, fileid, getSmsEFPath(mode),
++                    0, 0, GET_RESPONSE_EF_SIZE_BYTES, null, null, mAid, response);
++    }
++
++    protected String getSmsEFPath(int mode)
++    {
++        String efpath = "";
++
++        if (mode == PhoneConstants.PHONE_TYPE_GSM)
++            efpath = IccConstants.MF_SIM + IccConstants.DF_TELECOM;
++        else if (mode == PhoneConstants.PHONE_TYPE_CDMA)
++            efpath = IccConstants.MF_SIM + IccConstants.DF_CDMA;
++
++        return efpath;
++    }
++
++
++    /**
++     * Load a SIM Transparent EF with path specified
++     *
++     * @param fileid EF id
++     * @param efPath EF path
++     * @param onLoaded
++     *
++     * ((AsyncResult)(onLoaded.obj)).result is the byte[]
++     *
++     */
++
++    public void loadEFTransparent(int fileid, String efPath, Message onLoaded) {
++        Message response = obtainMessage(EVENT_GET_BINARY_SIZE_DONE,
++                        fileid, 0, onLoaded);
++
++        mCi.iccIOForApp(COMMAND_GET_RESPONSE, fileid, efPath,
++                        0, 0, GET_RESPONSE_EF_SIZE_BYTES, null, null, mAid, response);
++    }
++
++
++    /**
++     * select an EF file and get response
++     *
++     * @param fileid EF id
++     * @param onLoaded (EFResponseData)efData
++     *
++     */
++    public void selectEFFile(int fileid, Message onLoaded) {
++        Message response
++                = obtainMessage(EVENT_SELECT_EF_FILE,  fileid, 0, onLoaded);
++
++        mCi.iccIOForApp(COMMAND_GET_RESPONSE, fileid, getEFPath(fileid),
++                    0, 0, GET_RESPONSE_EF_SIZE_BYTES, null, null, mAid, response);
++    }
++    //MTK-START Support Multi-Application
++    /**
++     * Load a SIM Transparent EF
++     *
++     * @param fileid EF id
++     * @param channel application channel
++     * @param onLoaded
++     *
++     * ((AsyncResult)(onLoaded.obj)).result is the byte[]
++     *
++     */
++
++    public void loadEFTransparentEx(int fileid, int channel , Message onLoaded) {
++        Message response = obtainMessage(EVENT_GET_BINARY_SIZE_DONE,
++                        fileid, channel, onLoaded);
++
++        mCi.iccIOForAppEx(COMMAND_GET_RESPONSE, fileid, getEFPath(fileid),
++                        0, 0, GET_RESPONSE_EF_SIZE_BYTES, null, null, mAid, channel, response);
++    }
++
++    public void loadEFLinearFixedEx(int fileid, int recordNum, int channel, Message onLoaded) {
++        Message response
++            = obtainMessage(EVENT_GET_RECORD_SIZE_DONE,
++                        new LoadLinearFixedContext(fileid, recordNum, onLoaded, channel));
++
++        mCi.iccIOForAppEx(COMMAND_GET_RESPONSE, fileid, getEFPath(fileid),
++                        0, 0, GET_RESPONSE_EF_SIZE_BYTES, null, null, mAid, channel, response);
++    }
++    public void loadEFLinearFixedAllEx(int fileid, int channel, Message onLoaded) {
++        Message response = obtainMessage(EVENT_GET_RECORD_SIZE_DONE,
++                        new LoadLinearFixedContext(fileid, onLoaded, channel));
++
++        mCi.iccIOForAppEx(COMMAND_GET_RESPONSE, fileid, getEFPath(fileid, false),
++                        0, 0, GET_RESPONSE_EF_SIZE_BYTES, null, null, mAid, channel, response);
++    }
++
++    public void updateEFTransparentEx(int fileid, int channel, byte[ ] data, Message onComplete) {
++        mCi.iccIOForAppEx(COMMAND_UPDATE_BINARY, fileid, getEFPath(fileid),
++                        0, 0, data.length,
++                        IccUtils.bytesToHexString(data), null, mAid, channel, onComplete);
++    }
++
++    //MTK-END Support Multi-Application
++
++    protected String getEFPath(int efid, boolean is7FFF) { return null; };
+ }
+diff --git a/src/java/com/android/internal/telephony/uicc/UiccCard.java b/src/java/com/android/internal/telephony/uicc/UiccCard.java
+index f970e45..2c6a474 100644
+--- a/src/java/com/android/internal/telephony/uicc/UiccCard.java
++++ b/src/java/com/android/internal/telephony/uicc/UiccCard.java
+@@ -98,6 +98,10 @@ public class UiccCard {
+     private static final int EVENT_CARRIER_PRIVILIGES_LOADED = 20;
+     private static final int EVENT_SIM_GET_ATR_DONE = 21;
+ 
++    // MTK
++    private static final int EVENT_GET_ATR_DONE = 100;
++    private static final int EVENT_OPEN_CHANNEL_WITH_SW_DONE = 101;
++
+     private int mPhoneId;
+ 
+     // MTK
+@@ -379,6 +383,9 @@ public class UiccCard {
+                 case EVENT_TRANSMIT_APDU_BASIC_CHANNEL_DONE:
+                 case EVENT_SIM_IO_DONE:
+                 case EVENT_SIM_GET_ATR_DONE:
++                // MTK
++                case EVENT_GET_ATR_DONE:
++                case EVENT_OPEN_CHANNEL_WITH_SW_DONE:
+                     AsyncResult ar = (AsyncResult)msg.obj;
+                     if (ar.exception != null) {
+                        if (DBG)
+@@ -717,16 +724,14 @@ public class UiccCard {
+ 
+     // MTK additions
+ 
+-    // Added by M begin
+-    /*
+     public int getSlotId() {
+-        return mSlotId;
++        return mPhoneId;
+     }
+ 
+     public UiccCard(Context c, CommandsInterface ci, IccCardStatus ics, int slotId, boolean isUpdateSiminfo) {
+         if (DBG) log("Creating simId " + slotId + ",isUpdateSiminfo" + isUpdateSiminfo);
+         mCardState = ics.mCardState;
+-        mSlotId = slotId;
++        mPhoneId = slotId;
+         update(c, ci, ics, isUpdateSiminfo);
+     }
+ 
+@@ -739,17 +744,13 @@ public class UiccCard {
+     public void iccGetAtr(Message onComplete) {
+         mCi.iccGetATR(mHandler.obtainMessage(EVENT_GET_ATR_DONE, onComplete));
+     }
+-    */
+ 
+     public String getIccCardType() {
+-        // TODO: port MTK slot id
+-        final int mSlotId = 0;
+-        final String mIccType = SystemProperties.get(UICCCARD_PROPERTY_RIL_UICC_TYPE[mSlotId]);
++        final String mIccType = SystemProperties.get(UICCCARD_PROPERTY_RIL_UICC_TYPE[mPhoneId]);
+         if (DBG) log("getIccCardType(): iccType = " + mIccType);
+         return mIccType;
+     }
+ 
+-    /*
+     public void iccOpenChannelWithSw(String AID, Message onComplete) {
+         mCi.iccOpenChannelWithSw(AID,
+             mHandler.obtainMessage(EVENT_OPEN_CHANNEL_WITH_SW_DONE, onComplete));
+@@ -812,6 +813,4 @@ public class UiccCard {
+             mLastRadioState = radioState;
+         }
+     }
+-    */
+-    // Added by M end
+ }
+diff --git a/src/java/com/android/internal/telephony/uicc/UiccController.java b/src/java/com/android/internal/telephony/uicc/UiccController.java
+index 3e5d679..e3cc67c 100644
+--- a/src/java/com/android/internal/telephony/uicc/UiccController.java
++++ b/src/java/com/android/internal/telephony/uicc/UiccController.java
+@@ -18,14 +18,19 @@ package com.android.internal.telephony.uicc;
+ 
+ import android.content.Context;
+ import android.content.Intent;
++import android.content.SharedPreferences;
++import android.content.BroadcastReceiver;
++import android.content.IntentFilter;
+ 
+ import android.os.AsyncResult;
++import android.os.Bundle;
+ import android.os.Handler;
+ import android.os.Message;
+ import android.os.Registrant;
+ import android.os.RegistrantList;
+ import android.os.SystemProperties;
+ import android.telephony.TelephonyManager;
++import android.telephony.SubscriptionManager;
+ import android.telephony.Rlog;
+ import android.text.format.Time;
+ 
+@@ -34,7 +39,10 @@ import android.telephony.ServiceState;
+ import com.android.internal.telephony.CommandsInterface;
+ import com.android.internal.telephony.PhoneConstants;
+ import com.android.internal.telephony.SubscriptionController;
++import com.android.internal.telephony.IccCardConstants;
++import com.android.internal.telephony.TelephonyIntents;
+ import com.android.internal.telephony.uicc.IccCardApplicationStatus.AppState;
++import com.android.internal.telephony.uicc.IccCardApplicationStatus.PersoSubState;
+ 
+ import java.io.FileDescriptor;
+ import java.io.PrintWriter;
+@@ -97,6 +105,36 @@ public class UiccController extends Handler {
+     private static final int EVENT_REFRESH = 4;
+     private static final int EVENT_REFRESH_OEM = 5;
+ 
++    // MTK
++    protected static final int EVENT_RADIO_AVAILABLE = 100;
++    protected static final int EVENT_VIRTUAL_SIM_ON = 101;
++    protected static final int EVENT_VIRTUAL_SIM_OFF = 102;
++    protected static final int EVENT_SIM_MISSING = 103;
++    protected static final int EVENT_QUERY_SIM_MISSING_STATUS = 104;
++    protected static final int EVENT_SIM_RECOVERY = 105;
++    protected static final int EVENT_GET_ICC_STATUS_DONE_FOR_SIM_MISSING = 106;
++    protected static final int EVENT_GET_ICC_STATUS_DONE_FOR_SIM_RECOVERY = 107;
++    protected static final int EVENT_QUERY_ICCID_DONE_FOR_HOT_SWAP = 108;
++    protected static final int EVENT_SIM_PLUG_OUT = 109;
++    protected static final int EVENT_SIM_PLUG_IN = 110;
++    protected static final int EVENT_HOTSWAP_GET_ICC_STATUS_DONE = 111;
++    protected static final int EVENT_QUERY_SIM_STATUS_FOR_PLUG_IN = 112;
++    protected static final int EVENT_QUERY_SIM_MISSING = 113;
++    protected static final int EVENT_INVALID_SIM_DETECTED = 114;
++    protected static final int EVENT_REPOLL_SML_STATE = 115;
++    protected static final int EVENT_COMMON_SLOT_NO_CHANGED = 116;
++
++    //Multi-application
++    protected static final int EVENT_TURN_ON_ISIM_APPLICATION_DONE = 200;
++    protected static final int EVENT_GET_ICC_APPLICATION_STATUS = 201;
++    protected static final int EVENT_APPLICATION_SESSION_CHANGED = 202;
++
++    private static final int SML_FEATURE_NO_NEED_BROADCAST_INTENT = 0;
++    private static final int SML_FEATURE_NEED_BROADCAST_INTENT = 1;
++    private static final String ACTION_RESET_MODEM = "android.intent.action.sim.ACTION_RESET_MODEM";
++    private static final String PROPERTY_3G_SWITCH = "gsm.3gswitch";
++    private static final String COMMON_SLOT_PROPERTY = "ro.mtk_sim_hot_swap_common_slot";
++
+     private CommandsInterface[] mCis;
+     private UiccCard[] mUiccCards = new UiccCard[TelephonyManager.getDefault().getPhoneCount()];
+ 
+@@ -109,6 +147,15 @@ public class UiccController extends Handler {
+ 
+     private boolean mOEMHookSimRefresh = false;
+ 
++    // MTK
++    private boolean mIsHotSwap = false;
++    private boolean mClearMsisdn = false;
++
++    private RegistrantList mRecoveryRegistrants = new RegistrantList();
++    //Multi-application
++    private int[] mImsSessionId = new int[TelephonyManager.getDefault().getPhoneCount()];
++    private RegistrantList mApplicationChangedRegistrants = new RegistrantList();
++
+     // Logging for dumpsys. Useful in cases when the cards run into errors.
+     private static final int MAX_PROACTIVE_COMMANDS_TO_LOG = 20;
+     private LinkedList<String> mCardLogs = new LinkedList<String>();
+@@ -131,9 +178,11 @@ public class UiccController extends Handler {
+                 com.android.internal.R.bool.config_sim_refresh_for_dual_mode_card);
+         for (int i = 0; i < mCis.length; i++) {
+             Integer index = new Integer(i);
+-            if (SystemProperties.getBoolean("persist.radio.apm_sim_not_pwdn", false)) {
++            if (SystemProperties.getBoolean("persist.radio.apm_sim_not_pwdn", false) ||
++                SystemProperties.get("gsm.version.ril-impl").startsWith("mtk")) {
+                 // Reading ICC status in airplane mode is only supported in QCOM
+                 // RILs when this property is set to true
++                // and MTK RILs
+                 mCis[i].registerForAvailable(this, EVENT_ICC_STATUS_CHANGED, index);
+             } else {
+                 mCis[i].registerForOn(this, EVENT_ICC_STATUS_CHANGED, index);
+@@ -142,12 +191,30 @@ public class UiccController extends Handler {
+             mCis[i].registerForIccStatusChanged(this, EVENT_ICC_STATUS_CHANGED, index);
+             // TODO remove this once modem correctly notifies the unsols
+             mCis[i].registerForNotAvailable(this, EVENT_RADIO_UNAVAILABLE, index);
++
++            mCis[i].registerForVirtualSimOn(this, EVENT_VIRTUAL_SIM_ON, index);
++            mCis[i].registerForVirtualSimOff(this, EVENT_VIRTUAL_SIM_OFF, index);
++            mCis[i].registerForSimMissing(this, EVENT_SIM_MISSING, index);
++            mCis[i].registerForSimRecovery(this, EVENT_SIM_RECOVERY, index);
++            mCis[i].registerForSimPlugOut(this, EVENT_SIM_PLUG_OUT, index);
++            mCis[i].registerForSimPlugIn(this, EVENT_SIM_PLUG_IN, index);
++            mCis[i].registerForCommonSlotNoChanged(this, EVENT_COMMON_SLOT_NO_CHANGED, index);
++            mCis[i].registerForSessionChanged(this, EVENT_APPLICATION_SESSION_CHANGED, index);
++
+             if (mOEMHookSimRefresh) {
+                 mCis[i].registerForSimRefreshEvent(this, EVENT_REFRESH_OEM, index);
+             } else {
+                 mCis[i].registerForIccRefresh(this, EVENT_REFRESH, index);
+             }
+         }
++
++        IntentFilter filter = new IntentFilter();
++        /* TODO: Wait for SIM Info migration done
++        filter.addAction(TelephonyIntents.ACTION_SIM_INFO_UPDATE);
++        */
++        filter.addAction(TelephonyIntents.ACTION_SIM_STATE_CHANGED);
++        filter.addAction(ACTION_RESET_MODEM);
++        mContext.registerReceiver(mIntentReceiver, filter);
+     }
+ 
+     public static UiccController getInstance() {
+@@ -239,6 +306,23 @@ public class UiccController extends Handler {
+         }
+     }
+ 
++    //Notifies when card status changes
++    public void registerForIccRecovery(Handler h, int what, Object obj) {
++        synchronized (mLock) {
++            Registrant r = new Registrant(h, what, obj);
++            mRecoveryRegistrants.add(r);
++            //Notify registrant right after registering, so that it will get the latest ICC status,
++            //otherwise which may not happen until there is an actual change in ICC status.
++            r.notifyRegistrant();
++        }
++    }
++
++    public void unregisterForIccRecovery(Handler h) {
++        synchronized (mLock) {
++            mRecoveryRegistrants.remove(h);
++        }
++    }
++
+     @Override
+     public void handleMessage (Message msg) {
+         synchronized (mLock) {
+@@ -259,6 +343,38 @@ public class UiccController extends Handler {
+                     AsyncResult ar = (AsyncResult)msg.obj;
+                     onGetIccCardStatusDone(ar, index);
+                     break;
++                case EVENT_REPOLL_SML_STATE:
++                    if (DBG) log("Received EVENT_REPOLL_SML_STATE");
++                    ar = (AsyncResult) msg.obj;
++                    boolean needIntent = msg.arg1 == SML_FEATURE_NEED_BROADCAST_INTENT ? true : false;
++
++                    //Update Uicc Card status.
++                    onGetIccCardStatusDone(ar, index, false);
++
++                    // If we still in Network lock, broadcast intent if caller need this intent.
++                    if (mUiccCards[index] != null && needIntent == true) {
++                        UiccCardApplication app = mUiccCards[index].getApplication(APP_FAM_3GPP);
++                        if (app == null) {
++                            if (DBG) log("UiccCardApplication = null");
++                            break;
++                        }
++                        if (app.getState() == AppState.APPSTATE_SUBSCRIPTION_PERSO) {
++                            Intent lockIntent = new Intent();
++                            if (null == lockIntent) {
++                                if (DBG) log("New intent failed");
++                                return;
++                            }
++                            if (DBG) log("Broadcast ACTION_UNLOCK_SIM_LOCK");
++                            lockIntent.setAction(TelephonyIntents.ACTION_UNLOCK_SIM_LOCK);
++                            lockIntent.putExtra(IccCardConstants.INTENT_KEY_ICC_STATE,
++                                    IccCardConstants.INTENT_VALUE_ICC_LOCKED);
++                            lockIntent.putExtra(IccCardConstants.INTENT_KEY_LOCKED_REASON,
++                                    parsePersoType(app.getPersoSubState()));
++                            SubscriptionManager.putPhoneIdAndSubIdExtra(lockIntent, index);
++                            mContext.sendBroadcast(lockIntent);
++                        }
++                    }
++                    break;
+                 case EVENT_RADIO_UNAVAILABLE:
+                     if (DBG) log("EVENT_RADIO_UNAVAILABLE, dispose card");
+                     if (mUiccCards[index] != null) {
+@@ -267,6 +383,90 @@ public class UiccController extends Handler {
+                     mUiccCards[index] = null;
+                     mIccChangedRegistrants.notifyRegistrants(new AsyncResult(null, index, null));
+                     break;
++                case EVENT_TURN_ON_ISIM_APPLICATION_DONE:
++                    if (DBG) log("Received EVENT_TURN_ON_ISIM_APPLICATION_DONE");
++                    ar = (AsyncResult) msg.obj;
++                    if (ar.exception != null) {
++                        Rlog.e(LOG_TAG, "[SIM " + index + "] Error turn on ISIM. ", ar.exception);
++                        return;
++                    }
++
++                    //Response format: <Application ID>, <Session ID>
++                    int[] ints = (int[]) ar.result;
++                    if (DBG) log("Application ID = " + ints[0] + "Session ID = " + ints[1]);
++
++                    mImsSessionId[index] =  ints[1];
++                    mCis[index].getIccApplicationStatus(mImsSessionId[index],
++                            obtainMessage(EVENT_GET_ICC_APPLICATION_STATUS, index));
++                    break;
++
++                case EVENT_GET_ICC_APPLICATION_STATUS:
++                    if (DBG) log("Received EVENT_GET_ICC_APPLICATION_STATUS");
++                    ar = (AsyncResult) msg.obj;
++                    onGetIccApplicationStatusDone(ar, index);
++                    break;
++
++                case EVENT_APPLICATION_SESSION_CHANGED:
++                    if (DBG) log("Received EVENT_APPLICATION_SESSION_CHANGED");
++                    ar = (AsyncResult) msg.obj;
++
++                    //Response format: <Application ID>, <Session ID>
++                    int[] result = (int[]) ar.result;
++                    // FIXME: application id and array index? only support one application now.
++                    if (DBG) log("Application = " + result[0] + ", Session = " + result[1]);
++                    mImsSessionId[index] =  result[1];
++                    break;
++                case EVENT_VIRTUAL_SIM_ON:
++                    mCis[index].getIccCardStatus(obtainMessage(EVENT_GET_ICC_STATUS_DONE, index));
++                    // setNotificationVirtual(index, EVENT_VIRTUAL_SIM_ON);
++                    SharedPreferences shOn = mContext.getSharedPreferences("AutoAnswer", 1);
++                    SharedPreferences.Editor editorOn = shOn.edit();
++                    editorOn.putBoolean("flag", true);
++                    editorOn.commit();
++                    break;
++               case EVENT_VIRTUAL_SIM_OFF:
++                    if (DBG) log("handleMessage (EVENT_VIRTUAL_SIM_OFF)");
++                    mCis[index].getIccCardStatus(obtainMessage(EVENT_GET_ICC_STATUS_DONE, index));
++                    // removeNotificationVirtual(index, EVENT_VIRTUAL_SIM_ON);
++                    //setNotification(index, EVENT_SIM_MISSING);
++                    SharedPreferences shOff = mContext.getSharedPreferences("AutoAnswer", 1);
++                    SharedPreferences.Editor editorOff = shOff.edit();
++                    editorOff.putBoolean("flag", false);
++                    editorOff.commit();
++                    break;
++                case EVENT_SIM_RECOVERY:
++                    if (DBG) log("handleMessage (EVENT_SIM_RECOVERY)");
++                    mCis[index].getIccCardStatus(obtainMessage(EVENT_GET_ICC_STATUS_DONE_FOR_SIM_RECOVERY, index));
++                    mRecoveryRegistrants.notifyRegistrants(new AsyncResult(null, index, null));
++                    //disableSimMissingNotification(index);
++
++                    //ALPS01209124
++                    Intent intent = new Intent();
++                    intent.setAction(TelephonyIntents.ACTION_SIM_RECOVERY_DONE);
++                    mContext.sendBroadcast(intent);
++                    break;
++                case EVENT_SIM_MISSING:
++                    if (DBG) log("handleMessage (EVENT_SIM_MISSING)");
++                    //setNotification(index, EVENT_SIM_MISSING);
++                    mCis[index].getIccCardStatus(obtainMessage(EVENT_GET_ICC_STATUS_DONE_FOR_SIM_MISSING, index));
++                    break;
++                case EVENT_GET_ICC_STATUS_DONE_FOR_SIM_MISSING:
++                    if (DBG) log("Received EVENT_GET_ICC_STATUS_DONE_FOR_SIM_MISSING");
++                    ar = (AsyncResult) msg.obj;
++                    onGetIccCardStatusDone(ar, index, false);
++                case EVENT_GET_ICC_STATUS_DONE_FOR_SIM_RECOVERY:
++                    if (DBG) log("Received EVENT_GET_ICC_STATUS_DONE_FOR_SIM_RECOVERY");
++                    ar = (AsyncResult) msg.obj;
++                    onGetIccCardStatusDone(ar, index, false);
++                    break;
++                case EVENT_COMMON_SLOT_NO_CHANGED:
++                    if (DBG) log("handleMessage (EVENT_COMMON_SLOT_NO_CHANGED)");
++                    Intent intentNoChanged = new Intent(TelephonyIntents.ACTION_COMMON_SLOT_NO_CHANGED);
++                    int slotId = index.intValue();
++                    SubscriptionManager.putPhoneIdAndSubIdExtra(intentNoChanged, slotId);
++                    log("Broadcasting intent ACTION_COMMON_SLOT_NO_CHANGED for mSlotId : " + slotId);
++                    mContext.sendBroadcast(intentNoChanged);
++                    break;
+                 case EVENT_REFRESH:
+                     ar = (AsyncResult)msg.obj;
+                     if (DBG) log("Sim REFRESH received");
+@@ -437,4 +637,223 @@ public class UiccController extends Handler {
+             pw.println("  " + mCardLogs.get(i));
+         }
+     }
++
++    // MTK
++    private synchronized void onGetIccCardStatusDone(AsyncResult ar, Integer index, boolean isUpdate) {
++        if (ar.exception != null) {
++            Rlog.e(LOG_TAG, "Error getting ICC status. "
++                    + "RIL_REQUEST_GET_ICC_STATUS should "
++                    + "never return an error", ar.exception);
++            return;
++        }
++        if (!isValidCardIndex(index)) {
++            Rlog.e(LOG_TAG, "onGetIccCardStatusDone: invalid index : " + index);
++            return;
++        }
++        if (DBG) log("onGetIccCardStatusDone, index " + index + "isUpdateSiminfo " + isUpdate);
++
++        IccCardStatus status = (IccCardStatus) ar.result;
++
++        //if (status.mCardState == IccCardStatus.CardState.CARDSTATE_PRESENT) {
++        //    if (DBG) log("onGetIccCardStatusDone, disableSimMissingNotification because card is present");
++        //    disableSimMissingNotification(index);
++        //}
++
++        if (mUiccCards[index] == null) {
++            //Create new card
++            mUiccCards[index] = new UiccCard(mContext, mCis[index], status, index, isUpdate);
++
++/*
++            // Update the UiccCard in base class, so that if someone calls
++            // UiccManager.getUiccCard(), it will return the default card.
++            if (index == PhoneConstants.DEFAULT_CARD_INDEX) {
++                mUiccCard = mUiccCards[index];
++            }
++*/
++        } else {
++            //Update already existing card
++            mUiccCards[index].update(mContext, mCis[index] , status, isUpdate);
++        }
++
++        if (DBG) log("Notifying IccChangedRegistrants");
++        // TODO: Think if it is possible to pass isUpdate
++        if (!SystemProperties.get(COMMON_SLOT_PROPERTY).equals("1")) {
++            mIccChangedRegistrants.notifyRegistrants(new AsyncResult(null, index, null));
++        } else {
++            Bundle result = new Bundle();
++            result.putInt("Index", index.intValue());
++            result.putBoolean("ForceUpdate", isUpdate);
++
++            mIccChangedRegistrants.notifyRegistrants(new AsyncResult(null, result, null));
++        }
++    }
++
++    private final BroadcastReceiver mIntentReceiver = new BroadcastReceiver() {
++        public void onReceive(Context context, Intent intent) {
++            if (intent == null) return;
++            String action = intent.getAction();
++            log("mIntentReceiver Receive action " + action);
++
++            if (TelephonyIntents.ACTION_SIM_STATE_CHANGED.equals(intent.getAction())) {
++                log(intent.toString() + intent.getStringExtra(IccCardConstants.INTENT_KEY_ICC_STATE));
++                String stateExtra = intent.getStringExtra(IccCardConstants.INTENT_KEY_ICC_STATE);
++                int slot = intent.getIntExtra(PhoneConstants.SLOT_KEY, PhoneConstants.SIM_ID_1);
++                log("mIntentReceiver ACTION_SIM_STATE_CHANGED slot " + slot + " ,state " + stateExtra);
++
++                if (slot >= TelephonyManager.getDefault().getPhoneCount()) {
++                    Rlog.e(LOG_TAG, "BroadcastReceiver SIM State changed slot is invalid");
++                    return;
++                }
++
++                String iccType = ((getUiccCard(slot) != null) ? getUiccCard(slot).getIccCardType() : "");
++
++                if (IccCardConstants.INTENT_VALUE_ICC_READY.equals(stateExtra)
++                        && "USIM".equals(iccType)) {
++                    mCis[slot].openIccApplication(0, obtainMessage(EVENT_TURN_ON_ISIM_APPLICATION_DONE, slot));
++                }
++            } else if (action.equals(ACTION_RESET_MODEM)) {
++                int simIdFor3G = SystemProperties.getInt(PROPERTY_3G_SWITCH, 1) - 1;
++                int slotId = intent.getIntExtra("SLOT_ID", 0);
++                if (slotId < 0 || slotId >= mCis.length) {
++                    log("Receive ACTION_RESET_MODEM: invalid slot id." + slotId);
++                    return;
++                }
++                log("mIntentReceiver Receive ACTION_RESET_MODEM: " + slotId);
++                if (simIdFor3G == slotId) {
++                    log("phone " + simIdFor3G + " will reset modem");
++                    mCis[slotId].resetRadio(null);
++                }
++            } /* else if (TelephonyIntents.ACTION_SIM_INFO_UPDATE.equals(action)) {
++                //ALPS00776430: Since EF_MSISDN can not be read/wrtie without verify PIN.
++                //We need to clear it or update it to avoid user to get the cached data before.
++                new Thread() {
++                    @Override
++                    public void run() {
++                        SIMInfo simInfo = SIMInfo.getSIMInfoBySlot(mContext, mSimId);
++                        if (simInfo!= null && mClearMsisdn == false) {
++                            mClearMsisdn = true;
++                            log("Initial sim info.");
++                            IccRecords iccRecord = getIccRecords(APP_FAM_3GPP);
++                            if(iccRecord != null) {
++                                SIMInfo.setNumber(mContext, iccRecord.getMsisdnNumber(), simInfo.mSimId);
++                            } else {
++                                SIMInfo.setNumber(mContext, "", simInfo.mSimId);
++                            }
++                            Intent intent = new Intent(TelephonyIntents.ACTION_SIM_INFO_UPDATE);
++                            ActivityManagerNative.broadcastStickyIntent(intent, READ_PHONE_STATE, UserHandle.USER_ALL);
++                        }
++                    }
++                }.start();
++            } */
++        }
++    };
++
++    private synchronized void onGetIccApplicationStatusDone(AsyncResult ar, Integer index) {
++        if (ar.exception != null) {
++            Rlog.e(LOG_TAG, "Error getting ICC status. "
++                    + "RIL_REQUEST_GET_ICC_APPLICATION_STATUS should "
++                    + "never return an error", ar.exception);
++            return;
++        }
++        if (!isValidCardIndex(index)) {
++            Rlog.e(LOG_TAG, "onGetIccApplicationStatusDone: invalid index : " + index);
++            return;
++        }
++        if (DBG) log("onGetIccApplicationStatusDone, index " + index);
++
++        IccCardStatus status = (IccCardStatus) ar.result;
++
++        if (mUiccCards[index] == null) {
++            //Create new card
++            mUiccCards[index] = new UiccCard(mContext, mCis[index], status, index);
++
++/*
++            // Update the UiccCard in base class, so that if someone calls
++            // UiccManager.getUiccCard(), it will return the default card.
++            if (index == PhoneConstants.DEFAULT_CARD_INDEX) {
++                mUiccCard = mUiccCards[index];
++            }
++*/
++        } else {
++            //Update already existing card
++            mUiccCards[index].update(mContext, mCis[index] , status);
++        }
++
++        if (DBG) log("Notifying mApplicationChangedRegistrants");
++        mApplicationChangedRegistrants.notifyRegistrants();
++    }
++
++    private int mBtSlotId = -1;
++
++    /**
++     * Get BT connected sim id.
++     *
++     * @internal
++     */
++    public int getBtConnectedSimId() {
++        if (DBG) log("getBtConnectedSimId, slot " + mBtSlotId);
++        return mBtSlotId;
++    }
++
++    /**
++     * Set BT connected sim id.
++     *
++     * @internal
++     */
++    public void setBtConnectedSimId(int simId) {
++        mBtSlotId = simId;
++        if (DBG) log("setBtConnectedSimId, slot " + mBtSlotId);
++    }
++
++    /**
++     * Parse network lock reason string.
++     *
++     * @param state network lock type
++     * @return network lock string
++     *
++     */
++    private String parsePersoType(PersoSubState state) {
++        if (DBG) log("parsePersoType, state = " + state);
++        switch (state) {
++            case PERSOSUBSTATE_SIM_NETWORK:
++                return IccCardConstants.INTENT_VALUE_LOCKED_NETWORK;
++            case PERSOSUBSTATE_SIM_NETWORK_SUBSET:
++                return IccCardConstants.INTENT_VALUE_LOCKED_NETWORK_SUBSET;
++            case PERSOSUBSTATE_SIM_CORPORATE:
++                return IccCardConstants.INTENT_VALUE_LOCKED_CORPORATE;
++            case PERSOSUBSTATE_SIM_SERVICE_PROVIDER:
++                return IccCardConstants.INTENT_VALUE_LOCKED_SERVICE_PROVIDER;
++            case PERSOSUBSTATE_SIM_SIM:
++                return IccCardConstants.INTENT_VALUE_LOCKED_SIM;
++            default:
++                break;
++        }
++        return IccCardConstants.INTENT_VALUE_ICC_UNKNOWN;
++    }
++
++    //Modem SML change feature.
++    public void repollIccStateForModemSmlChangeFeatrue(int slotId, boolean needIntent) {
++        if (DBG) log("repollIccStateForModemSmlChangeFeatrue, needIntent = " + needIntent);
++        int arg1 = needIntent == true ? SML_FEATURE_NEED_BROADCAST_INTENT : SML_FEATURE_NO_NEED_BROADCAST_INTENT;
++        //Use arg1 to determine the intent is needed or not
++        //Use object to indicated slotId
++        mCis[slotId].getIccCardStatus(obtainMessage(EVENT_REPOLL_SML_STATE, arg1, 0, slotId));
++    }
++
++    //Notifies when application status changes
++    public void registerForApplicationChanged(Handler h, int what, Object obj) {
++        synchronized (mLock) {
++            Registrant r = new Registrant(h, what, obj);
++            mApplicationChangedRegistrants.add(r);
++            //Notify registrant right after registering, so that it will get the latest application status,
++            //otherwise which may not happen until there is an actual change in application status.
++            r.notifyRegistrant();
++        }
++    }
++
++    public void unregisterForApplicationChanged(Handler h) {
++        synchronized (mLock) {
++            mApplicationChangedRegistrants.remove(h);
++        }
++    }
+ }
+diff --git a/src/java/com/android/internal/telephony/uicc/UsimFileHandler.java b/src/java/com/android/internal/telephony/uicc/UsimFileHandler.java
+index 612d55e..426814d 100644
+--- a/src/java/com/android/internal/telephony/uicc/UsimFileHandler.java
++++ b/src/java/com/android/internal/telephony/uicc/UsimFileHandler.java
+@@ -35,7 +35,10 @@ public final class UsimFileHandler extends IccFileHandler implements IccConstant
+     @Override
+     protected String getEFPath(int efid) {
+         switch(efid) {
++        case EF_ICCID:
++            return null;
+         case EF_SMS:
++        case EF_SMSP:   // [ALPS01206315] Support EF_SMSP
+         case EF_EXT6:
+         case EF_EXT5:
+         case EF_MWIS:
+@@ -60,9 +63,13 @@ public final class UsimFileHandler extends IccFileHandler implements IccConstant
+         case EF_CSP_CPHS:
+         case EF_GID1:
+         case EF_LI:
++        case EF_ECC:
+         case EF_PLMNWACT:
+             return MF_SIM + DF_ADF;
+ 
++        case EF_PSISMSC:
++            return /*MF_SIM +*/ DF_TELECOM;
++
+         case EF_PBR:
+             // we only support global phonebook.
+             return MF_SIM + DF_TELECOM + DF_PHONEBOOK;
+-- 
+2.5.0
+

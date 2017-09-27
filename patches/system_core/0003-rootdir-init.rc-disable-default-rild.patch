@@ -1,0 +1,36 @@
+From 526776d20d4b586c50bf98c8320a5ec3f74dee91 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Fri, 28 Aug 2015 06:02:34 +0800
+Subject: [PATCH] rootdir/init.rc: disable default rild
+
+Change-Id: I2746fa71c965f01268c1655a5a17f5f723a8a935
+---
+ rootdir/init.rc | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/rootdir/init.rc b/rootdir/init.rc
+index 6b83ee6..8c2c77e 100644
+--- a/rootdir/init.rc
++++ b/rootdir/init.rc
+@@ -552,12 +552,12 @@ service debuggerd /system/bin/debuggerd
+ service debuggerd64 /system/bin/debuggerd64
+     class main
+ 
+-service ril-daemon /system/bin/rild
+-    class main
+-    socket rild stream 660 root radio
+-    socket rild-debug stream 660 radio system
+-    user root
+-    group radio cache inet misc audio sdcard_rw qcom_diag log
++#service ril-daemon /system/bin/rild
++#    class main
++#    socket rild stream 660 root radio
++#    socket rild-debug stream 660 radio system
++#    user root
++#    group radio cache inet misc audio sdcard_rw qcom_diag log
+ 
+ service surfaceflinger /system/bin/surfaceflinger
+     class core
+-- 
+2.5.0
+

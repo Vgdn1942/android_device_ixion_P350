@@ -82,7 +82,7 @@ PRODUCT_COPY_FILES += \
 	$(LOCAL_PATH)/rootdir/init.aee.rc:root/init.aee.rc \
 	$(LOCAL_KERNEL):kernel
 
-DEVICE_PACKAGE_OVERLAYS += device/ixion/P350/overlay
+DEVICE_PACKAGE_OVERLAYS += $(LOCAL_PATH)/overlay
 
 # TWRP
 PRODUCT_COPY_FILES += \
@@ -156,6 +156,14 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
 	libion
 
+# Keyhandler
+PRODUCT_PACKAGES += \
+	com.cyanogenmod.keyhandler \
+	Gestures
+
+PRODUCT_SYSTEM_SERVER_JARS += \
+	com.cyanogenmod.keyhandler
+
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES := \
 	ro.secure=0 \
 	ro.adb.secure=0 \
@@ -176,3 +184,5 @@ PRODUCT_BUILD_PROP_OVERRIDES += BUILD_UTC_DATE=0
 
 $(call inherit-product, build/target/product/full.mk)
 $(call inherit-product, frameworks/native/build/phone-xhdpi-1024-dalvik-heap.mk)
+# never dexopt the keyhandler
+$(call add-product-dex-preopt-module-config,com.cyanogenmod.keyhandler,disable)

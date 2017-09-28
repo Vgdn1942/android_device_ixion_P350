@@ -61,6 +61,8 @@ ro.boot.selinux=disable
 # Disable dirty region for Mali
 debug.hwui.render_dirty_regions=false
 
+persist.sys.media.use-awesome=1
+
 ro.mediatek.chip_ver=S01
 ro.mediatek.version.release=ALPS.L1.MP6.V2_ESKY6580.WE.L_P1
 ro.mediatek.platform=MT6580

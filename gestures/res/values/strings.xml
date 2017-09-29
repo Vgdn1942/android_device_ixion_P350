@@ -25,10 +25,12 @@
     <string name="touchscreen_double_tap_gesture_title">Wake device</string>
     <string name="touchscreen_double_tap_gesture_summary">Double tap to wake the device</string>
     <string name="touchscreen_camera_gesture_title">Camera</string>
-    <string name="touchscreen_camera_gesture_summary">Draw a \'O\' to activate camera</string>
-    <string name="touchscreen_music_gesture_title">Music</string>
+    <string name="touchscreen_camera_gesture_summary">Draw a «O» to activate camera</string>
+    <string name="touchscreen_dialer_gesture_title">Dialer</string>
+    <string name="touchscreen_dialer_gesture_summary">Draw a «W» to activate dialer</string>
     <string name="touchscreen_flashlight_gesture_title">Flashlight</string>
-    <string name="touchscreen_flashlight_gesture_summary">Draw a \'C\' to toggle flashlight</string>
+    <string name="touchscreen_flashlight_gesture_summary">Draw a «C» to toggle flashlight</string>
+    <string name="touchscreen_music_gesture_title">Music</string>
     <string name="touchscreen_music_gesture_summary">Use gestures to control music playback \n
     • Swipe finger vertically to play/pause\n
     • Swipe finger left for previous track\n

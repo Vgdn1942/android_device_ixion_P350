@@ -59,11 +59,14 @@ public class KeyHandler implements DeviceKeyHandler {
     private static final String KEY_GESTURE_CAMERA =
             "touchscreen_gesture_camera";
 
-    private static final String KEY_GESTURE_MUSIC =
-            "touchscreen_gesture_music";
+    private static final String KEY_GESTURE_DIALER =
+            "touchscreen_gesture_dialer";
 
     private static final String KEY_GESTURE_FLASHLIGHT =
             "touchscreen_gesture_flashlight";
+
+    private static final String KEY_GESTURE_MUSIC =
+            "touchscreen_gesture_music";
 
     private static final String KEY_GESTURE_HAPTIC_FEEDBACK =
             "touchscreen_gesture_haptic_feedback";
@@ -72,40 +75,40 @@ public class KeyHandler implements DeviceKeyHandler {
             "com.android.keyguard.action.DISMISS_KEYGUARD_SECURELY";
 
     // Supported scancodes
-    // Supported scancodes
     /*
     K - 0x25 - 37 - double tap
     O - 0x18 - 24 - gesture O
     W - 0x11 - 17 - gesture W
-    M - 0x32 - 50 - gesture M
     C - 0x2e - 46 - gesture C
-    D - 0x20 - 32 - down swipe
+    M - 0x32 - 50 - gesture M
     U - 0x16 - 22 - up swipe
+    D - 0x20 - 32 - down swipe
     R - 0x13 - 19 - right swipe
     L - 0x26 - 38 - left swipe
     */
-    private static final int GESTURE_M_SCANCODE = 50;
+
+    private static final int GESTURE_DOUBLE_TAP = 37;
     private static final int GESTURE_O_SCANCODE = 24;
     private static final int GESTURE_W_SCANCODE = 17;
     private static final int GESTURE_C_SCANCODE = 46;
-    private static final int GESTURE_RIGHT_SCANCODE = 19;
-    private static final int GESTURE_LEFT_SCANCODE = 38;
+    private static final int GESTURE_M_SCANCODE = 50;
     private static final int GESTURE_UP_SCANCODE = 22;
     private static final int GESTURE_DOWN_SCANCODE = 32;
-    private static final int GESTURE_DOUBLE_TAP = 37;
+    private static final int GESTURE_RIGHT_SCANCODE = 19;
+    private static final int GESTURE_LEFT_SCANCODE = 38;
 
     private static final int GESTURE_WAKELOCK_DURATION = 3000;
 
     private static final int[] sSupportedGestures = new int[] {
-        GESTURE_M_SCANCODE,
+        GESTURE_DOUBLE_TAP,
         GESTURE_O_SCANCODE,
         GESTURE_W_SCANCODE,
         GESTURE_C_SCANCODE,
-        GESTURE_RIGHT_SCANCODE,
-        GESTURE_LEFT_SCANCODE,
+        GESTURE_M_SCANCODE,
         GESTURE_UP_SCANCODE,
         GESTURE_DOWN_SCANCODE,
-        GESTURE_DOUBLE_TAP
+        GESTURE_RIGHT_SCANCODE,
+        GESTURE_LEFT_SCANCODE
     };
 
     private final Context mContext;
@@ -185,6 +188,36 @@ public class KeyHandler implements DeviceKeyHandler {
                     doHapticFeedback();
                 }
                 break;
+            case GESTURE_W_SCANCODE:
+                boolean enabled_dialer = Settings.System.getInt(mContext.getContentResolver(),
+                    KEY_GESTURE_DIALER, 1) != 0;
+                if (enabled_dialer) {
+                    ensureKeyguardManager();
+                    final String action;
+                    mGestureWakeLock.acquire(GESTURE_WAKELOCK_DURATION);
+                    if (mKeyguardManager.isKeyguardSecure() && mKeyguardManager.isKeyguardLocked()) {
+                        action = Intent.ACTION_DIAL;
+                    } else {
+                        mContext.sendBroadcastAsUser(new Intent(ACTION_DISMISS_KEYGUARD),
+                              UserHandle.CURRENT);
+                        action = Intent.ACTION_DIAL;
+                    }
+                    mPowerManager.wakeUp(SystemClock.uptimeMillis());
+                    Intent intent = new Intent(action, null);
+                    startActivitySafely(intent);
+                    doHapticFeedback();
+                }
+                break;
+            case GESTURE_C_SCANCODE:
+                boolean enabled_flashlight = Settings.System.getInt(mContext.getContentResolver(),
+                    KEY_GESTURE_FLASHLIGHT, 1) != 0;
+                if (enabled_flashlight) {
+                    ensureTorchManager();
+                    mGestureWakeLock.acquire(GESTURE_WAKELOCK_DURATION);
+                    mTorchManager.toggleTorch();
+                    doHapticFeedback();
+                }
+                break;
             case GESTURE_UP_SCANCODE:
                 boolean enabled_music_up = Settings.System.getInt(mContext.getContentResolver(),
                     KEY_GESTURE_MUSIC, 1) != 0;
@@ -201,14 +234,6 @@ public class KeyHandler implements DeviceKeyHandler {
                     doHapticFeedback();
                 }
                 break;
-            case GESTURE_LEFT_SCANCODE:
-                boolean enabled_music_left = Settings.System.getInt(mContext.getContentResolver(),
-                    KEY_GESTURE_MUSIC, 1) != 0;
-                if (enabled_music_left) {
-                    dispatchMediaKeyWithWakeLockToMediaSession(KeyEvent.KEYCODE_MEDIA_PREVIOUS);
-                    doHapticFeedback();
-                }
-                break;
             case GESTURE_RIGHT_SCANCODE:
                 boolean enabled_music_right = Settings.System.getInt(mContext.getContentResolver(),
                     KEY_GESTURE_MUSIC, 1) != 0;
@@ -217,13 +242,11 @@ public class KeyHandler implements DeviceKeyHandler {
                     doHapticFeedback();
                 }
                 break;
-            case GESTURE_C_SCANCODE:
-                boolean enabled_flashlight = Settings.System.getInt(mContext.getContentResolver(),
-                    KEY_GESTURE_FLASHLIGHT, 1) != 0;
-                if (enabled_flashlight) {
-                    ensureTorchManager();
-                    mGestureWakeLock.acquire(GESTURE_WAKELOCK_DURATION);
-                    mTorchManager.toggleTorch();
+            case GESTURE_LEFT_SCANCODE:
+                boolean enabled_music_left = Settings.System.getInt(mContext.getContentResolver(),
+                    KEY_GESTURE_MUSIC, 1) != 0;
+                if (enabled_music_left) {
+                    dispatchMediaKeyWithWakeLockToMediaSession(KeyEvent.KEYCODE_MEDIA_PREVIOUS);
                     doHapticFeedback();
                 }
                 break;

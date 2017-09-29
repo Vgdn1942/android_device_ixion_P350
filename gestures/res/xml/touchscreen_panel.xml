@@ -36,15 +36,21 @@
             android:dependency="touchscreen_enable_gesture" />
 
         <SwitchPreference
-            android:key="touchscreen_gesture_music"
-            android:title="@string/touchscreen_music_gesture_title"
-            android:summary="@string/touchscreen_music_gesture_summary"
+            android:key="touchscreen_gesture_dialer"
+            android:title="@string/touchscreen_dialer_gesture_title"
+            android:summary="@string/touchscreen_dialer_gesture_summary"
             android:dependency="touchscreen_enable_gesture" />
 
         <SwitchPreference
             android:key="touchscreen_gesture_flashlight"
             android:title="@string/touchscreen_flashlight_gesture_title"
             android:summary="@string/touchscreen_flashlight_gesture_summary"
+            android:dependency="touchscreen_enable_gesture" />
+
+        <SwitchPreference
+            android:key="touchscreen_gesture_music"
+            android:title="@string/touchscreen_music_gesture_title"
+            android:summary="@string/touchscreen_music_gesture_summary"
             android:dependency="touchscreen_enable_gesture" />
 
     </PreferenceCategory>

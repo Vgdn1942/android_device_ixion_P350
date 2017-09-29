@@ -28,14 +28,16 @@ import android.preference.SwitchPreference;
 public class TouchscreenGestureSettings extends NodePreferenceActivity {
     private static final String KEY_DOUBLE_TAP_GESTURE = "touchscreen_gesture_double_tap";
     private static final String KEY_CAMERA_GESTURE = "touchscreen_gesture_camera";
-    private static final String KEY_MUSIC_GESTURE = "touchscreen_gesture_music";
+    private static final String KEY_DIALER_GESTURE = "touchscreen_gesture_dialer";
     private static final String KEY_FLASHLIGHT_GESTURE = "touchscreen_gesture_flashlight";
+    private static final String KEY_MUSIC_GESTURE = "touchscreen_gesture_music";
     private static final String KEY_HAPTIC_FEEDBACK = "touchscreen_gesture_haptic_feedback";
 
     private SwitchPreference mDoubleTapGesture;
     private SwitchPreference mCameraGesture;
-    private SwitchPreference mMusicGesture;
+    private SwitchPreference mDialerGesture;
     private SwitchPreference mFlashlightGesture;
+    private SwitchPreference mMusicGesture;
     private SwitchPreference mHapticFeedback;
 
     @Override
@@ -49,11 +51,14 @@ public class TouchscreenGestureSettings extends NodePreferenceActivity {
         mCameraGesture = (SwitchPreference) findPreference(KEY_CAMERA_GESTURE);
         mCameraGesture.setOnPreferenceChangeListener(this);
 
-        mMusicGesture = (SwitchPreference) findPreference(KEY_MUSIC_GESTURE);
-        mMusicGesture.setOnPreferenceChangeListener(this);
+        mDialerGesture = (SwitchPreference) findPreference(KEY_DIALER_GESTURE);
+        mDialerGesture.setOnPreferenceChangeListener(this);
 
         mFlashlightGesture = (SwitchPreference) findPreference(KEY_FLASHLIGHT_GESTURE);
         mFlashlightGesture.setOnPreferenceChangeListener(this);
+
+        mMusicGesture = (SwitchPreference) findPreference(KEY_MUSIC_GESTURE);
+        mMusicGesture.setOnPreferenceChangeListener(this);
 
         mHapticFeedback = (SwitchPreference) findPreference(KEY_HAPTIC_FEEDBACK);
         mHapticFeedback.setOnPreferenceChangeListener(this);
@@ -72,14 +77,19 @@ public class TouchscreenGestureSettings extends NodePreferenceActivity {
             Settings.System.putInt(getContentResolver(), KEY_CAMERA_GESTURE, value ? 1 : 0);
             return true;
         }
-        if (KEY_MUSIC_GESTURE.equals(key)) {
+        if (KEY_DIALER_GESTURE.equals(key)) {
             final boolean value = (Boolean) newValue;
-            Settings.System.putInt(getContentResolver(), KEY_MUSIC_GESTURE, value ? 1 : 0);
+            Settings.System.putInt(getContentResolver(), KEY_DIALER_GESTURE, value ? 1 : 0);
             return true;
         }
         if (KEY_FLASHLIGHT_GESTURE.equals(key)) {
             final boolean value = (Boolean) newValue;
             Settings.System.putInt(getContentResolver(), KEY_FLASHLIGHT_GESTURE, value ? 1 : 0);
+            return true;
+        }
+        if (KEY_MUSIC_GESTURE.equals(key)) {
+            final boolean value = (Boolean) newValue;
+            Settings.System.putInt(getContentResolver(), KEY_MUSIC_GESTURE, value ? 1 : 0);
             return true;
         }
         if (KEY_HAPTIC_FEEDBACK.equals(key)) {
@@ -106,11 +116,14 @@ public class TouchscreenGestureSettings extends NodePreferenceActivity {
         mCameraGesture.setChecked(
                 Settings.System.getInt(getContentResolver(), KEY_CAMERA_GESTURE, 1) != 0);
 
-        mMusicGesture.setChecked(
-                Settings.System.getInt(getContentResolver(), KEY_MUSIC_GESTURE, 1) != 0);
+        mDialerGesture.setChecked(
+                Settings.System.getInt(getContentResolver(), KEY_DIALER_GESTURE, 1) != 0);
 
         mFlashlightGesture.setChecked(
                 Settings.System.getInt(getContentResolver(), KEY_FLASHLIGHT_GESTURE, 1) != 0);
+
+        mMusicGesture.setChecked(
+                Settings.System.getInt(getContentResolver(), KEY_MUSIC_GESTURE, 1) != 0);
 
         mHapticFeedback.setChecked(
                 Settings.System.getInt(getContentResolver(), KEY_HAPTIC_FEEDBACK, 1) != 0);

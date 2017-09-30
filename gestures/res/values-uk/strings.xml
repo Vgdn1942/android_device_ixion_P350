@@ -27,7 +27,7 @@
   <string name="touchscreen_double_tap_gesture_summary">Натисніть двічі щоб розбудити пристрій</string>
   <string name="touchscreen_camera_gesture_title">Камера</string>
   <string name="touchscreen_camera_gesture_summary">Намалюйте «O» щоб задіяти камеру</string>
-  <string name="touchscreen_dialer_gesture_title">Камера</string>
+  <string name="touchscreen_dialer_gesture_title">Телефон</string>
   <string name="touchscreen_dialer_gesture_summary">Намалюйте «W» щоб задіяти додаток \"Телефон\"</string>
   <string name="touchscreen_flashlight_gesture_title">Ліхтарик</string>
   <string name="touchscreen_flashlight_gesture_summary">Намалюйте «C» аби перемкнути ліхтарик</string>

@@ -27,7 +27,7 @@
   <string name="touchscreen_double_tap_gesture_summary">Дважды нажмите для включения устройства</string>
   <string name="touchscreen_camera_gesture_title">Камера</string>
   <string name="touchscreen_camera_gesture_summary">Нарисуйте букву «O» для запуска камеры</string>
-  <string name="touchscreen_dialer_gesture_title">Камера</string>
+  <string name="touchscreen_dialer_gesture_title">Телефон</string>
   <string name="touchscreen_dialer_gesture_summary">Нарисуйте букву «W» для запуска приложения \"Телефон\"</string>
   <string name="touchscreen_flashlight_gesture_title">Фонарик</string>
   <string name="touchscreen_flashlight_gesture_summary">Нарисуйте букву «C», чтобы включить или выключить фонарик</string>

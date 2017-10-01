@@ -22,6 +22,7 @@ import android.content.ActivityNotFoundException;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.res.Resources;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -74,8 +75,9 @@ public class KeyHandler implements DeviceKeyHandler {
     private static final String ACTION_DISMISS_KEYGUARD =
             "com.android.keyguard.action.DISMISS_KEYGUARD_SECURELY";
 
-    // Supported scancodes
     /*
+    Supported scancodes
+
     K - 0x25 - 37 - double tap
     O - 0x18 - 24 - gesture O
     W - 0x11 - 17 - gesture W
@@ -114,7 +116,7 @@ public class KeyHandler implements DeviceKeyHandler {
     private final Context mContext;
     private final PowerManager mPowerManager;
     private KeyguardManager mKeyguardManager;
-    private EventHandler mEventHandler;
+    private Handler mHandler;
     private SensorManager mSensorManager;
     private TorchManager mTorchManager;
     private Sensor mProximitySensor;
@@ -127,7 +129,7 @@ public class KeyHandler implements DeviceKeyHandler {
     public KeyHandler(Context context) {
         mContext = context;
         mPowerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
-        mEventHandler = new EventHandler();
+        mHandler = new Handler();
         mGestureWakeLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
                 "GestureWakeLock");
 
@@ -163,11 +165,23 @@ public class KeyHandler implements DeviceKeyHandler {
         }
     }
 
-    private class EventHandler extends Handler {
-        @Override
-        public void handleMessage(Message msg) {
-            KeyEvent event = (KeyEvent) msg.obj;
+    public boolean handleKeyEvent(KeyEvent event) {
+        if (event.getAction() != KeyEvent.ACTION_UP) {
+            return false;
+        }
+        boolean isKeySupported = ArrayUtils.contains(sSupportedGestures, event.getScanCode());
+        if (isKeySupported) {
             switch (event.getScanCode()) {
+            case GESTURE_DOUBLE_TAP:
+            if (!mPowerManager.isScreenOn()) {
+                boolean enabled_doubletap = Settings.System.getInt(mContext.getContentResolver(),
+                    KEY_GESTURE_DOUBLE_TAP, 1) != 0;
+                if (enabled_doubletap) {
+                    mPowerManager.wakeUpWithProximityCheck(SystemClock.uptimeMillis());
+                    doHapticFeedback();
+                    return true;
+                }
+            }
             case GESTURE_O_SCANCODE:
                 boolean enabled_camera = Settings.System.getInt(mContext.getContentResolver(),
                     KEY_GESTURE_CAMERA, 1) != 0;
@@ -182,10 +196,11 @@ public class KeyHandler implements DeviceKeyHandler {
                               UserHandle.CURRENT);
                         action = MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA;
                     }
-                    mPowerManager.wakeUp(SystemClock.uptimeMillis());
+                    mPowerManager.wakeUpWithProximityCheck(SystemClock.uptimeMillis());
                     Intent intent = new Intent(action, null);
                     startActivitySafely(intent);
                     doHapticFeedback();
+                    return true;
                 }
                 break;
             case GESTURE_W_SCANCODE:
@@ -202,10 +217,11 @@ public class KeyHandler implements DeviceKeyHandler {
                               UserHandle.CURRENT);
                         action = Intent.ACTION_DIAL;
                     }
-                    mPowerManager.wakeUp(SystemClock.uptimeMillis());
+                    mPowerManager.wakeUpWithProximityCheck(SystemClock.uptimeMillis());
                     Intent intent = new Intent(action, null);
                     startActivitySafely(intent);
                     doHapticFeedback();
+                    return true;
                 }
                 break;
             case GESTURE_C_SCANCODE:
@@ -216,6 +232,7 @@ public class KeyHandler implements DeviceKeyHandler {
                     mGestureWakeLock.acquire(GESTURE_WAKELOCK_DURATION);
                     mTorchManager.toggleTorch();
                     doHapticFeedback();
+                    return true;
                 }
                 break;
             case GESTURE_UP_SCANCODE:
@@ -224,6 +241,7 @@ public class KeyHandler implements DeviceKeyHandler {
                 if (enabled_music_up) {
                     dispatchMediaKeyWithWakeLockToMediaSession(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE);
                     doHapticFeedback();
+                    return true;
                 }
                 break;
             case GESTURE_DOWN_SCANCODE:
@@ -232,6 +250,7 @@ public class KeyHandler implements DeviceKeyHandler {
                 if (enabled_music_down) {
                     dispatchMediaKeyWithWakeLockToMediaSession(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE);
                     doHapticFeedback();
+                    return true;
                 }
                 break;
             case GESTURE_RIGHT_SCANCODE:
@@ -240,6 +259,7 @@ public class KeyHandler implements DeviceKeyHandler {
                 if (enabled_music_right) {
                     dispatchMediaKeyWithWakeLockToMediaSession(KeyEvent.KEYCODE_MEDIA_NEXT);
                     doHapticFeedback();
+                    return true;
                 }
                 break;
             case GESTURE_LEFT_SCANCODE:
@@ -248,28 +268,9 @@ public class KeyHandler implements DeviceKeyHandler {
                 if (enabled_music_left) {
                     dispatchMediaKeyWithWakeLockToMediaSession(KeyEvent.KEYCODE_MEDIA_PREVIOUS);
                     doHapticFeedback();
+                    return true;
                 }
                 break;
-            }
-        }
-    }
-
-    public boolean handleKeyEvent(KeyEvent event) {
-        if (event.getAction() != KeyEvent.ACTION_UP) {
-            return false;
-        }
-        boolean isKeySupported = ArrayUtils.contains(sSupportedGestures, event.getScanCode());
-        if (isKeySupported && !mEventHandler.hasMessages(GESTURE_REQUEST)) {
-            if (event.getScanCode() == GESTURE_DOUBLE_TAP && !mPowerManager.isScreenOn()) {
-                boolean enabled_doubletap = Settings.System.getInt(mContext.getContentResolver(),
-                    KEY_GESTURE_DOUBLE_TAP, 1) != 0;
-                if (enabled_doubletap) {
-                    mPowerManager.wakeUpWithProximityCheck(SystemClock.uptimeMillis());
-                    doHapticFeedback();
-                    return true;
-                } else {
-                    return false;
-                }
             }
             Message msg = getMessageForKeyEvent(event);
             boolean defaultProximity = mContext.getResources().getBoolean(
@@ -277,17 +278,17 @@ public class KeyHandler implements DeviceKeyHandler {
             boolean proximityWakeCheckEnabled = Settings.System.getInt(mContext.getContentResolver(),
                     Settings.System.PROXIMITY_ON_WAKE, defaultProximity ? 1 : 0) == 1;
             if (mProximityWakeSupported && proximityWakeCheckEnabled && mProximitySensor != null) {
-                mEventHandler.sendMessageDelayed(msg, mProximityTimeOut);
+                mHandler.sendMessageDelayed(msg, mProximityTimeOut);
                 processEvent(event);
             } else {
-                mEventHandler.sendMessage(msg);
+                mHandler.sendMessage(msg);
             }
         }
         return isKeySupported;
     }
 
     private Message getMessageForKeyEvent(KeyEvent keyEvent) {
-        Message msg = mEventHandler.obtainMessage(GESTURE_REQUEST);
+        Message msg = mHandler.obtainMessage(GESTURE_REQUEST);
         msg.obj = keyEvent;
         return msg;
     }
@@ -299,14 +300,14 @@ public class KeyHandler implements DeviceKeyHandler {
             public void onSensorChanged(SensorEvent event) {
                 mProximityWakeLock.release();
                 mSensorManager.unregisterListener(this);
-                if (!mEventHandler.hasMessages(GESTURE_REQUEST)) {
-                    // The sensor took to long, ignoring.
+                if (!mHandler.hasMessages(GESTURE_REQUEST)) {
+                    /* The sensor took to long, ignoring. */
                     return;
                 }
-                mEventHandler.removeMessages(GESTURE_REQUEST);
+                mHandler.removeMessages(GESTURE_REQUEST);
                 if (event.values[0] == mProximitySensor.getMaximumRange()) {
                     Message msg = getMessageForKeyEvent(keyEvent);
-                    mEventHandler.sendMessage(msg);
+                    mHandler.sendMessage(msg);
                 }
             }
 
@@ -338,7 +339,7 @@ public class KeyHandler implements DeviceKeyHandler {
             UserHandle user = new UserHandle(UserHandle.USER_CURRENT);
             mContext.startActivityAsUser(intent, null, user);
         } catch (ActivityNotFoundException e) {
-            // Ignore
+            /* Ignore */
         }
     }
 

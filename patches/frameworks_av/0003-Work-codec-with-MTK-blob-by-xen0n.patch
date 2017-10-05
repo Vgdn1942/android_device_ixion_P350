@@ -1,0 +1,255 @@
+From 7dc3412201bf919feb495ddd72b5639c01d5f103 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Wed, 4 Oct 2017 19:42:03 +0300
+Subject: [PATCH] Work codec with MTK blob by xen0n
+
+Change-Id: I35b328490352d5bb99ba83c482b96a644319a686
+---
+ .../plugins/common/util/src/MimeTypeUtil.cpp       | 20 +++++++++++++-
+ media/libmediaplayerservice/Android.mk             |  4 +--
+ media/libmediaplayerservice/MediaPlayerService.cpp |  3 +-
+ media/libstagefright/include/OMXNodeInstance.h     |  3 ++
+ .../include/SoftVideoDecoderOMXComponent.h         |  3 ++
+ media/libstagefright/omx/Android.mk                |  8 ++++++
+ media/libstagefright/omx/OMXNodeInstance.cpp       | 23 +++++++++++++++-
+ .../omx/SoftVideoDecoderOMXComponent.cpp           | 32 ++++++++++++++++++++--
+ 8 files changed, 89 insertions(+), 7 deletions(-)
+
+diff --git a/drm/libdrmframework/plugins/common/util/src/MimeTypeUtil.cpp b/drm/libdrmframework/plugins/common/util/src/MimeTypeUtil.cpp
+index 89cf3b4..1655e09 100644
+--- a/drm/libdrmframework/plugins/common/util/src/MimeTypeUtil.cpp
++++ b/drm/libdrmframework/plugins/common/util/src/MimeTypeUtil.cpp
+@@ -52,18 +52,36 @@ struct MimeTypeList{
+ 
+ 
+ // Known mimetypes by android
++#ifdef QCOM_HARDWARE
+ static const char mime_type_audio_mpeg[]  = "audio/qc-mpeg";
++#else
++static const char mime_type_audio_mpeg[]  = "audio/mpeg";
++#endif
+ static const char mime_type_audio_3gpp[]  = "audio/3gpp";
++#ifdef QCOM_HARDWARE
+ static const char mime_type_audio_amr[]   = "audio/qc-amr";
+ static const char mime_type_audio_amr_wb[]   = "audio/qc-amr-wb";
++#else
++static const char mime_type_audio_amr[]   = "audio/amr";
++static const char mime_type_audio_amr_wb[]   = "audio/amr-wb";
++#endif
+ static const char mime_type_audio_aac[]   = "audio/mp4a-latm";
++#ifdef QCOM_HARDWARE
+ static const char mime_type_audio_wav[]   = "audio/qc-wav";
++#else
++static const char mime_type_audio_wav[]   = "audio/wav";
++#endif
+ static const char mime_type_audio_wma[]   = "audio/x-ms-wma";
+ 
+ static const char mime_type_video_mpeg4[] = "video/mpeg4";
+ static const char mime_type_video_3gpp[]  = "video/3gpp";
++#ifdef QCOM_HARDWARE
+ static const char mime_type_video_ogg[]  = "video/qc-ogg";
+ static const char mime_type_video_flv[]  = "video/qc-flv";
++#else
++static const char mime_type_video_ogg[]  = "video/ogg";
++static const char mime_type_video_flv[]  = "video/flv";
++#endif
+ static const char mime_type_video_3g2[]  = "video/3g2";
+ static const char mime_type_video_wmv[]  = "video/x-ms-wmv";
+ 
+@@ -200,4 +218,4 @@ String8 MimeTypeUtil::convertMimeType(String8& mimeType) {
+     }
+     return result;
+ }
+-};
+\ No newline at end of file
++};
+diff --git a/media/libmediaplayerservice/Android.mk b/media/libmediaplayerservice/Android.mk
+index 8f06c55..144d036 100644
+--- a/media/libmediaplayerservice/Android.mk
++++ b/media/libmediaplayerservice/Android.mk
+@@ -42,7 +42,7 @@ LOCAL_SHARED_LIBRARIES :=       \
+     libstagefright_wfd          \
+     libutils                    \
+     libvorbisidec               \
+-    libdrmframework             \
++    libdrmframework
+ 
+ LOCAL_STATIC_LIBRARIES :=       \
+     libstagefright_nuplayer     \
+@@ -54,7 +54,7 @@ LOCAL_C_INCLUDES :=                                                 \
+     $(TOP)/frameworks/av/media/libstagefright/wifi-display          \
+     $(TOP)/frameworks/av/media/libstagefright/webm                  \
+     $(TOP)/frameworks/native/include/media/openmax                  \
+-    $(TOP)/external/tremolo/Tremolo                                 \
++    $(TOP)/external/tremolo/Tremolo
+ 
+ LOCAL_MODULE:= libmediaplayerservice
+ 
+diff --git a/media/libmediaplayerservice/MediaPlayerService.cpp b/media/libmediaplayerservice/MediaPlayerService.cpp
+index 1c3b539..59c29f2 100644
+--- a/media/libmediaplayerservice/MediaPlayerService.cpp
++++ b/media/libmediaplayerservice/MediaPlayerService.cpp
+@@ -237,7 +237,8 @@ void unmarshallAudioAttributes(const Parcel& parcel, audio_attributes_t *attribu
+             // copying array size -1, array for tags was calloc'd, no need to NULL-terminate it
+             size_t tagSize = realTagSize > AUDIO_ATTRIBUTES_TAGS_MAX_SIZE - 1 ?
+                     AUDIO_ATTRIBUTES_TAGS_MAX_SIZE - 1 : realTagSize;
+-            utf16_to_utf8(tags.string(), tagSize, attributes->tags);
++            utf16_to_utf8(tags.string(), tagSize, attributes->tags,
++                    sizeof(attributes->tags) / sizeof(attributes->tags[0]));
+         }
+     } else {
+         ALOGE("unmarshallAudioAttributes() received unflattened tags, ignoring tag values");
+diff --git a/media/libstagefright/include/OMXNodeInstance.h b/media/libstagefright/include/OMXNodeInstance.h
+index 4586aa2..2454717 100644
+--- a/media/libstagefright/include/OMXNodeInstance.h
++++ b/media/libstagefright/include/OMXNodeInstance.h
+@@ -148,10 +148,13 @@ private:
+     };
+     Vector<ActiveBuffer> mActiveBuffers;
+     // for buffer ptr to buffer id translation
++    // but don't enable for use with MTK Lollipop- blob
++#if !defined(USE_LEGACY_MTK_AV_BLOB) || defined(__LP64__)
+     Mutex mBufferIDLock;
+     uint32_t mBufferIDCount;
+     KeyedVector<OMX::buffer_id, OMX_BUFFERHEADERTYPE *> mBufferIDToBufferHeader;
+     KeyedVector<OMX_BUFFERHEADERTYPE *, OMX::buffer_id> mBufferHeaderToBufferID;
++#endif
+ 
+     // For debug support
+     char *mName;
+diff --git a/media/libstagefright/include/SoftVideoDecoderOMXComponent.h b/media/libstagefright/include/SoftVideoDecoderOMXComponent.h
+index 4529007..37cc066 100644
+--- a/media/libstagefright/include/SoftVideoDecoderOMXComponent.h
++++ b/media/libstagefright/include/SoftVideoDecoderOMXComponent.h
+@@ -64,6 +64,9 @@ protected:
+             const char *mimeType,
+             OMX_U32 minCompressionRatio = 1u);
+ 
++    // For MTK blob compatibility
++    virtual void updatePortDefinitions(bool updateCrop = true);
++
+     virtual void updatePortDefinitions(bool updateCrop = true, bool updateInputSize = false);
+ 
+     uint32_t outputBufferWidth();
+diff --git a/media/libstagefright/omx/Android.mk b/media/libstagefright/omx/Android.mk
+index 4408050..99ea845 100644
+--- a/media/libstagefright/omx/Android.mk
++++ b/media/libstagefright/omx/Android.mk
+@@ -37,6 +37,14 @@ ifeq ($(DTS_CODEC_M_), true)
+   LOCAL_CFLAGS += -DDTS_CODEC_M_
+ endif
+ 
++ifeq ($(BOARD_HAS_MTK_HARDWARE),true)
++ifeq ($(BOARD_USES_LEGACY_MTK_AV_BLOB),true)
++ifeq ($(TARGET_ARCH),arm)
++LOCAL_CFLAGS += -DUSE_LEGACY_MTK_AV_BLOB
++endif
++endif
++endif
++
+ LOCAL_MODULE:= libstagefright_omx
+ 
+ include $(BUILD_SHARED_LIBRARY)
+diff --git a/media/libstagefright/omx/OMXNodeInstance.cpp b/media/libstagefright/omx/OMXNodeInstance.cpp
+index 00f3b60..d6c3b9c 100644
+--- a/media/libstagefright/omx/OMXNodeInstance.cpp
++++ b/media/libstagefright/omx/OMXNodeInstance.cpp
+@@ -170,7 +170,7 @@ OMXNodeInstance::OMXNodeInstance(
+       mHandle(NULL),
+       mObserver(observer),
+       mDying(false)
+-#ifdef __LP64__
++#if !defined(USE_LEGACY_MTK_AV_BLOB) || defined(__LP64__)
+       , mBufferIDCount(0)
+ #endif
+ {
+@@ -1363,6 +1363,8 @@ void OMXNodeInstance::freeActiveBuffers() {
+     }
+ }
+ 
++#if !defined(USE_LEGACY_MTK_AV_BLOB) || defined(__LP64__)
++
+ OMX::buffer_id OMXNodeInstance::makeBufferID(OMX_BUFFERHEADERTYPE *bufferHeader) {
+     if (bufferHeader == NULL) {
+         return 0;
+@@ -1405,4 +1407,23 @@ void OMXNodeInstance::invalidateBufferID(OMX::buffer_id buffer) {
+     mBufferIDToBufferHeader.removeItem(buffer);
+ }
+ 
++#else
++
++OMX::buffer_id OMXNodeInstance::makeBufferID(OMX_BUFFERHEADERTYPE *bufferHeader) {
++    return (OMX::buffer_id)bufferHeader;
++}
++
++OMX_BUFFERHEADERTYPE *OMXNodeInstance::findBufferHeader(OMX::buffer_id buffer) {
++    return (OMX_BUFFERHEADERTYPE *)buffer;
++}
++
++OMX::buffer_id OMXNodeInstance::findBufferID(OMX_BUFFERHEADERTYPE *bufferHeader) {
++    return (OMX::buffer_id)bufferHeader;
++}
++
++void OMXNodeInstance::invalidateBufferID(OMX::buffer_id buffer __unused) {
++}
++
++#endif
++
+ }  // namespace android
+diff --git a/media/libstagefright/omx/SoftVideoDecoderOMXComponent.cpp b/media/libstagefright/omx/SoftVideoDecoderOMXComponent.cpp
+index 4ce165b..784aa3b 100644
+--- a/media/libstagefright/omx/SoftVideoDecoderOMXComponent.cpp
++++ b/media/libstagefright/omx/SoftVideoDecoderOMXComponent.cpp
+@@ -130,6 +130,34 @@ void SoftVideoDecoderOMXComponent::initPorts(
+     updatePortDefinitions(true /* updateCrop */, true /* updateInputSize */);
+ }
+ 
++// For MTK blob compatibility
++void SoftVideoDecoderOMXComponent::updatePortDefinitions(bool updateCrop) {
++    OMX_PARAM_PORTDEFINITIONTYPE *def = &editPortInfo(kInputPortIndex)->mDef;
++    def->format.video.nFrameWidth = mWidth;
++    def->format.video.nFrameHeight = mHeight;
++    def->format.video.nStride = def->format.video.nFrameWidth;
++    def->format.video.nSliceHeight = def->format.video.nFrameHeight;
++
++    def->nBufferSize = def->format.video.nFrameWidth * def->format.video.nFrameHeight * 3 / 2;
++
++    def = &editPortInfo(kOutputPortIndex)->mDef;
++    def->format.video.nFrameWidth = outputBufferWidth();
++    def->format.video.nFrameHeight = outputBufferHeight();
++    def->format.video.nStride = def->format.video.nFrameWidth;
++    def->format.video.nSliceHeight = def->format.video.nFrameHeight;
++
++    def->nBufferSize =
++            (def->format.video.nFrameWidth *
++             def->format.video.nFrameHeight * 3) / 2;
++
++    if (updateCrop) {
++        mCropLeft = 0;
++        mCropTop = 0;
++        mCropWidth = mWidth;
++        mCropHeight = mHeight;
++    }
++}
++
+ void SoftVideoDecoderOMXComponent::updatePortDefinitions(bool updateCrop, bool updateInputSize) {
+     OMX_PARAM_PORTDEFINITIONTYPE *outDef = &editPortInfo(kOutputPortIndex)->mDef;
+     outDef->format.video.nFrameWidth = outputBufferWidth();
+@@ -202,12 +230,12 @@ void SoftVideoDecoderOMXComponent::handlePortSettingsChange(
+                     mAdaptiveMaxHeight = height;
+                 }
+             }
+-            updatePortDefinitions(updateCrop);
++            updatePortDefinitions(updateCrop, false);
+             notify(OMX_EventPortSettingsChanged, kOutputPortIndex, 0, NULL);
+             mOutputPortSettingsChange = AWAITING_DISABLED;
+             *portWillReset = true;
+         } else {
+-            updatePortDefinitions(updateCrop);
++            updatePortDefinitions(updateCrop, false);
+ 
+             if (fakeStride) {
+                 // MAJOR HACK that is not pretty, it's just to fool the renderer to read the correct
+-- 
+2.7.4
+

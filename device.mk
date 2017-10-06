@@ -82,12 +82,6 @@ PRODUCT_COPY_FILES += \
 	$(LOCAL_PATH)/rootdir/init.aee.rc:root/init.aee.rc \
 	$(LOCAL_KERNEL):kernel
 
-DEVICE_PACKAGE_OVERLAYS += $(LOCAL_PATH)/overlay
-
-# TWRP
-PRODUCT_COPY_FILES += \
-	$(LOCAL_PATH)/rootdir/twrp.fstab:recovery/root/etc/twrp.fstab
-
 PRODUCT_PACKAGES += \
 	libxlog
 

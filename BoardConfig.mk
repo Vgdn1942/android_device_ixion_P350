@@ -58,36 +58,46 @@ TARGET_KMODULES := true
 COMMON_GLOBAL_CFLAGS += -DDISABLE_HW_ID_MATCH_CHECK
 TARGET_RUNNING_WITHOUT_SYNC_FRAMEWORK := true
 
+DEVICE_PACKAGE_OVERLAYS += $(LOCAL_PATH)/overlay
+
 TARGET_PREBUILT_KERNEL := $(LOCAL_PATH)/kernel
 BOARD_MKBOOTIMG_ARGS := --kernel_offset 0x00008000 --ramdisk_offset 0x04000000 --tags_offset 0x0e000000 --board 1441186574
 BOARD_CUSTOM_BOOTIMG := true
 
-TARGET_PREBUILT_RECOVERY_KERNEL := $(LOCAL_PATH)/kernel
-TARGET_RECOVERY_FSTAB := $(LOCAL_PATH)/rootdir/fstab.mt6580
-
-TARGET_USE_CUSTOM_LUN_FILE_PATH := "/sys/devices/virtual/android_usb/android0/f_mass_storage/lun%d/file"
-
 TARGET_OTA_ASSERT_DEVICE := "dexp_ixion_p350","P350","DEXP Ixion P350","Ixion P350"
 
-# TWRP
-DEVICE_RESOLUTION := 720x1280
-TARGET_SCREEN_HEIGHT := 1280
-TARGET_SCREEN_WIDTH := 720
+# Recovery
+RECOVERY_VARIANT := twrp
 RECOVERY_GRAPHICS_USE_LINELENGTH := true
-TW_NO_REBOOT_BOOTLOADER := true
+TARGET_PREBUILT_RECOVERY_KERNEL := $(LOCAL_PATH)/kernel
+TARGET_USE_CUSTOM_LUN_FILE_PATH := "/sys/devices/platform/mt_usb/musb-hdrc.0.auto/gadget/lun%d/file"
+
+ifeq ($(RECOVERY_VARIANT),twrp)
+TARGET_RECOVERY_FSTAB := $(LOCAL_PATH)/rootdir/twrp.fstab
+else
+TARGET_RECOVERY_FSTAB := $(LOCAL_PATH)/rootdir/fstab.mt6580
+endif
+
+# TWRP
+ifeq ($(RECOVERY_VARIANT),twrp)
+RECOVERY_SDCARD_ON_DATA := true
+TW_THEME := portrait_hdpi
+DEVICE_RESOLUTION := 720x1280
+TW_USE_MODEL_HARDWARE_ID_FOR_DEVICE_ID := true
+TW_DEFAULT_LANGUAGE := ru
+TW_NO_REBOOT_BOOTLOADER := false
+TW_NO_USB_STORAGE := false
 TW_BRIGHTNESS_PATH := "/sys/devices/platform/leds-mt65xx/leds/lcd-backlight/brightness"
-#TARGET_USE_CUSTOM_LUN_FILE_PATH := "/sys/devices/platform/mt_usb/musb-hdrc.0.auto/gadget/lun%d/file"
 TW_MAX_BRIGHTNESS := 255
-TW_INTERNAL_STORAGE_PATH := "/emmc"
-TW_INTERNAL_STORAGE_MOUNT_POINT := "emmc"
-TW_EXTERNAL_STORAGE_PATH := "/external_sd"
-TW_EXTERNAL_STORAGE_MOUNT_POINT := "external_sd"
+TW_DEFAULT_EXTERNAL_STORAGE := true
+TW_INCLUDE_L_CRYPTO := true
 TW_CRYPTO_FS_TYPE := "ext4"
-TW_CRYPTO_REAL_BLKDEV := "/dev/block/mmcblk0p7"
+TW_CRYPTO_REAL_BLKDEV := "/dev/block/platform/mtk-msdc.0/by-name/userdata"
 TW_CRYPTO_MNT_POINT := "/data"
 TW_CRYPTO_FS_OPTIONS := "nosuid,nodev,noatime,discard,noauto_da_alloc,data=ordered"
-TW_EXCLUDE_SUPERSU := true
+TW_CUSTOM_CPU_TEMP_PATH := "/sys/devices/virtual/thermal/thermal_zone1/temp"
 TW_INCLUDE_FB2PNG := true
+endif
 
 # Deodex
 WITH_DEXPREOPT := false

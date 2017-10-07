@@ -1,4 +1,3 @@
-$(call inherit-product, $(SRC_TARGET_DIR)/product/languages_full.mk)
 $(call inherit-product, $(SRC_TARGET_DIR)/product/full_base_telephony.mk)
 
 PRODUCT_CHARACTERISTICS := default
@@ -11,7 +10,7 @@ PRODUCT_PROPERTY_OVERRIDES += ro.product.locale.language=ru
 $(call inherit-product, device/common/gps/gps_eu_supl.mk)
 
 # Inherit device configuration
-$(call inherit-product, device/ixion/P350/full_P350.mk)
+$(call inherit-product, device/ixion/P350/device.mk)
 
 # Inherit some common AICP stuff.
 $(call inherit-product, vendor/aicp/configs/common.mk)
@@ -20,6 +19,7 @@ $(call inherit-product, vendor/aicp/configs/common.mk)
 $(call inherit-product, vendor/aicp/configs/gsm.mk)
 
 ## Device identifier. This must come after all inclusions
+PRODUCT_RELEASE_NAME := P350
 PRODUCT_NAME := aicp_P350
 PRODUCT_DEVICE := P350
 PRODUCT_BRAND := Ixion

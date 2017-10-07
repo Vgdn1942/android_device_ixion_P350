@@ -67,7 +67,10 @@ BOARD_CUSTOM_BOOTIMG := true
 TARGET_OTA_ASSERT_DEVICE := "dexp_ixion_p350","P350","DEXP Ixion P350","Ixion P350"
 
 # Recovery
-RECOVERY_VARIANT := twrp
+# Enable twrp variant only for 'make recoveryimage'
+# Do not enable for full build
+#RECOVERY_VARIANT := twrp
+
 RECOVERY_GRAPHICS_USE_LINELENGTH := true
 TARGET_PREBUILT_RECOVERY_KERNEL := $(LOCAL_PATH)/kernel
 TARGET_USE_CUSTOM_LUN_FILE_PATH := "/sys/devices/platform/mt_usb/musb-hdrc.0.auto/gadget/lun%d/file"

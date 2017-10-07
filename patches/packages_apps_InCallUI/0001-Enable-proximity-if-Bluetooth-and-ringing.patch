@@ -1,0 +1,44 @@
+From 4376ad06d8fe56d8c3d582fe80f2f10fd920efb5 Mon Sep 17 00:00:00 2001
+From: vgdn1942 <vgdn1942@gmail.com>
+Date: Sat, 7 Oct 2017 21:52:55 +0300
+Subject: [PATCH] Enable proximity if Bluetooth and ringing
+
+Change-Id: I6d37c12fa7d548b2513e0de7dfbae869b285adf0
+---
+ src/com/android/incallui/ProximitySensor.java | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/com/android/incallui/ProximitySensor.java b/src/com/android/incallui/ProximitySensor.java
+index 7bf4a08..8082227 100644
+--- a/src/com/android/incallui/ProximitySensor.java
++++ b/src/com/android/incallui/ProximitySensor.java
+@@ -75,7 +75,7 @@ public class ProximitySensor implements AccelerometerListener.ChangeListener,
+             if (mIsPhoneOffhook
+                     // as long as AudioMode isn't currently wired headset or bluetooth
+                     && audioMode != AudioMode.WIRED_HEADSET
+-                    && audioMode != AudioMode.BLUETOOTH) {
++                   /* && audioMode != AudioMode.BLUETOOTH) */ {
+ 
+                 // okay, we're good to start switching audio mode on proximity
+ 
+@@ -282,7 +282,7 @@ public class ProximitySensor implements AccelerometerListener.ChangeListener,
+         // is being held in a horizontal position.
+             boolean screenOnImmediately = (AudioState.ROUTE_WIRED_HEADSET == audioMode
+                     || AudioState.ROUTE_SPEAKER == audioMode
+-                    || AudioState.ROUTE_BLUETOOTH == audioMode
++                 /* || AudioState.ROUTE_BLUETOOTH == audioMode */
+                     || mIsHardKeyboardOpen);
+             screenOnImmediately |= Settings.System.getInt(mContext.getContentResolver(),
+                     Settings.System.IN_CALL_PROXIMITY_SENSOR, 1) == 0;
+@@ -311,7 +311,7 @@ public class ProximitySensor implements AccelerometerListener.ChangeListener,
+                     .add("aud", AudioState.audioRouteToString(audioMode))
+                     .toString());
+ 
+-            if (mIsPhoneOffhook && !screenOnImmediately) {
++            if (/*mIsPhoneOffhook && */!screenOnImmediately) {
+                 Log.d(this, "Turning on proximity sensor");
+                 // Phone is in use!  Arrange for the screen to turn off
+                 // automatically when the sensor detects a close object.
+-- 
+2.7.4
+

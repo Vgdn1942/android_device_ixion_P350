@@ -1,2 +1,2 @@
 PRODUCT_MAKEFILES := \
-    $(LOCAL_DIR)/full_P350.mk
+    $(LOCAL_DIR)/aicp.mk

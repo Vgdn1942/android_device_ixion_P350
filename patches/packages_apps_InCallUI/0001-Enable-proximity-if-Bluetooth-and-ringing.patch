@@ -1,15 +1,15 @@
-From 4376ad06d8fe56d8c3d582fe80f2f10fd920efb5 Mon Sep 17 00:00:00 2001
+From 3ab55e19ad94e173db9438648a3e1e80d0be1faa Mon Sep 17 00:00:00 2001
 From: vgdn1942 <vgdn1942@gmail.com>
-Date: Sat, 7 Oct 2017 21:52:55 +0300
+Date: Sun, 8 Oct 2017 12:43:20 +0300
 Subject: [PATCH] Enable proximity if Bluetooth and ringing
 
-Change-Id: I6d37c12fa7d548b2513e0de7dfbae869b285adf0
+Change-Id: I8ae077a64bad6d1a1109719701d65bf2b0fdc25b
 ---
  src/com/android/incallui/ProximitySensor.java | 6 +++---
  1 file changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/src/com/android/incallui/ProximitySensor.java b/src/com/android/incallui/ProximitySensor.java
-index 7bf4a08..8082227 100644
+index 7bf4a08..cf8ab19 100644
 --- a/src/com/android/incallui/ProximitySensor.java
 +++ b/src/com/android/incallui/ProximitySensor.java
 @@ -75,7 +75,7 @@ public class ProximitySensor implements AccelerometerListener.ChangeListener,
@@ -17,7 +17,7 @@ index 7bf4a08..8082227 100644
                      // as long as AudioMode isn't currently wired headset or bluetooth
                      && audioMode != AudioMode.WIRED_HEADSET
 -                    && audioMode != AudioMode.BLUETOOTH) {
-+                   /* && audioMode != AudioMode.BLUETOOTH) */ {
++                   /* && audioMode != AudioMode.BLUETOOTH */) {
  
                  // okay, we're good to start switching audio mode on proximity
  

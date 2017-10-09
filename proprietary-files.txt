@@ -190,6 +190,7 @@ lib/libja3m.so
 lib/libJpgDecPipe.so
 lib/libJpgEncPipe.so
 lib/libjtranscode.so
+lib/liblog.so
 lib/libm4u.so
 lib/libMali.so
 lib/libmatv_cust.so

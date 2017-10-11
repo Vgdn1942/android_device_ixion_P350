@@ -1,0 +1,74 @@
+From d8cd629c4b3df027801fe2de4c79a1f7fbb72522 Mon Sep 17 00:00:00 2001
+From: vgdn1942 <vgdn1942@gmail.com>
+Date: Wed, 11 Oct 2017 21:59:31 +0300
+Subject: [PATCH] Xlog symbols
+
+Change-Id: I23d5e12ebd966ddc7586aa38e6d6b35140df1d10
+---
+ liblog/logd_write_kern.c | 43 +++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 41 insertions(+), 2 deletions(-)
+
+diff --git a/liblog/logd_write_kern.c b/liblog/logd_write_kern.c
+index 0d0bd2f..28d65e2 100644
+--- a/liblog/logd_write_kern.c
++++ b/liblog/logd_write_kern.c
+@@ -32,11 +32,9 @@
+ #include <android/set_abort_message.h>
+ #endif
+ 
+-#ifdef MOTOROLA_LOG
+ #if HAVE_LIBC_SYSTEM_PROPERTIES
+ #include <sys/system_properties.h>
+ #endif
+-#endif
+ 
+ #include <log/log.h>
+ #include <log/logd.h>
+@@ -472,3 +470,44 @@ int __android_log_bswrite(int32_t tag, const char *payload)
+ 
+     return write_to_log(LOG_ID_EVENTS, vec, 4);
+ }
++
++#ifdef MTK_HARDWARE
++struct xlog_record {
++    const char *tag_str;
++    const char *fmt_str;
++    int prio;
++};
++
++void __attribute__((weak)) __xlog_buf_printf(int bufid, const struct xlog_record *xlog_record, ...) {
++    va_list args;
++    va_start(args, xlog_record);
++#if    HAVE_LIBC_SYSTEM_PROPERTIES
++    int len = 0;
++    int do_xlog = 0;
++    char results[PROP_VALUE_MAX];
++
++
++    // MobileLog
++    len = __system_property_get ("debug.MB.running", results);
++    if (len && atoi(results))
++        do_xlog = 1;
++
++    // ModemLog
++    len = __system_property_get ("debug.mdlogger.Running", results);
++    if (len && atoi(results))
++        do_xlog = 1;
++
++    // Manual
++    len = __system_property_get ("persist.debug.xlog.enable", results);
++    if (len && atoi(results))
++        do_xlog = 1;
++
++    if (do_xlog > 0)
++#endif
++        __android_log_vprint(xlog_record->prio, xlog_record->tag_str, xlog_record->fmt_str, args);
++
++    // get rid of "unused parameter 'bufid'"
++    bufid = bufid;
++    return;
++}
++#endif
+-- 
+2.7.4
+

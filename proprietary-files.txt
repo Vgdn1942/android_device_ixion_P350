@@ -56,6 +56,17 @@ bin/wmt_loader
 
 # etc
 
+etc/firmware/mt6580/mt6580_fm_v1_coeff.bin
+etc/firmware/mt6580/mt6580_fm_v1_patch.bin
+etc/firmware/mt6580/mt6580_fm_v2_coeff.bin
+etc/firmware/mt6580/mt6580_fm_v2_patch.bin
+etc/firmware/mt6580/mt6580_fm_v3_coeff.bin
+etc/firmware/mt6580/mt6580_fm_v3_patch.bin
+etc/firmware/mt6580/mt6580_fm_v4_coeff.bin
+etc/firmware/mt6580/mt6580_fm_v4_patch.bin
+etc/firmware/mt6580/mt6580_fm_v5_coeff.bin
+etc/firmware/mt6580/mt6580_fm_v5_patch.bin
+
 etc/firmware/catcher_filter_1_wg_n.bin
 etc/firmware/modem_1_wg_n.img
 etc/firmware/pcm_deepidle.bin
@@ -66,6 +77,8 @@ etc/firmware/ROMv2_lm_patch_1_1_hdr.bin
 etc/firmware/S_ANDRO_SFL.ini
 etc/firmware/WIFI_RAM_CODE_6580
 etc/firmware/WMT_SOC.cfg
+
+etc/fmr/mt6580_fm_cust.cfg
 
 etc/mddb/BPLGUInfoCustomAppSrcP_MT6580_S00_MOLY_WR8_W1449_MD_WG_MP_V6_P4_1_wg_n
 etc/mddb/DbgInfo_WR8.W1449.MD.WG.MP_CKT6580_WE_L_HSPA_MOLY_WR8_W1449_MD_WG_MP_V6_P4_2016_12_02_10_20_1_wg_n

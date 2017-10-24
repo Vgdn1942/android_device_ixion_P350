@@ -29,16 +29,11 @@ Working:
 - GPS
 - HW composer
 - Sleep
-- Video
-- FM Radio
 
 Not working/Bugs:
-- YouTube 720p
+- Video not played
 
 Thanks:
 @Besik13
 @dee3000
 @Zormax
-@Cheshkin
-@xen0n
-@visi0nary

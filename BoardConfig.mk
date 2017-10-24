@@ -134,6 +134,11 @@ WIFI_DRIVER_FW_PATH_P2P := P2P
 # GPS
 TARGET_SPECIFIC_HEADER_PATH := $(LOCAL_PATH)/include
 
+# FM radio
+MTK_FM_SUPPORT := yes
+MTK_FM_RX_SUPPORT := yes
+MTK_FM_CHIP := MT6580_FM
+
 # EGL settings
 BOARD_EGL_CFG := $(LOCAL_PATH)/config/lib/egl/egl.cfg
 USE_OPENGL_RENDERER := true

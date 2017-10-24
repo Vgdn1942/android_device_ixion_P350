@@ -86,7 +86,6 @@ PRODUCT_PACKAGES += \
 	libxlog
 
 # FM Radio
-ifeq ($(MTK_FM_SUPPORT),yes)
 PRODUCT_PACKAGES += \
 	FMRadio \
 	libfmjni \
@@ -95,9 +94,7 @@ PRODUCT_PACKAGES += \
 	libfmmt6628 \
 	libfmmt6627 \
 	libfmmt6630 \
-	libfmcust \
-	libmtkplayer
-endif
+	libfmcust
 
 PRODUCT_PACKAGES += \
 	audio_policy.default \
@@ -137,7 +134,7 @@ PRODUCT_PACKAGES += \
 
 # Bluetooth
 PRODUCT_PACKAGES += \
-	libbt-vendor \
+	libbt-vendor
 
 PRODUCT_PACKAGES += \
 	libwpa_client \

@@ -1,0 +1,152 @@
+From 71ae10d00f961bf3cd08c7a06875d05da6cd9c1b Mon Sep 17 00:00:00 2001
+From: Jan Engelmohr <jan.engelmohr@mailbox.tu-dresden.de>
+Date: Thu, 12 Oct 2017 10:19:50 +0300
+Subject: [PATCH] Added frameworks_av patch for MTKs FM Radio
+
+Change-Id: I7a16f1d5e69c6a2570237b243c64bb45b5332d41
+---
+ include/media/MediaPlayerInterface.h               |  1 +
+ media/libmediaplayerservice/Android.mk             |  6 ++++--
+ media/libmediaplayerservice/MediaPlayerFactory.cpp | 23 +++++++++++++++++++++
+ services/audioflinger/AudioFlinger.cpp             | 24 ++++++++++++++++++++++
+ 4 files changed, 52 insertions(+), 2 deletions(-)
+
+diff --git a/include/media/MediaPlayerInterface.h b/include/media/MediaPlayerInterface.h
+index b95f949..4760ba2 100644
+--- a/include/media/MediaPlayerInterface.h
++++ b/include/media/MediaPlayerInterface.h
+@@ -54,6 +54,7 @@ enum player_type {
+     // argument to the 'test:' url in the setDataSource call.
+     TEST_PLAYER = 5,
+     DASH_PLAYER = 6,
++    FM_AUDIO_PLAYER=7,
+ };
+ 
+ 
+diff --git a/media/libmediaplayerservice/Android.mk b/media/libmediaplayerservice/Android.mk
+index 144d036..b9db980 100644
+--- a/media/libmediaplayerservice/Android.mk
++++ b/media/libmediaplayerservice/Android.mk
+@@ -42,7 +42,8 @@ LOCAL_SHARED_LIBRARIES :=       \
+     libstagefright_wfd          \
+     libutils                    \
+     libvorbisidec               \
+-    libdrmframework
++    libdrmframework             \
++    libmtkplayer
+ 
+ LOCAL_STATIC_LIBRARIES :=       \
+     libstagefright_nuplayer     \
+@@ -54,7 +55,8 @@ LOCAL_C_INCLUDES :=                                                 \
+     $(TOP)/frameworks/av/media/libstagefright/wifi-display          \
+     $(TOP)/frameworks/av/media/libstagefright/webm                  \
+     $(TOP)/frameworks/native/include/media/openmax                  \
+-    $(TOP)/external/tremolo/Tremolo
++    $(TOP)/external/tremolo/Tremolo                                 \
++    $(TOP)/device/ixion/P350/fm/fmaudioplayer
+ 
+ LOCAL_MODULE:= libmediaplayerservice
+ 
+diff --git a/media/libmediaplayerservice/MediaPlayerFactory.cpp b/media/libmediaplayerservice/MediaPlayerFactory.cpp
+index 03fae91..4a5597a 100644
+--- a/media/libmediaplayerservice/MediaPlayerFactory.cpp
++++ b/media/libmediaplayerservice/MediaPlayerFactory.cpp
+@@ -1,4 +1,9 @@
+ /*
++* Copyright (C) 2014 MediaTek Inc.
++* Modification based on code covered by the mentioned copyright
++* and/or permission notice(s).
++*/
++/*
+ **
+ ** Copyright 2012, The Android Open Source Project
+ **
+@@ -33,6 +38,7 @@
+ #include "TestPlayerStub.h"
+ #include "StagefrightPlayer.h"
+ #include "nuplayer/NuPlayerDriver.h"
++#include "FMAudioPlayer.h"
+ #include <dlfcn.h>
+ 
+ namespace android {
+@@ -388,6 +394,22 @@ class TestPlayerFactory : public MediaPlayerFactory::IFactory {
+     }
+ };
+ 
++class FMPlayerFactory : public MediaPlayerFactory::IFactory {
++  public:
++    virtual float scoreFactory(const sp<IMediaPlayer>& client,
++                               const char* url,
++                               float curScore) {
++        if(strncmp(url, "THIRDPARTY://MEDIAPLAYER_PLAYERTYPE_FM", 38) == 0)
++           return 1.0;
++        return 0.0;
++    }
++
++    virtual sp<MediaPlayerBase> createPlayer() {
++        return new FMAudioPlayer();
++        return NULL;
++    }
++};
++
+ void MediaPlayerFactory::registerBuiltinFactories() {
+     Mutex::Autolock lock_(&sLock);
+ 
+@@ -398,6 +420,7 @@ void MediaPlayerFactory::registerBuiltinFactories() {
+     registerFactory_l(new NuPlayerFactory(), NU_PLAYER);
+     registerFactory_l(new SonivoxPlayerFactory(), SONIVOX_PLAYER);
+     registerFactory_l(new TestPlayerFactory(), TEST_PLAYER);
++    registerFactory_l(new FMPlayerFactory(), FM_AUDIO_PLAYER);
+ 
+     const char* FACTORY_LIB           = "libdashplayer.so";
+     const char* FACTORY_CREATE_FN     = "CreateDASHFactory";
+diff --git a/services/audioflinger/AudioFlinger.cpp b/services/audioflinger/AudioFlinger.cpp
+index 0c9b646..4d89d05 100644
+--- a/services/audioflinger/AudioFlinger.cpp
++++ b/services/audioflinger/AudioFlinger.cpp
+@@ -1,4 +1,9 @@
+ /*
++* Copyright (C) 2014 MediaTek Inc.
++* Modification based on code covered by the mentioned copyright
++* and/or permission notice(s).
++*/
++/*
+ ** Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+ ** Not a Contribution.
+ ** Copyright 2007, The Android Open Source Project
+@@ -1151,6 +1156,19 @@ status_t AudioFlinger::setStreamVolume(audio_stream_type_t stream, float value,
+         thread->setStreamVolume(stream, value);
+     }
+ 
++    // change by hochi for fm volume
++    if(stream == AUDIO_STREAM_MUSIC)
++    {
++        sp<ThreadBase> thread;
++        thread = checkPlaybackThread_l(output);
++        if (thread == primaryPlaybackThread_l())
++        {
++            //MTK_ALOG_D("setStreamVolume FM  value = %f",value);
++            audio_hw_device_t *dev = mPrimaryHardwareDev->hwDevice();
++            dev->set_parameters (dev,String8::format("SetFmVolume=%f",value));
++        }
++    }
++
+     return NO_ERROR;
+ }
+ 
+@@ -1165,6 +1183,12 @@ status_t AudioFlinger::setStreamMute(audio_stream_type_t stream, bool muted)
+     if (status != NO_ERROR) {
+         return status;
+     }
++    if(stream == AUDIO_STREAM_MUSIC)
++    {
++        //MTK_ALOG_D("setStreamMute MATV muted=%d",muted);
++        audio_hw_device_t *dev = mPrimaryHardwareDev->hwDevice();
++        dev->set_parameters (dev,String8::format("SetMatvMute=%d",muted));
++    }
+     ALOG_ASSERT(stream != AUDIO_STREAM_PATCH, "attempt to mute AUDIO_STREAM_PATCH");
+ 
+     if (uint32_t(stream) == AUDIO_STREAM_ENFORCED_AUDIBLE) {
+-- 
+2.7.4
+

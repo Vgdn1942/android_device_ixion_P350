@@ -105,8 +105,8 @@ TW_INCLUDE_FB2PNG := true
 endif
 
 # Deodex
-WITH_DEXPREOPT := false
-DISABLE_DEXPREOPT := true
+WITH_DEXPREOPT := true
+DISABLE_DEXPREOPT := false
 
 # Bluetooth
 BOARD_HAVE_BLUETOOTH := true

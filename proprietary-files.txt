@@ -240,7 +240,6 @@ lib/libMtkOmxRawDec.so
 lib/libMtkOmxVdec.so
 lib/libMtkOmxVenc.so
 lib/libMtkOmxVorbisEnc.so
-lib/libmtkplayer.so
 lib/libmtkshifter.so
 lib/libnativecheck-jni.so
 lib/libnvramagentclient.so
@@ -258,9 +257,6 @@ lib/libsbccodec.so
 lib/libshowlogo.so
 lib/libspeech_enh_lib.so
 lib/libssladp.so
-lib/libstagefright_amrnb_common.so
-lib/libstagefright_avc_common.so
-lib/libstagefright_enc_common.so
 lib/libstagefrighthw.so
 lib/libSwJpgCodec.so
 lib/libterservice.so

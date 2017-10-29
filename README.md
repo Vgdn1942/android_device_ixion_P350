@@ -1,3 +1,5 @@
+# CyanogenMod 13.0 device tree for DEXP Ixion P350
+
 DEXP Ixion P350
 ==============
 
@@ -14,26 +16,23 @@ Camera  | 8MPx, LED Flash
 
 ![DEXP](https://content2.onliner.by/catalog/device/main/28756eabf91d930d247cb06211958125.jpeg "DEXP Ixion P350 Tundra Black")
 
-This branch is for building AICP 10.0 (or Android Lollipop 5.1 CM based roms) ROMS.
-
 Working:
-- Audio
-- Sensors
-- Wi-Fi
-- Camera
-- Modem
-- USSD
-- Bluetooth
-- Mobile data
-- Wi-Fi tethering
-- GPS
-- HW composer
-- Sleep
 
 Not working/Bugs:
-- Video not played
 
-Thanks:
-@Besik13
-@dee3000
-@Zormax
+# Acknowledgements
+
+(in alphabetical order)
+
+* aiden09
+* Besik13
+* ccfxny
+* dee3000
+* DerTeufel
+* ferhung
+* fire855
+* hyperion70
+* varunchitre15
+* xen0n
+* Zormax
+* others I might have forgotten to include

@@ -28,7 +28,9 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.hardware.TorchManager;
+import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraAccessException;
 import android.media.session.MediaSessionLegacyHelper;
 import android.net.Uri;
 import android.os.Handler;
@@ -45,6 +47,8 @@ import android.provider.Settings;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.WindowManagerGlobal;
+
+import cyanogenmod.providers.CMSettings;
 
 import com.android.internal.os.DeviceKeyHandler;
 import com.android.internal.util.ArrayUtils;
@@ -118,7 +122,9 @@ public class KeyHandler implements DeviceKeyHandler {
     private KeyguardManager mKeyguardManager;
     private Handler mHandler;
     private SensorManager mSensorManager;
-    private TorchManager mTorchManager;
+    private CameraManager mCameraManager;
+    private String mRearCameraId;
+    private boolean mTorchEnabled;
     private Sensor mProximitySensor;
     private Vibrator mVibrator;
     WakeLock mProximityWakeLock;
@@ -135,9 +141,9 @@ public class KeyHandler implements DeviceKeyHandler {
 
         final Resources resources = mContext.getResources();
         mProximityTimeOut = resources.getInteger(
-                com.android.internal.R.integer.config_proximityCheckTimeout);
+                org.cyanogenmod.platform.internal.R.integer.config_proximityCheckTimeout);
         mProximityWakeSupported = resources.getBoolean(
-                com.android.internal.R.bool.config_proximityCheckOnWake);
+                org.cyanogenmod.platform.internal.R.bool.config_proximityCheckOnWake);
 
         if (mProximityWakeSupported) {
             mSensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
@@ -150,18 +156,46 @@ public class KeyHandler implements DeviceKeyHandler {
         if (mVibrator == null || !mVibrator.hasVibrator()) {
             mVibrator = null;
         }
+
+        mCameraManager = (CameraManager) mContext.getSystemService(Context.CAMERA_SERVICE);
+        mCameraManager.registerTorchCallback(new MyTorchCallback(), mHandler);
+
+        // Get first rear camera id
+        try {
+            for (final String cameraId : mCameraManager.getCameraIdList()) {
+                CameraCharacteristics characteristics =
+                        mCameraManager.getCameraCharacteristics(cameraId);
+                int cOrientation = characteristics.get(CameraCharacteristics.LENS_FACING);
+                if (cOrientation == CameraCharacteristics.LENS_FACING_BACK) {
+                    mRearCameraId = cameraId;
+                    break;
+                }
+            }
+        } catch (CameraAccessException e) {
+            // Ignore
+        }
+    }
+
+    private class MyTorchCallback extends CameraManager.TorchCallback {
+        @Override
+        public void onTorchModeChanged(String cameraId, boolean enabled) {
+            if (!cameraId.equals(mRearCameraId))
+                return;
+            mTorchEnabled = enabled;
+        }
+
+        @Override
+        public void onTorchModeUnavailable(String cameraId) {
+            if (!cameraId.equals(mRearCameraId))
+                return;
+            mTorchEnabled = false;
+        }
     }
 
     private void ensureKeyguardManager() {
         if (mKeyguardManager == null) {
             mKeyguardManager =
                     (KeyguardManager) mContext.getSystemService(Context.KEYGUARD_SERVICE);
-        }
-    }
-
-    private void ensureTorchManager() {
-        if (mTorchManager == null) {
-            mTorchManager = (TorchManager) mContext.getSystemService(Context.TORCH_SERVICE);
         }
     }
 
@@ -177,7 +211,7 @@ public class KeyHandler implements DeviceKeyHandler {
                 boolean enabled_doubletap = Settings.System.getInt(mContext.getContentResolver(),
                     KEY_GESTURE_DOUBLE_TAP, 1) != 0;
                 if (enabled_doubletap) {
-                    mPowerManager.wakeUpWithProximityCheck(SystemClock.uptimeMillis());
+                    mPowerManager.wakeUp(SystemClock.uptimeMillis());
                     doHapticFeedback();
                     return true;
                 }
@@ -196,7 +230,7 @@ public class KeyHandler implements DeviceKeyHandler {
                               UserHandle.CURRENT);
                         action = MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA;
                     }
-                    mPowerManager.wakeUpWithProximityCheck(SystemClock.uptimeMillis());
+                    mPowerManager.wakeUp(SystemClock.uptimeMillis());
                     Intent intent = new Intent(action, null);
                     startActivitySafely(intent);
                     doHapticFeedback();
@@ -217,7 +251,7 @@ public class KeyHandler implements DeviceKeyHandler {
                               UserHandle.CURRENT);
                         action = Intent.ACTION_DIAL;
                     }
-                    mPowerManager.wakeUpWithProximityCheck(SystemClock.uptimeMillis());
+                    mPowerManager.wakeUp(SystemClock.uptimeMillis());
                     Intent intent = new Intent(action, null);
                     startActivitySafely(intent);
                     doHapticFeedback();
@@ -228,10 +262,16 @@ public class KeyHandler implements DeviceKeyHandler {
                 boolean enabled_flashlight = Settings.System.getInt(mContext.getContentResolver(),
                     KEY_GESTURE_FLASHLIGHT, 1) != 0;
                 if (enabled_flashlight) {
-                    ensureTorchManager();
-                    mGestureWakeLock.acquire(GESTURE_WAKELOCK_DURATION);
-                    mTorchManager.toggleTorch();
-                    doHapticFeedback();
+                    if (mRearCameraId != null) {
+                        mGestureWakeLock.acquire(GESTURE_WAKELOCK_DURATION);
+                        try {
+                            mCameraManager.setTorchMode(mRearCameraId, !mTorchEnabled);
+                            mTorchEnabled = !mTorchEnabled;
+                        } catch (CameraAccessException e) {
+                            // Ignore
+                        }
+                        doHapticFeedback();
+                    }
                     return true;
                 }
                 break;
@@ -274,9 +314,9 @@ public class KeyHandler implements DeviceKeyHandler {
             }
             Message msg = getMessageForKeyEvent(event);
             boolean defaultProximity = mContext.getResources().getBoolean(
-                com.android.internal.R.bool.config_proximityCheckOnWakeEnabledByDefault);
-            boolean proximityWakeCheckEnabled = Settings.System.getInt(mContext.getContentResolver(),
-                    Settings.System.PROXIMITY_ON_WAKE, defaultProximity ? 1 : 0) == 1;
+                org.cyanogenmod.platform.internal.R.bool.config_proximityCheckOnWakeEnabledByDefault);
+            boolean proximityWakeCheckEnabled = CMSettings.System.getInt(mContext.getContentResolver(),
+                    CMSettings.System.PROXIMITY_ON_WAKE, defaultProximity ? 1 : 0) == 1;
             if (mProximityWakeSupported && proximityWakeCheckEnabled && mProximitySensor != null) {
                 mHandler.sendMessageDelayed(msg, mProximityTimeOut);
                 processEvent(event);

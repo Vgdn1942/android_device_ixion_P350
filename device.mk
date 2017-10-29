@@ -138,10 +138,6 @@ PRODUCT_PACKAGES += \
     gps.mt6580 \
     mtk_agpsd
 
-# Vibration
-PRODUCT_PACKAGES += \
-    openimmvibed
-
 # Torch
 PRODUCT_PACKAGES += \
     Torch

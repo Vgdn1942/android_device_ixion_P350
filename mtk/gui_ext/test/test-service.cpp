@@ -1,7 +1,6 @@
 #define LOG_TAG "GuiExt-Test"
 
-#define MTK_LOG_ENABLE 1
-#include <cutils/log.h>
+#include <cutils/xlog.h>
 #ifdef USE_PTHREAD
 #include <pthread.h> 
 #else
@@ -35,7 +34,7 @@ int aal_service_fun(void *arg)
 
 int main(int argc, char** argv)
 {
-    ALOGD("AAL service start...");
+    XLOGD("AAL service start...");
     
 #ifdef USE_PTHREAD
     pthread_t aal_tid; 
@@ -56,6 +55,6 @@ int main(int argc, char** argv)
     sleep(10000);
 
 
-    ALOGD("AAL service finish...");
+    XLOGD("AAL service finish...");
     return 0;    
 }

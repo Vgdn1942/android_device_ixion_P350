@@ -1,7 +1,6 @@
 #define LOG_TAG "GuiExt"
 
-#define MTK_LOG_ENABLE 1
-#include <cutils/log.h>
+#include <cutils/xlog.h>
 #include <binder/IServiceManager.h>
 #include <binder/ProcessState.h>
 #include "GuiExtClient.h"
@@ -9,11 +8,11 @@
 
 namespace android {
 
-#define GUIEX_LOGV(x, ...) ALOGV("[GuiExtL] " x, ##__VA_ARGS__)
-#define GUIEX_LOGD(x, ...) ALOGD("[GuiExtL] " x, ##__VA_ARGS__)
-#define GUIEX_LOGI(x, ...) ALOGI("[GuiExtL] " x, ##__VA_ARGS__)
-#define GUIEX_LOGW(x, ...) ALOGW("[GuiExtL] " x, ##__VA_ARGS__)
-#define GUIEX_LOGE(x, ...) ALOGE("[GuiExtL] " x, ##__VA_ARGS__)
+#define GUIEX_LOGV(x, ...) XLOGV("[GuiExtL] "x, ##__VA_ARGS__)
+#define GUIEX_LOGD(x, ...) XLOGD("[GuiExtL] "x, ##__VA_ARGS__)
+#define GUIEX_LOGI(x, ...) XLOGI("[GuiExtL] "x, ##__VA_ARGS__)
+#define GUIEX_LOGW(x, ...) XLOGW("[GuiExtL] "x, ##__VA_ARGS__)
+#define GUIEX_LOGE(x, ...) XLOGE("[GuiExtL] "x, ##__VA_ARGS__)
 
 GuiExtClient::GuiExtClient()
 {
@@ -39,7 +38,7 @@ status_t GuiExtClient::assertStateLocked() const
             DeathObserver(GuiExtClient & service) : mGuiExtClient(service) { }
         };
         mDeathObserver = new DeathObserver(*const_cast<GuiExtClient*>(this));
-        mGuiExtService->asBinder(mGuiExtService)->linkToDeath(mDeathObserver);
+        mGuiExtService->asBinder()->linkToDeath(mDeathObserver);
     }
 
     return NO_ERROR;

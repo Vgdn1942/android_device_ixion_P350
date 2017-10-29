@@ -10,26 +10,6 @@ namespace android {
 // ---------------------------------------------------------------------------
 class GraphicBuffer;
 
-class BufferInfo
-{
-private:
-    int mErr;
-
-public:
-    int mWidth;
-    int mHeight;
-    int mStride;
-    int mFormat;
-    buffer_handle_t mHandle;
-
-    BufferInfo() : mErr(NO_ERROR)
-    {
-    }
-
-    status_t getInfo(const buffer_handle_t& handle);
-    status_t getInfo(const sp<GraphicBuffer>& gb);
-};
-
 class GraphicBufferUtil : public Singleton<GraphicBufferUtil>
 {
 public:
@@ -40,9 +20,8 @@ public:
      * @param prefix the prefix of file name
      * @param dir the stored directory, default is "/data/"
      */
-    void dump(const buffer_handle_t& handle, const char* prefix = "", const char* dir = "/data/");
+    void dump(const buffer_handle_t& gb, const char* prefix = "", const char* dir = "/data/");
     void dump(const sp<GraphicBuffer>& gb, const char* prefix = "", const char* dir = "/data/");
-    void dump(const BufferInfo &handle, const char* prefix = "", const char* dir = "/data/");
 
     uint32_t getBitsPerPixel(int format);
     uint32_t getBitsPerPixel(buffer_handle_t handle);
@@ -50,7 +29,6 @@ public:
 
     int drawLine(const buffer_handle_t& handle, uint8_t val, int ptn_w, int ptn_h, int pos);
     int drawLine(const sp<GraphicBuffer>& gb, uint8_t val, int ptn_w, int ptn_h, int pos);
-    int drawLine(const BufferInfo &handle, uint8_t val, int ptn_w, int ptn_h, int pos);
 
 private:
     friend class Singleton<GraphicBufferUtil>;

@@ -23,9 +23,9 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <bt_vendor_lib.h>
-/* #include <bt_hci_lib.h> */
 #include <bt_hci_bdroid.h>
-/* #include <utils.h> */
+#include "bt_hci_lib.h"
+#include "utils.h"
 
 /**
  * TODO: check/fix this value. does this make sense for MTK? It is taken from TI
@@ -67,7 +67,7 @@ int mtk_init(const bt_vendor_callbacks_t* p_cb, unsigned char *local_bdaddr) {
   if (p_cb == NULL)
     {
       ALOGE("init failed with no user callbacks!");
-      return -1;
+      return BT_HC_STATUS_FAIL;
     }
 
   bt_vendor_cbacks = (bt_vendor_callbacks_t *) p_cb;
@@ -104,7 +104,7 @@ int mtk_open(void **param) {
   int fd, idx;
   fd = mtk_bt_enable(0, NULL);
   if (fd < 0) {
-    ALOGE("Can't open mtk fd");
+    ALOGE(" Can't open mtk fd");
     return -1;
   }
   for (idx = 0; idx < CH_MAX; idx++)

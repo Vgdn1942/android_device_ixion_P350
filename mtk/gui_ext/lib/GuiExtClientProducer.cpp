@@ -1,18 +1,17 @@
 #define LOG_TAG "GuiExt"
 
-#define MTK_LOG_ENABLE 1
-#include <cutils/log.h>
+#include <cutils/xlog.h>
 #include <binder/IServiceManager.h>
 #include <binder/ProcessState.h>
 #include "GuiExtClientProducer.h"
 
 namespace android {
 
-#define GUIEXT_LOGV(x, ...) ALOGV("[GuiExtP] " x, ##__VA_ARGS__)
-#define GUIEXT_LOGD(x, ...) ALOGD("[GuiExtP] " x, ##__VA_ARGS__)
-#define GUIEXT_LOGI(x, ...) ALOGI("[GuiExtP] " x, ##__VA_ARGS__)
-#define GUIEXT_LOGW(x, ...) ALOGW("[GuiExtP] " x, ##__VA_ARGS__)
-#define GUIEXT_LOGE(x, ...) ALOGE("[GuiExtP] " x, ##__VA_ARGS__)
+#define GUIEXT_LOGV(x, ...) XLOGV("[GuiExtP] "x, ##__VA_ARGS__)
+#define GUIEXT_LOGD(x, ...) XLOGD("[GuiExtP] "x, ##__VA_ARGS__)
+#define GUIEXT_LOGI(x, ...) XLOGI("[GuiExtP] "x, ##__VA_ARGS__)
+#define GUIEXT_LOGW(x, ...) XLOGW("[GuiExtP] "x, ##__VA_ARGS__)
+#define GUIEXT_LOGE(x, ...) XLOGE("[GuiExtP] "x, ##__VA_ARGS__)
 
 ANDROID_SINGLETON_STATIC_INSTANCE(GuiExtClientProducer);
 

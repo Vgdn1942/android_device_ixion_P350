@@ -62,7 +62,7 @@
 #include <pthread.h>
 
 #ifdef MUX_ANDROID
-//#include <pathconf.h>
+#include "pathconf.h"
 #include <sys/socket.h>
 #include <cutils/sockets.h>
 #include <cutils/properties.h>
@@ -180,23 +180,6 @@ static const unsigned char r_crctable[] = { //reversed, 8-bit, poly=0x07
 /******************************************************************************/
 #ifdef MUX_ANDROID
 
-// Define the maxium number of channel that gsm0710muxd could support
-#if defined (MTK_TC1_FEATURE) && defined (MTK_VOLTE_SUPPORT)
-#define GSM0710_MAX_CHANNELS 64
-#else
-#define GSM0710_MAX_CHANNELS 32
-#endif
-
-#if defined (MTK_TC1_FEATURE) && defined (MTK_VOLTE_SUPPORT)
-#ifdef MTK_RIL_MD2
-#define MUXD_CH_NUM_IMS     0
-#else
-#define MUXD_CH_NUM_IMS     4
-#endif
-#else
-#define MUXD_CH_NUM_IMS     0
-#endif
-
 #ifdef MTK_RIL_MD2
 #ifdef MTK_ENABLE_MD5
 #define MUXD_CH_NUM_EXT_AUD_SPEECH      1
@@ -212,26 +195,22 @@ static const unsigned char r_crctable[] = { //reversed, 8-bit, poly=0x07
 #define MUXD_CH_NUM_ALL     (MUXD_CH_NUM_CCH + \
                             ((MUXD_CH_NUM_RILD + MUXD_CH_NUM_PDP + MUXD_CH_ATCI) * 4) + \
                             MUXD_CH_NUM_VT + \
-                            MUXD_CH_NUM_IMS+\
                             MUXD_CH_NUM_TEST)
 #elif (SIM_COUNT >= 3)
 #define MUXD_CH_NUM_ALL     (MUXD_CH_NUM_CCH + \
                             ((MUXD_CH_NUM_RILD + MUXD_CH_NUM_PDP + MUXD_CH_ATCI) * 3) + \
                             MUXD_CH_NUM_VT + \
-                            MUXD_CH_NUM_IMS+\
                             MUXD_CH_NUM_TEST)
 #else
 #define MUXD_CH_NUM_ALL     (MUXD_CH_NUM_CCH + \
                             ((MUXD_CH_NUM_RILD + MUXD_CH_NUM_PDP + MUXD_CH_ATCI) * 2) + \
                             MUXD_CH_NUM_VT + \
-                            MUXD_CH_NUM_IMS+\
                             MUXD_CH_NUM_TEST)
 #endif /*(SIM_COUNT >= 4)*/
 #else /*(SIM_COUNT >= 2) */
 #define MUXD_CH_NUM_ALL     (MUXD_CH_NUM_CCH + \
                             ((MUXD_CH_NUM_RILD + MUXD_CH_NUM_PDP + MUXD_CH_ATCI)) + \
                             MUXD_CH_NUM_VT + \
-                            MUXD_CH_NUM_IMS+\
                             MUXD_CH_NUM_TEST + \
                             MUXD_CH_NUM_EXT_AUD_SPEECH)
 #endif /*__ANDROID_GEMINI_SUPPORT__ */
@@ -416,7 +395,7 @@ static const Channel_Config ch_cfg[] =
 
 #endif
 
-#ifdef MTK_CSD_DIALER_SUPPORT
+#ifdef MTK_CSD_DIALER_SUPPORT 
     { 30, 512, "/dev/pttycsd" },
 #endif
 #if defined(__CCMNI_SUPPORT__) && defined(__MUX_UT__)
@@ -424,15 +403,7 @@ static const Channel_Config ch_cfg[] =
     { 29, 512, "/dev/pttyiuttx" },
     { 30, 512, "/dev/pttyiutrx" },
 #endif
-//add ims support for TC1 only
-#if defined (MTK_TC1_FEATURE) && defined (MTK_VOLTE_SUPPORT)
-#ifdef MTK_RIL_MD1
-    { 31, 512, "/dev/radio/ims-pttycmd" },
-    { 32, 512, "/dev/radio/ims-pttynotify" },
-    { 33, 512, "/dev/radio/ims-sms-pttycmd" },
-    { 34, 512, "/dev/radio/ims-sms-pttynotify" },
-#endif
-#endif
+
 };
 
 #ifdef MTK_RIL_MD2
@@ -688,8 +659,7 @@ int write_frame(
         postfix[0] = frame_calc_crc(prefix + 1, prefix_length - 1);
         syslogdump(">s ", prefix,prefix_length); /* syslogdump for basic mode */
         c = write(serial.fd, prefix, prefix_length);
-        int writeErrno = errno;
-        LOGMUX(LOG_DEBUG, "Write prefix len=%d written=%d errno=%d", prefix_length, c, writeErrno);
+        LOGMUX(LOG_DEBUG, "Write prefix len=%d written=%d", prefix_length, c);
         if (c != prefix_length) {
             LOGMUX(LOG_WARNING, "Couldn't write the whole prefix to the serial port for the virtual port %d. Wrote only %d bytes",
                    channel, c);
@@ -699,7 +669,7 @@ int write_frame(
             /* Another potential problem: If it returns from here directly, original completed frame maybe discontinuous with other subsystem's frame data */
             if (c < 0) {
                 /* Check Error cause */
-                if (writeErrno==ETXTBSY || writeErrno==ENODEV) {
+                if (errno==ETXTBSY || errno==ENODEV) {
                     LOGMUX(LOG_INFO, "write to MD get ETXTBSY/ENODEV (%d), drop data (%d)", errno, length);
                     property_set(PROPERTY_MODEM_EE, "1");
                     pthread_mutex_unlock(&write_frame_lock);
@@ -716,8 +686,7 @@ int write_frame(
         if (length > 0) {
             syslogdump(">s ", input,length); /* syslogdump for basic mode */
             c = write(serial.fd, input, length);
-            writeErrno = errno;
-            LOGMUX(LOG_DEBUG, "Write data len=%d written=%d errno=%d", length, c, writeErrno);
+            LOGMUX(LOG_DEBUG, "Write data len=%d written=%d", length, c);
             if (length != c) {
                 LOGMUX(LOG_WARNING, "Couldn't write all data to the serial port from the virtual port %d. Wrote only %d bytes",
                        channel, c);
@@ -725,7 +694,7 @@ int write_frame(
                 /* If the remaining data exists due to previous write_frame(), it should not write the prefix data again */
                 if (c < 0) {
                     /* Check Error Cause */
-                    if (writeErrno==ETXTBSY || writeErrno==ENODEV) {
+                    if (errno==ETXTBSY || errno==ENODEV) {
                         LOGMUX(LOG_INFO, "write to MD get ETXTBSY/ENODEV (%d), drop data (%d)", errno, length);
                         property_set(PROPERTY_MODEM_EE, "1");
                         pthread_mutex_unlock(&write_frame_lock);
@@ -742,15 +711,14 @@ int write_frame(
         // Write postfix
         syslogdump(">s ", postfix,2); /* syslogdump for basic mode */
         c = write(serial.fd, postfix, 2);
-        writeErrno = errno;
-        LOGMUX(LOG_DEBUG, "Write postfix len=%d written=%d errno=%d", 2, c, writeErrno);
+        LOGMUX(LOG_DEBUG, "Write postfix len=%d written=%d", 2, c);
         if (c != 2) {
             LOGMUX(LOG_WARNING, "Couldn't write the whole postfix to the serial port for the virtual port %d. Wrote only %d bytes",
                    channel, c);
             /* Note by LS: Potential Bug - When re-entering this function, it always sends from the prefix data again */
             /* If the remaining data exists due to previous write_frame(), it should not write the prefix data again */
             /* Check Error Cause */
-            if (writeErrno==ETXTBSY || writeErrno==ENODEV) {
+            if (errno==ETXTBSY || errno==ENODEV) {
                 LOGMUX(LOG_INFO, "write to MD get ETXTBSY/ENODEV (%d), drop data (%d)", errno, length);
                 property_set(PROPERTY_MODEM_EE, "1");
                 pthread_mutex_unlock(&write_frame_lock);
@@ -2399,14 +2367,10 @@ int extract_frames(GSM0710_Buffer *buf)
 
                     while (1) {
                         if ((write_result = write(channel->fd, frame->data, frame->length)) >= 0) {
-                            int fsync_result = -1;
 							LOGMUX(LOG_INFO, "write() returned. Written %d/%d bytes of frame to %s", write_result, frame->length, channel->ptsname);
                             /* Ref Linux Man Page: fsync() transfers ("flushes") all modified in-core data of (i.e., modified buffer cache pages for) the file referred to by the file descriptor fd to the disk device (or other permanent storage device) where that file resides */
                             /* The call blocks until the device reports that the transfer has completed */
-                            fsync_result = fsync(channel->fd); /*push to /dev/pts device */
-                            if (fsync_result < 0) {
-                                LOGMUX(LOG_ERR, "fsync() failed (%d, %d - %s)", fsync_result, errno, strerror(errno));
-                            }
+                            fsync(channel->fd); /*push to /dev/pts device */
 
                             #ifdef __MUXD_FLOWCONTROL__
                             if ((frame->length - write_result) > 0) {
@@ -2455,6 +2419,9 @@ int extract_frames(GSM0710_Buffer *buf)
                             case EFAULT:
                                 LOGMUX(LOG_ERR, "Interrupt signal EFAULT caught");
                                 break;
+                            case EIO:
+                                LOGMUX(LOG_ERR, "Interrupt signal EIO caught");
+                                break;
                             case EFBIG:
                                 LOGMUX(LOG_ERR, "Interrupt signal EFBIG caught");
                                 break;
@@ -2465,15 +2432,6 @@ int extract_frames(GSM0710_Buffer *buf)
                                 LOGMUX(LOG_ERR, "Interrupt signal EPIPE caught");
                                 break;
                             #endif
-                            case EIO:
-                                // When channel fd has some problem and before reopen flag raised,
-                                // the flow will go into the assert flow.
-                                // Since "close_pty_channel" flow will raise the reopen flag soon,
-                                // we add a catch EIO here and make a delay. Next time, it will
-                                // go into the write reopen flow.
-                                LOGMUX(LOG_ERR, "Interrupt signal EIO caught");
-                                sleep(1);
-                                break;
                             default:
                                 if (channel->reopen) {
                                     LOGMUX(LOG_ERR, "channel%d needs to be reopened\n", channel->id);
@@ -3683,7 +3641,7 @@ int isDualTalkSupport() {
     int telephonyMode = getTelephonyMode();
     int isDtSupport = 0;
     char property_value[PROPERTY_VALUE_MAX] = { 0 };
-
+    
     if (telephonyMode == 0) {
         property_get("ro.mtk_dt_support", property_value, "0");
         isDtSupport = atoi(property_value);
@@ -3720,12 +3678,12 @@ int main(int argc, char *argv[])
     #if defined(MTK_ENABLE_MD5)
         // for DSDA external MD2
         snprintf(dev_node, 32, "%s", ccci_get_node_name(USR_MUXD_DATA, MD_SYS5));
-
+        
     #elif defined(MTK_ENABLE_MD2)
-        // for DSDA internal MD2
+        // for DSDA internal MD2 
         snprintf(dev_node, 32, "%s", ccci_get_node_name(USR_MUXD_DATA, MD_SYS2));
     #else
-        LOGMUX(LOG_ERR, "ccci_get_node_name unknown, default tablet=%s", dev_node);
+        LOGMUX(LOG_ERR, "ccci_get_node_name unknown, default tablet=%s", dev_node); 
         Gsm0710Muxd_Assert(GSM0710MUXD_OPEN_SERIAL_DEV_ERR);
     #endif
     #else /* MTK_RIL_MD2 */
@@ -3734,8 +3692,8 @@ int main(int argc, char *argv[])
     #elif defined(MTK_ENABLE_MD5)
         snprintf(dev_node, 32, "%s", ccci_get_node_name(USR_MUXD_DATA, MD_SYS5));
     #else
-        LOGMUX(LOG_ERR, "ccci_get_node_name unknown, default tablet=%s", dev_node);
-        Gsm0710Muxd_Assert(GSM0710MUXD_OPEN_SERIAL_DEV_ERR);
+        LOGMUX(LOG_ERR, "ccci_get_node_name unknown, default tablet=%s", dev_node); 
+        Gsm0710Muxd_Assert(GSM0710MUXD_OPEN_SERIAL_DEV_ERR);  
     #endif
     #endif /* MTK_RIL_MD2 */
 
@@ -3748,7 +3706,7 @@ int main(int argc, char *argv[])
         snprintf(dev_node, 32, "%s", ccci_get_node_name(USR_MUXD_DATA, MD_SYS5));
     #else
         snprintf(dev_node, 32, "%s", "/dev/ttyUSB1");
-        LOGMUX(LOG_ERR, "ccci_get_node_name unknown, default tablet=%s", dev_node);
+        LOGMUX(LOG_ERR, "ccci_get_node_name unknown, default tablet=%s", dev_node);    
     #endif
         LOGMUX(LOG_INFO, "ccci_get_node_name=%s", dev_node);
     }

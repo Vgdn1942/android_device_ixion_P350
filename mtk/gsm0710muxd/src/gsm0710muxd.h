@@ -49,6 +49,9 @@
 
 /******************************************************************************/
 
+// Define the maxium number of channel that gsm0710muxd could support
+#define GSM0710_MAX_CHANNELS 32
+
 #define GSM0710_WRITE_RETRIES 5
 // Defines how often the modem is polled when automatic restarting is
 // enabled The value is in seconds
@@ -78,7 +81,7 @@
 #define MUXD_CH_ATCI        1
 #define MUXD_CH_NUM_CSD     1
 
-#ifdef __ANDROID_VT_SUPPORT__
+#ifdef __ANDROID_VT_SUPPORT__ 
 #ifdef MTK_RIL_MD2
 #define MUXD_CH_NUM_VT      0
 #else
@@ -146,11 +149,13 @@
 
 #ifdef MTK_RIL_MD1
 #define LOGMUX(lvl,f,...) do{if(lvl<=syslog_level){\
-                                RLOGD("[gsm0710muxd] %d:%s(): " f, __LINE__, __FUNCTION__, ##__VA_ARGS__);}\
+                                LOG_PRI(android_log_lvl_convert[lvl], LOG_TAG, \
+                                "[gsm0710muxd] %d:%s(): " f, __LINE__, __FUNCTION__, ##__VA_ARGS__);}\
                           }while(0)
 #else
 #define LOGMUX(lvl,f,...) do{if(lvl<=syslog_level){\
-                                RLOGD("[gsm0710muxdmd2] %d:%s(): " f, __LINE__, __FUNCTION__, ##__VA_ARGS__);}\
+                                LOG_PRI(android_log_lvl_convert[lvl], LOG_TAG, \
+                                "[gsm0710muxdmd2] %d:%s(): " f, __LINE__, __FUNCTION__, ##__VA_ARGS__);}\
                           }while(0)
 #endif
 

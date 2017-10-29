@@ -59,6 +59,7 @@ LOCAL_MODULE_SUFFIX := .so
 LOCAL_SRC_FILES_arm64 := blisrc16/lib64blisrc.so
 LOCAL_MULTILIB := both
 include $(BUILD_PREBUILT)
+
 include $(CLEAR_VARS)
 LOCAL_MODULE := libblisrc32
 LOCAL_MODULE_TAGS := optional

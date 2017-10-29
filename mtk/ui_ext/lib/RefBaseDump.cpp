@@ -14,10 +14,10 @@
 #define RBD_LOGE(x, ...)
 #endif
 
-#include <cutils/log.h>
+#include <cutils/xlog.h>
 #include <cutils/process_name.h>
 #include <cutils/properties.h>
-#include <RefBaseDump.h>
+#include <ui/mediatek/RefBaseDump.h>
 
 namespace android {
 

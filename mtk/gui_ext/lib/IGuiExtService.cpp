@@ -1,6 +1,5 @@
 #define LOG_TAG "GuiExt"
 
-#define MTK_LOG_ENABLE 1
 #include <utils/Errors.h>
 #include <utils/RefBase.h>
 #include <utils/Vector.h>
@@ -10,10 +9,10 @@
 #include <binder/Parcel.h>
 #include <binder/IInterface.h>
 
-#include <cutils/log.h>
+#include <cutils/xlog.h>
 
 #include <ui/GraphicBuffer.h>
-#include <IDumpTunnel.h>
+#include <ui/mediatek/IDumpTunnel.h>
 
 #include "IGuiExtService.h"
 
@@ -37,7 +36,7 @@ public:
         data.writeInt32(h);
         status_t result = remote()->transact(GUI_EXT_ALLOC, data, &reply);
         if (result != NO_ERROR) {
-            ALOGE("alloc could not contact remote\n");
+            XLOGE("alloc could not contact remote\n");
             return result;
         }
         *id = reply.readInt32();
@@ -52,7 +51,7 @@ public:
         data.writeInt32(id);
         status_t result = remote()->transact(GUI_EXT_FREE, data, &reply);
         if (result != NO_ERROR) {
-            ALOGE("free could not contact remote\n");
+            XLOGE("free could not contact remote\n");
             return -1;
         }
         result = reply.readInt32();
@@ -69,7 +68,7 @@ public:
         data.writeInt32(type);
         status_t result = remote()->transact(GUI_EXT_ACQUIRE, data, &reply);
         if (result != NO_ERROR) {
-            ALOGE("acquire could not contact remote\n");
+            XLOGE("acquire could not contact remote\n");
             return result;
         }
         *buf = reply.readInt32();
@@ -87,7 +86,7 @@ public:
         data.writeInt32(buf);
         status_t result =remote()->transact(GUI_EXT_REQUEST, data, &reply);
         if (result != NO_ERROR) {
-            ALOGE("request could not contact remote\n");
+            XLOGE("request could not contact remote\n");
             return result;
         }
         bool nonNull = reply.readInt32();
@@ -113,7 +112,7 @@ public:
         data.writeInt32(buf);
         status_t result = remote()->transact(GUI_EXT_RELEASE, data, &reply);
         if (result != NO_ERROR) {
-            ALOGE("release could not contact remote\n");
+            XLOGE("release could not contact remote\n");
             return result;
         }
         result = reply.readInt32();
@@ -129,7 +128,7 @@ public:
         data.writeInt32(type);
         status_t result = remote()->transact(GUI_EXT_DISCONNECT, data, &reply);
         if (result != NO_ERROR) {
-            ALOGE("disconnect could not contact remote\n");
+            XLOGE("disconnect could not contact remote\n");
             return result;
         }
         result = reply.readInt32();
@@ -147,7 +146,7 @@ public:
         data.writeInt32(bufNum);
         status_t result = remote()->transact(GUI_EXT_CONFIGDISPLAY, data, &reply);
         if (result != NO_ERROR) {
-            ALOGE("disconnect could not contact remote\n");
+            XLOGE("disconnect could not contact remote\n");
             return result;
         }
         result = reply.readInt32();
@@ -157,7 +156,7 @@ public:
     {
         Parcel data, reply;
         data.writeInterfaceToken(IGuiExtService::getInterfaceDescriptor());
-        data.writeStrongBinder(tunnel->asBinder(tunnel));
+        data.writeStrongBinder(tunnel->asBinder());
         data.writeString8(key);
         remote()->transact(GUI_EXT_REGDUMP, data, &reply);
         return reply.readInt32();
@@ -177,7 +176,7 @@ IMPLEMENT_META_INTERFACE(GuiExtService, "GuiExtService");
 
 status_t BnGuiExtService::onTransact(uint32_t code, const Parcel& data, Parcel* reply, uint32_t flags)
 {
-    //ALOGD("receieve the command code %d", code);
+    //XLOGD("receieve the command code %d", code);
 
     switch(code)
     {

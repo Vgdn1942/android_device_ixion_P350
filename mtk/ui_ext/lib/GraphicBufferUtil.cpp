@@ -1,10 +1,9 @@
 #define LOG_TAG "GraphicBufferUtil"
 #define ATRACE_TAG ATRACE_TAG_GRAPHICS
 
-#define MTK_LOG_ENABLE 1
 #include <utils/String8.h>
 
-#include <cutils/log.h>
+#include <cutils/xlog.h>
 
 #include <ui/GraphicBufferExtra.h>
 #include <ui/GraphicBuffer.h>
@@ -24,38 +23,30 @@ namespace android {
 
 ANDROID_SINGLETON_STATIC_INSTANCE( GraphicBufferUtil )
 
-status_t BufferInfo::getInfo(const buffer_handle_t& handle)
+class BufferInfo
 {
-    mHandle = handle;
-    int format = PIXEL_FORMAT_UNKNOWN;
-    int err = NO_ERROR;
-    mErr = gralloc_extra_query(handle, GRALLOC_EXTRA_GET_WIDTH, &mWidth);
-    mErr |= gralloc_extra_query(handle, GRALLOC_EXTRA_GET_HEIGHT, &mHeight);
-    mErr |= gralloc_extra_query(handle, GRALLOC_EXTRA_GET_STRIDE, &mStride);
-    mErr |= gralloc_extra_query(handle, GRALLOC_EXTRA_GET_FORMAT, &mFormat);
+private:
+    int mErr;
 
-    if ((err = getGraphicBufferUtil().getRealFormat(handle, &format)) == GRALLOC_EXTRA_OK)
-    {
-        mFormat = format;
-    }
-    mErr |= err;
-    return mErr;
-}
+public:    
+    int mWidth;
+    int mHeight;
+    int mStride;
+    int mFormat;
 
-status_t BufferInfo::getInfo(const sp<GraphicBuffer>& gb)
-{
-    if (NO_ERROR != getInfo(gb->handle))
+    BufferInfo(buffer_handle_t handle) : mErr(0)
     {
-        ALOGD("Can't gralloc_extra handle, fallback to get info from gb!");
-        mHandle = gb->handle;
-        mWidth = gb->width;
-        mHeight = gb->height;
-        mStride = gb->stride;
-        mFormat = gb->format;
-        mErr = NO_ERROR;
+        mErr = gralloc_extra_query(handle, GRALLOC_EXTRA_GET_WIDTH, &mWidth);
+        mErr |= gralloc_extra_query(handle, GRALLOC_EXTRA_GET_HEIGHT, &mHeight);
+        mErr |= gralloc_extra_query(handle, GRALLOC_EXTRA_GET_STRIDE, &mStride);
+        mErr |= gralloc_extra_query(handle, GRALLOC_EXTRA_GET_FORMAT, &mFormat);
     }
-    return mErr;
-}
+
+    int getError()
+    {
+        return mErr;
+    }
+};
 
 GraphicBufferUtil::GraphicBufferUtil()
 {
@@ -77,7 +68,7 @@ static void write565Data(uint32_t width,
     png_bytep tmp = new png_byte[width * outBPP];
     if (NULL == tmp)
     {
-        ALOGE("cannot create temp row buffer for RGB565 conversion");
+        XLOGE("cannot create temp row buffer for RGB565 conversion");
         return;
     }
 
@@ -124,14 +115,10 @@ void GraphicBufferUtil::dump(const sp<GraphicBuffer>& gb,
 {
     if (CC_UNLIKELY(gb == NULL))
     {
-        ALOGE("[%s] gb is NULL", __func__);
+        XLOGE("[%s] gb is NULL", __func__);
         return;
     }
-
-    BufferInfo i;
-    i.getInfo(gb);
-
-    dump(i, prefix, dir);
+    dump(gb->handle, prefix, dir);
 }
 
 void GraphicBufferUtil::dump(const buffer_handle_t &handle,
@@ -140,28 +127,29 @@ void GraphicBufferUtil::dump(const buffer_handle_t &handle,
 {
     if (CC_UNLIKELY(handle == NULL))
     {
-        ALOGE("[%s] handle is NULL", __func__);
+        XLOGE("[%s] handle is NULL", __func__);
         return;
     }
 
-    BufferInfo i;
-    i.getInfo(handle);
+    BufferInfo info(handle);
+    if(info.getError() != NO_ERROR)
+    {
+        XLOGD("getting info of handle failed");
+        return;
+    }
 
-    dump(i, prefix, dir);
-}
-
-void GraphicBufferUtil::dump( const BufferInfo &info,
-                              const char* prefix,
-                              const char* dir)
-{
     const uint32_t& width = info.mWidth;
     const uint32_t& height = info.mHeight;
     const uint32_t& stride = info.mStride;
-    const buffer_handle_t& handle = info.mHandle;
-    const PixelFormat& format = info.mFormat;
+    PixelFormat inputFormat = PIXEL_FORMAT_UNKNOWN;
+    if (getRealFormat(handle, &inputFormat) != GRALLOC_EXTRA_OK)
+    {
+        XLOGE("Getting format of handle failed");
+        return;
+    }
 
-    ALOGD("[%s] handle:%p +", __func__, handle);
-    ALOGD("    prefix: %s dir:%s", prefix, dir);
+    XLOGD("[%s] handle:%p +", __func__, handle);
+    XLOGD("    prefix: %s dir:%s", prefix, dir);
 
     // make file name, default path to /data/[handle]_[width]_[height]_[stride]
     String8 path;
@@ -184,11 +172,11 @@ void GraphicBufferUtil::dump( const BufferInfo &info,
         path.append(String8::format("/%s_H%p_w%d_h%d_s%d",
             prefix, handle, width, height, stride));
     }
-    ALOGD("      name: %s", path.string());
+    XLOGD("      name: %s", path.string());
 
     int dumpHeight = height;
 
-    uint32_t bits = getBitsPerPixel(format);
+    uint32_t bits = getBitsPerPixel(info.mFormat);
     bool isRaw = false;
     bool is565 = false;
     bool stripAlpha = false;
@@ -196,7 +184,7 @@ void GraphicBufferUtil::dump( const BufferInfo &info,
     // switch case different pixel format process
     // only RGB? series will be saved into image file
     // others in RAW data only
-    switch (format)
+    switch (inputFormat)
     {
         case HAL_PIXEL_FORMAT_RGBA_8888:
             path += ".png";
@@ -244,10 +232,10 @@ void GraphicBufferUtil::dump( const BufferInfo &info,
             path += ".RGB";
             break;
         default:
-            ALOGE("    CANNOT dump (format:0x%x)", format);
+            XLOGE("    CANNOT dump (format:0x%x)", inputFormat);
             return;
     }
-    ALOGD("      path: %s", path.string());
+    XLOGD("      path: %s", path.string());
 
     void        *ptr     = NULL;
     FILE        *f       = NULL;
@@ -264,20 +252,20 @@ void GraphicBufferUtil::dump( const BufferInfo &info,
     {
         if (NULL == ptr)
         {
-            ALOGE("    lock() FAILED");
+            XLOGE("    lock() FAILED");
             goto finalize;
         }
 
         f = fopen(path.string(), "wb");
         if (NULL == f)
         {
-            ALOGE("    fopen() FAILED");
+            XLOGE("    fopen() FAILED");
             goto finalize;
         }
 
         if (isRaw)
         {
-            if (HAL_PIXEL_FORMAT_YV12 == format)
+            if (HAL_PIXEL_FORMAT_YV12 == inputFormat)
             {
                 // need correction for YV12 case, pending for VU planes should also pending to 16
                 uint32_t remainder = (stride / 2) % 16;
@@ -299,7 +287,7 @@ void GraphicBufferUtil::dump( const BufferInfo &info,
             png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
             if (NULL == png_ptr)
             {
-                ALOGE("    init png FAILED (1)");
+                XLOGE("    init png FAILED (1)");
                 goto finalize;
             }
 
@@ -307,7 +295,7 @@ void GraphicBufferUtil::dump( const BufferInfo &info,
             info_ptr = png_create_info_struct(png_ptr);
             if (NULL == info_ptr)
             {
-                ALOGE("    init png FAILED (2)");
+                XLOGE("    init png FAILED (2)");
                 goto finalize;
             }
 
@@ -377,7 +365,7 @@ finalize:
     }
     GraphicBufferMapper::getInstance().unlock(handle);
 
-    ALOGD("[%s] -", __func__);
+    XLOGD("[%s] -", __func__);
 }
 
 uint32_t GraphicBufferUtil::getBitsPerPixel(int format)
@@ -406,7 +394,7 @@ uint32_t GraphicBufferUtil::getBitsPerPixel(int format)
             bits = 12;
             break;
         default:
-            ALOGE("    unknown format: 0x%x, use default as 4.0", format);
+            XLOGE("    unknown format: 0x%x, use default as 4.0", format);
     }
     return bits;
 }
@@ -419,7 +407,7 @@ uint32_t GraphicBufferUtil::getBitsPerPixel(buffer_handle_t handle)
                 GRALLOC_EXTRA_GET_FORMAT,
                 static_cast<int*>(&format)) != GRALLOC_EXTRA_OK)
     {
-        ALOGE("Getting format of handle failed");
+        XLOGE("Getting format of handle failed");
         return 0;
     }
     return getBitsPerPixel(format);
@@ -429,37 +417,36 @@ status_t GraphicBufferUtil::drawLine(const sp<GraphicBuffer>& gb, uint8_t val, i
 {
     if (CC_UNLIKELY(gb == NULL))
     {
-        ALOGE("[%s] gb is NULL", __func__);
+        XLOGE("[%s] gb is NULL", __func__);
         return INVALID_OPERATION;
     }
-
-    BufferInfo i;
-    i.getInfo(gb);
-
-    return drawLine(i, val, ptn_w, ptn_h, pos);
+    return drawLine(gb->handle, val, ptn_w, ptn_h, pos);
 }
 
 status_t GraphicBufferUtil::drawLine(const buffer_handle_t& handle, uint8_t val, int ptn_w, int ptn_h, int pos)
 {
     if (CC_UNLIKELY(handle == NULL))
     {
-        ALOGE("[%s] handle is NULL", __func__);
+        XLOGE("[%s] handle is NULL", __func__);
         return INVALID_OPERATION;
     }
 
-    BufferInfo i;
-    i.getInfo(handle);
+    BufferInfo info(handle);
+    if(info.getError() != NO_ERROR)
+    {
+        XLOGD("getting info of handle failed");
+        return INVALID_OPERATION;
+    }
 
-    return drawLine(i, val, ptn_w, ptn_h, pos);
-}
-
-status_t GraphicBufferUtil::drawLine(const BufferInfo &info, uint8_t val, int ptn_w, int ptn_h, int pos)
-{
     const uint32_t& width = info.mWidth;
     const uint32_t& height = info.mHeight;
     const uint32_t& stride = info.mStride;
-    const buffer_handle_t& handle = info.mHandle;
-    const PixelFormat& format = info.mFormat;
+    PixelFormat inputFormat = PIXEL_FORMAT_UNKNOWN;
+    if (getRealFormat(handle, &inputFormat) != GRALLOC_EXTRA_OK)
+    {
+        XLOGE("getting format of handle failed");
+        return INVALID_OPERATION;
+    }
 
     if (ptn_w == 0)
         ptn_w = 1;
@@ -483,7 +470,7 @@ status_t GraphicBufferUtil::drawLine(const BufferInfo &info, uint8_t val, int pt
                                                       (void**)&ptr);
     if (NO_ERROR != err)
     {
-        ALOGE("[%s] buffer lock fail: %s (handle:%p)",
+        XLOGE("[%s] buffer lock fail: %s (handle:%p)",
             __func__, strerror(err), handle);
     }
     else
@@ -491,9 +478,9 @@ status_t GraphicBufferUtil::drawLine(const BufferInfo &info, uint8_t val, int pt
         // if custom format, just regard as one-byte-plane size
         // otherwise use accurate size aggressively
         uint32_t bits = 8;
-        if (format < 0x100)
+        if (inputFormat < 0x100)
         {
-            bits = getBitsPerPixel(format);
+            bits = getBitsPerPixel(inputFormat);
         }
 
         if (ptn_w == 1)
@@ -502,7 +489,7 @@ status_t GraphicBufferUtil::drawLine(const BufferInfo &info, uint8_t val, int pt
 
             pos &= (line_h - 1);    // mod count by 32
 
-            ALOGV("[debug] drawLine, pos=%d, log_h=%d, line_h=%d", pos, log_h, line_h);
+            XLOGV("[debug] drawLine, pos=%d, log_h=%d, line_h=%d", pos, log_h, line_h);
 
             bsize = ((stride * height * bits) >> 3) >> log_h;
             memset((void*)(ptr + (bsize * pos)), val, bsize);
@@ -517,7 +504,7 @@ status_t GraphicBufferUtil::drawLine(const BufferInfo &info, uint8_t val, int pt
             uint32_t pos_y = (pos / line_w) & (line_h - 1);
             uint32_t j;
 
-            ALOGV("[debug] drawLine pos=%d, log_w=%d, line_w=%d, log_h=%d, line_h=%d, "
+            XLOGV("[debug] drawLine pos=%d, log_w=%d, line_w=%d, log_h=%d, line_h=%d, "
                   "block_number=%d, block_w=%d, block_h=%d, bsize=%d, pos_x=%d, pos_y=%d",
                 pos, log_w, line_w, log_h, line_h, block_number, block_w, block_h, bsize, pos_x, pos_y);
 
@@ -538,12 +525,12 @@ status_t GraphicBufferUtil::drawLine(const BufferInfo &info, uint8_t val, int pt
 int GraphicBufferUtil::getRealFormat(buffer_handle_t handle, PixelFormat* format) {
     if (NULL == handle)
     {
-        ALOGE("[%s] invalid argument", __func__);
+        XLOGE("[%s] invalid argument", __func__);
         return GRALLOC_EXTRA_ERROR;
     }
     if (NULL == format)
     {
-        ALOGE("[%s] invalid argument", __func__);
+        XLOGE("[%s] invalid argument", __func__);
         return GRALLOC_EXTRA_ERROR;
     }
     int err = GRALLOC_EXTRA_OK;
@@ -554,7 +541,7 @@ int GraphicBufferUtil::getRealFormat(buffer_handle_t handle, PixelFormat* format
                     GRALLOC_EXTRA_GET_FORMAT,
                     format)) != GRALLOC_EXTRA_OK)
     {
-        ALOGE("[%s] to get format failed", __func__);
+        XLOGE("[%s] to get format failed", __func__);
         return err;
     }
 
@@ -563,7 +550,7 @@ int GraphicBufferUtil::getRealFormat(buffer_handle_t handle, PixelFormat* format
         gralloc_extra_ion_sf_info_t sf_info;
         if ((err = gralloc_extra_query(handle, GRALLOC_EXTRA_GET_IOCTL_ION_SF_INFO, &sf_info))
                 != GRALLOC_EXTRA_OK) {
-            ALOGE("[%s] to query real format failed", __func__);
+            XLOGE("[%s] to query real format failed", __func__);
             return err;
         }
         // check real format within private format
@@ -579,7 +566,7 @@ int GraphicBufferUtil::getRealFormat(buffer_handle_t handle, PixelFormat* format
                 *format = HAL_PIXEL_FORMAT_NV12_BLK_FCM;
                 break;
             default:
-                ALOGE("    CANNOT get real format: (format=0x%x, fillFormat=0x%x)",
+                XLOGE("    CANNOT get real format: (format=0x%x, fillFormat=0x%x)",
                       *format,
                       sf_info.status & GRALLOC_EXTRA_MASK_CM);
                 return GRALLOC_EXTRA_ERROR;

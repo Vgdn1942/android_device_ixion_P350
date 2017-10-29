@@ -1,11 +1,10 @@
 #define LOG_TAG "GuiExt"
 
-#define MTK_LOG_ENABLE 1
 #include <dlfcn.h>
 #include <fcntl.h>
 #include <math.h>
 #include <string.h>
-#include <cutils/log.h>
+#include <cutils/xlog.h>
 #include <cutils/properties.h>
 #include <utils/SortedVector.h>
 #include <binder/PermissionCache.h>
@@ -15,7 +14,7 @@
 #include <gui/SurfaceComposerClient.h>
 
 #include <ui/DisplayInfo.h>
-#include <IDumpTunnel.h>
+#include <ui/mediatek/IDumpTunnel.h>
 
 #include <cutils/memory.h>
 
@@ -24,11 +23,11 @@
 
 namespace android {
 
-#define GUIEXT_LOGV(x, ...) ALOGV("[GuiExtS] " x, ##__VA_ARGS__)
-#define GUIEXT_LOGD(x, ...) ALOGD("[GuiExtS] " x, ##__VA_ARGS__)
-#define GUIEXT_LOGI(x, ...) ALOGI("[GuiExtS] " x, ##__VA_ARGS__)
-#define GUIEXT_LOGW(x, ...) ALOGW("[GuiExtS] " x, ##__VA_ARGS__)
-#define GUIEXT_LOGE(x, ...) ALOGE("[GuiExtS] " x, ##__VA_ARGS__)
+#define GUIEXT_LOGV(x, ...) XLOGV("[GuiExtS] "x, ##__VA_ARGS__)
+#define GUIEXT_LOGD(x, ...) XLOGD("[GuiExtS] "x, ##__VA_ARGS__)
+#define GUIEXT_LOGI(x, ...) XLOGI("[GuiExtS] "x, ##__VA_ARGS__)
+#define GUIEXT_LOGW(x, ...) XLOGW("[GuiExtS] "x, ##__VA_ARGS__)
+#define GUIEXT_LOGE(x, ...) XLOGE("[GuiExtS] "x, ##__VA_ARGS__)
 
 GuiExtService::GuiExtService()
 {
@@ -137,7 +136,7 @@ status_t GuiExtService::dump(int fd, const Vector<String16>& /*args*/)
             const String8& key = mDumpTunnels.keyAt(i);
             const sp<IDumpTunnel>& tunnel = mDumpTunnels.valueAt(i);
 
-            if (!tunnel->asBinder(tunnel)->isBinderAlive()) {
+            if (!tunnel->asBinder()->isBinderAlive()) {
                 zombieTunnels.add(key, tunnel);
             } else if (key.find("BQ") == 0) {
                 bufferQueueTunnels.add(key, tunnel);
@@ -215,10 +214,10 @@ status_t GuiExtService::dump(int fd, const Vector<String16>& /*args*/)
 status_t GuiExtService::regDump(const sp<IDumpTunnel>& tunnel, const String8& key)
 {
     // check the tunnel does not come from GuiExtService
-    if (!tunnel->asBinder(tunnel)->remoteBinder())
+    if (!tunnel->asBinder()->remoteBinder())
         return NO_ERROR;
 
-    if (!tunnel->asBinder(tunnel)->isBinderAlive())
+    if (!tunnel->asBinder()->isBinderAlive())
         return BAD_VALUE;
 
     class DeathNotifier : public IBinder::DeathRecipient
@@ -247,7 +246,7 @@ status_t GuiExtService::regDump(const sp<IDumpTunnel>& tunnel, const String8& ke
     };
     sp<IBinder::DeathRecipient> notifier = new DeathNotifier(key, this);
     if (notifier != NULL)
-        tunnel->asBinder(tunnel)->linkToDeath(notifier);
+        tunnel->asBinder()->linkToDeath(notifier);
 
     Mutex::Autolock l(mDumpLock);
 
@@ -259,7 +258,7 @@ status_t GuiExtService::regDump(const sp<IDumpTunnel>& tunnel, const String8& ke
         for (int32_t i = (before - 1); i >= 0; i--)
         {
             const sp<IDumpTunnel>& t = mDumpTunnels[i];
-            if (!t->asBinder(t)->isBinderAlive())
+            if (!t->asBinder()->isBinderAlive())
             {
                 mDumpTunnels.removeItemsAt(i);
             }

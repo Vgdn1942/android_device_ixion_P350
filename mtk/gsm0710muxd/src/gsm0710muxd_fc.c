@@ -54,7 +54,7 @@
 #include <pthread.h>
 
 #ifdef MUX_ANDROID
-//#include <pathconf.h>
+#include <pathconf.h>
 #include <sys/socket.h>
 #include <cutils/sockets.h>
 #include <cutils/properties.h>
@@ -221,6 +221,7 @@ void _fc_cacheFrameData(
     if ((channel->rx_fl_total + frame->length) > RX_FLOW_CTRL_HIGH_WATERMARK) {
         LOGMUX(LOG_DEBUG, "Accumulated_pending_frame_bytes is larger than mark val=%d, drop it",
                RX_FLOW_CTRL_HIGH_WATERMARK);
+        destroy_frame(frame);
         serial.in_buf->dropped_count++;
         //mtk02863
         //Gsm0710Muxd_Assert(19);
@@ -231,7 +232,6 @@ void _fc_cacheFrameData(
 
     LOGMUX(LOG_INFO, "Case2:Frame List=0x%08X, pending_frame_bytes=%d, frame_len=%d",
            (unsigned int)channel->rx_fl, channel->rx_fl_total, frame->length);
-    destroy_frame(frame);
     return;
 }
 

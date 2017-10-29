@@ -1,0 +1,25 @@
+From 298aa1a65cbd695f51b6a5ebd81b6bbf3655e446 Mon Sep 17 00:00:00 2001
+From: vgdn1942 <vgdn1942@gmail.com>
+Date: Sun, 29 Oct 2017 19:04:45 +0300
+Subject: [PATCH] Fix build
+
+Change-Id: Ib7f7fdb46f6c069c6006cd887c0760ec62fa25a6
+---
+ domain.te | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/domain.te b/domain.te
+index 80ed156..b6eeb2e 100644
+--- a/domain.te
++++ b/domain.te
+@@ -194,7 +194,6 @@ neverallow {
+   -init
+   -ueventd
+   -vold
+-  -proj_dev_setup
+ } self:capability mknod;
+ 
+ attribute rmt_placeholder;
+-- 
+2.7.4
+

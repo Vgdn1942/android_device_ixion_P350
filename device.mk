@@ -60,8 +60,8 @@ PRODUCT_PACKAGES += \
 #    power.mt6580 \
 
 # Lights
-PRODUCT_PACKAGES += \
-    lights.mt6580
+#PRODUCT_PACKAGES += \
+#    lights.mt6580
 
 # Camera
 PRODUCT_PACKAGES += \

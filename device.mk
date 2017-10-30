@@ -55,6 +55,9 @@ PRODUCT_PACKAGES += \
 	com.cyanogenmod.keyhandler \
 	Gestures
 
+PRODUCT_SYSTEM_SERVER_JARS += \
+	com.cyanogenmod.keyhandler
+
 # Power
 #PRODUCT_PACKAGES += \
 #    power.mt6580 \

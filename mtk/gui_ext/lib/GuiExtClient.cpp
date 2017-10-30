@@ -38,7 +38,7 @@ status_t GuiExtClient::assertStateLocked() const
             DeathObserver(GuiExtClient & service) : mGuiExtClient(service) { }
         };
         mDeathObserver = new DeathObserver(*const_cast<GuiExtClient*>(this));
-        mGuiExtService->asBinder()->linkToDeath(mDeathObserver);
+        mGuiExtService->asBinder(mGuiExtService)->linkToDeath(mDeathObserver);
     }
 
     return NO_ERROR;

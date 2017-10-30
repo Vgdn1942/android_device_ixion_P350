@@ -156,7 +156,7 @@ public:
     {
         Parcel data, reply;
         data.writeInterfaceToken(IGuiExtService::getInterfaceDescriptor());
-        data.writeStrongBinder(tunnel->asBinder());
+        data.writeStrongBinder(tunnel->asBinder(tunnel));
         data.writeString8(key);
         remote()->transact(GUI_EXT_REGDUMP, data, &reply);
         return reply.readInt32();

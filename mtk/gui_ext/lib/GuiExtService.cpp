@@ -136,7 +136,7 @@ status_t GuiExtService::dump(int fd, const Vector<String16>& /*args*/)
             const String8& key = mDumpTunnels.keyAt(i);
             const sp<IDumpTunnel>& tunnel = mDumpTunnels.valueAt(i);
 
-            if (!tunnel->asBinder()->isBinderAlive()) {
+            if (!tunnel->asBinder(tunnel)->isBinderAlive()) {
                 zombieTunnels.add(key, tunnel);
             } else if (key.find("BQ") == 0) {
                 bufferQueueTunnels.add(key, tunnel);
@@ -214,10 +214,10 @@ status_t GuiExtService::dump(int fd, const Vector<String16>& /*args*/)
 status_t GuiExtService::regDump(const sp<IDumpTunnel>& tunnel, const String8& key)
 {
     // check the tunnel does not come from GuiExtService
-    if (!tunnel->asBinder()->remoteBinder())
+    if (!tunnel->asBinder(tunnel)->remoteBinder())
         return NO_ERROR;
 
-    if (!tunnel->asBinder()->isBinderAlive())
+    if (!tunnel->asBinder(tunnel)->isBinderAlive())
         return BAD_VALUE;
 
     class DeathNotifier : public IBinder::DeathRecipient
@@ -246,7 +246,7 @@ status_t GuiExtService::regDump(const sp<IDumpTunnel>& tunnel, const String8& ke
     };
     sp<IBinder::DeathRecipient> notifier = new DeathNotifier(key, this);
     if (notifier != NULL)
-        tunnel->asBinder()->linkToDeath(notifier);
+        tunnel->asBinder(tunnel)->linkToDeath(notifier);
 
     Mutex::Autolock l(mDumpLock);
 
@@ -258,7 +258,7 @@ status_t GuiExtService::regDump(const sp<IDumpTunnel>& tunnel, const String8& ke
         for (int32_t i = (before - 1); i >= 0; i--)
         {
             const sp<IDumpTunnel>& t = mDumpTunnels[i];
-            if (!t->asBinder()->isBinderAlive())
+            if (!t->asBinder(t)->isBinderAlive())
             {
                 mDumpTunnels.removeItemsAt(i);
             }

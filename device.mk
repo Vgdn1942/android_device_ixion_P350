@@ -50,14 +50,6 @@ PRODUCT_PACKAGES += \
     guiext-server \
     libmtk_drvb
 
-# Keyhandler
-PRODUCT_PACKAGES += \
-	com.cyanogenmod.keyhandler \
-	Gestures
-
-PRODUCT_SYSTEM_SERVER_JARS += \
-	com.cyanogenmod.keyhandler
-
 # Power
 #PRODUCT_PACKAGES += \
 #    power.mt6580 \
@@ -229,7 +221,4 @@ PRODUCT_CHARACTERISTICS := default
 $(call inherit-product, build/target/product/full.mk)
 
 $(call inherit-product, frameworks/native/build/phone-xhdpi-1024-dalvik-heap.mk)
-
-# never dexopt the keyhandler
-$(call add-product-dex-preopt-module-config,com.cyanogenmod.keyhandler,disable)
 

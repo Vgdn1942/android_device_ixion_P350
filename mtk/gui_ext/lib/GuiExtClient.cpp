@@ -1,6 +1,6 @@
 #define LOG_TAG "GuiExt"
 
-#include <cutils/xlog.h>
+#include <cutils/log.h>
 #include <binder/IServiceManager.h>
 #include <binder/ProcessState.h>
 #include "GuiExtClient.h"
@@ -8,11 +8,11 @@
 
 namespace android {
 
-#define GUIEX_LOGV(x, ...) XLOGV("[GuiExtL] "x, ##__VA_ARGS__)
-#define GUIEX_LOGD(x, ...) XLOGD("[GuiExtL] "x, ##__VA_ARGS__)
-#define GUIEX_LOGI(x, ...) XLOGI("[GuiExtL] "x, ##__VA_ARGS__)
-#define GUIEX_LOGW(x, ...) XLOGW("[GuiExtL] "x, ##__VA_ARGS__)
-#define GUIEX_LOGE(x, ...) XLOGE("[GuiExtL] "x, ##__VA_ARGS__)
+#define GUIEX_LOGV(x, ...) ALOGV("[GuiExtL] " x, ##__VA_ARGS__)
+#define GUIEX_LOGD(x, ...) ALOGD("[GuiExtL] " x, ##__VA_ARGS__)
+#define GUIEX_LOGI(x, ...) ALOGI("[GuiExtL] " x, ##__VA_ARGS__)
+#define GUIEX_LOGW(x, ...) ALOGW("[GuiExtL] " x, ##__VA_ARGS__)
+#define GUIEX_LOGE(x, ...) ALOGE("[GuiExtL] " x, ##__VA_ARGS__)
 
 GuiExtClient::GuiExtClient()
 {

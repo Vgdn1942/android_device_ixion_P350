@@ -3,7 +3,7 @@
 #include <dlfcn.h>
 #include <utils/String8.h>
 #include <binder/Parcel.h>
-#include <cutils/xlog.h>
+#include <cutils/log.h>
 #include <ui/mediatek/IDumpTunnel.h>
 
 namespace android {
@@ -22,7 +22,7 @@ public:
         data.writeCString(prefix);
         status_t err = remote()->transact(DUMPTUNNEL_DUMP, data, &reply);
         if (err != NO_ERROR) {
-            XLOGE("kickDump could not contact remote\n");
+            ALOGE("kickDump could not contact remote\n");
             return err;
         }
         result = reply.readString8();
@@ -74,13 +74,13 @@ DumpTunnelHelper::DumpTunnelHelper() :
         mRegDumpPtr = reinterpret_cast<RegDumpPrototype>(dlsym(mSoHandle, "regDump"));
         mUnregDumpPtr = reinterpret_cast<UnregDumpPrototype>(dlsym(mSoHandle, "unregDump"));
         if (NULL == mRegDumpPtr) {
-            XLOGE("finding regDump() failed");
+            ALOGE("finding regDump() failed");
         }
         if (NULL == mUnregDumpPtr) {
-            XLOGE("finding unregDump() failed");
+            ALOGE("finding unregDump() failed");
         }
     } else {
-        XLOGE("open libgui_ext failed");
+        ALOGE("open libgui_ext failed");
     }
 }
 
@@ -92,7 +92,7 @@ DumpTunnelHelper::~DumpTunnelHelper() {
 bool DumpTunnelHelper::regDump(const sp<IDumpTunnel>& tunnel, const String8& key) {
     bool result = false;
     if (NULL == mRegDumpPtr) {
-        XLOGE("finding regDump() failed");
+        ALOGE("finding regDump() failed");
         return result;
     }
     result = mRegDumpPtr(tunnel, key);
@@ -103,7 +103,7 @@ bool DumpTunnelHelper::regDump(const sp<IDumpTunnel>& tunnel, const String8& key
 bool DumpTunnelHelper::unregDump(const String8& key) {
     bool result = false;
     if (NULL == mUnregDumpPtr) {
-        XLOGE("finding unregDump() failed");
+        ALOGE("finding unregDump() failed");
         return result;
     }
     result = mUnregDumpPtr(key);

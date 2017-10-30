@@ -14,7 +14,7 @@
 #define RBD_LOGE(x, ...)
 #endif
 
-#include <cutils/xlog.h>
+#include <cutils/log.h>
 #include <cutils/process_name.h>
 #include <cutils/properties.h>
 #include <ui/mediatek/RefBaseDump.h>

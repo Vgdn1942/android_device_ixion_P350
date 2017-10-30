@@ -6,7 +6,7 @@
 #endif
 #define LOG_TAG "MFV_COMMON"    /* /< LOG_TAG "MFV_COMMON" */
 #include <utils/Log.h>
-#include <cutils/xlog.h>
+#include <cutils/log.h>
 
 #ifdef __cplusplus
 extern "C" {

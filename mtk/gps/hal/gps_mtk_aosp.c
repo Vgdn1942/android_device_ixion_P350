@@ -107,10 +107,10 @@
 #define  GPS_DEBUG  0
 #define  NEMA_DEBUG 0   /*the flag works if GPS_DEBUG is defined*/
 #if GPS_DEBUG
-#define  TRC(f)       XLOGD("%s", __func__)
-#define  ERR(f, ...)  XLOGE("%s: line = %d" f, __func__,__LINE__, ##__VA_ARGS__)
-#define  WAN(f, ...)  XLOGW("%s: line = %d" f, __func__, __LINE__,##__VA_ARGS__)
-#define DBG(f, ...) XLOGD("%s: line = %d" f, __func__, __LINE__,##__VA_ARGS__)
+#define  TRC(f)       ALOGD("%s", __func__)
+#define  ERR(f, ...)  ALOGE("%s: line = %d" f, __func__,__LINE__, ##__VA_ARGS__)
+#define  WAN(f, ...)  ALOGW("%s: line = %d" f, __func__, __LINE__,##__VA_ARGS__)
+#define DBG(f, ...) ALOGD("%s: line = %d" f, __func__, __LINE__,##__VA_ARGS__)
 #define VER(f, ...) ((void)0) //((void)0)//
 #else
 #  define TRC(...)    ((void)0)

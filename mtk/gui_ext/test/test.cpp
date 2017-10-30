@@ -1,7 +1,7 @@
 #define LOG_TAG "GuiExt-Test"
 
 #include <string.h>
-#include <cutils/xlog.h>
+#include <cutils/log.h>
 #include <hardware/gralloc.h>
 #include <hardware/hwcomposer_defs.h>
 

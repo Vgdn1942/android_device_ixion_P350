@@ -4,7 +4,7 @@
 #include <fcntl.h>
 #include <math.h>
 #include <string.h>
-#include <cutils/xlog.h>
+#include <cutils/log.h>
 #include <cutils/properties.h>
 #include <utils/SortedVector.h>
 #include <binder/PermissionCache.h>
@@ -23,11 +23,11 @@
 
 namespace android {
 
-#define GUIEXT_LOGV(x, ...) XLOGV("[GuiExtS] "x, ##__VA_ARGS__)
-#define GUIEXT_LOGD(x, ...) XLOGD("[GuiExtS] "x, ##__VA_ARGS__)
-#define GUIEXT_LOGI(x, ...) XLOGI("[GuiExtS] "x, ##__VA_ARGS__)
-#define GUIEXT_LOGW(x, ...) XLOGW("[GuiExtS] "x, ##__VA_ARGS__)
-#define GUIEXT_LOGE(x, ...) XLOGE("[GuiExtS] "x, ##__VA_ARGS__)
+#define GUIEXT_LOGV(x, ...) ALOGV("[GuiExtS] " x, ##__VA_ARGS__)
+#define GUIEXT_LOGD(x, ...) ALOGD("[GuiExtS] " x, ##__VA_ARGS__)
+#define GUIEXT_LOGI(x, ...) ALOGI("[GuiExtS] " x, ##__VA_ARGS__)
+#define GUIEXT_LOGW(x, ...) ALOGW("[GuiExtS] " x, ##__VA_ARGS__)
+#define GUIEXT_LOGE(x, ...) ALOGE("[GuiExtS] " x, ##__VA_ARGS__)
 
 GuiExtService::GuiExtService()
 {

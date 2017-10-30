@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <utils/Timers.h>
 #include <utils/Trace.h>
-#include <cutils/xlog.h>
+#include <cutils/log.h>
 #include <cutils/properties.h>
 #include <math.h>
 
@@ -41,11 +41,11 @@
 
 namespace android {
 
-#define GUIEXT_LOGV(x, ...) XLOGV("[GuiExtI] "x, ##__VA_ARGS__)
-#define GUIEXT_LOGD(x, ...) XLOGD("[GuiExtI] "x, ##__VA_ARGS__)
-#define GUIEXT_LOGI(x, ...) XLOGI("[GuiExtI] "x, ##__VA_ARGS__)
-#define GUIEXT_LOGW(x, ...) XLOGW("[GuiExtI] "x, ##__VA_ARGS__)
-#define GUIEXT_LOGE(x, ...) XLOGE("[GuiExtI] "x, ##__VA_ARGS__)
+#define GUIEXT_LOGV(x, ...) ALOGV("[GuiExtI] " x, ##__VA_ARGS__)
+#define GUIEXT_LOGD(x, ...) ALOGD("[GuiExtI] " x, ##__VA_ARGS__)
+#define GUIEXT_LOGI(x, ...) ALOGI("[GuiExtI] " x, ##__VA_ARGS__)
+#define GUIEXT_LOGW(x, ...) ALOGW("[GuiExtI] " x, ##__VA_ARGS__)
+#define GUIEXT_LOGE(x, ...) ALOGE("[GuiExtI] " x, ##__VA_ARGS__)
 
 #define ION_DEV_NODE "/dev/ion"
 

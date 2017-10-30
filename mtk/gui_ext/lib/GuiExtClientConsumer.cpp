@@ -1,6 +1,6 @@
 #define LOG_TAG "GuiExt"
 
-#include <cutils/xlog.h>
+#include <cutils/log.h>
 #include <binder/IServiceManager.h>
 #include <binder/ProcessState.h>
 #include <hardware/hwcomposer_defs.h>
@@ -13,11 +13,11 @@
 
 namespace android {
 
-#define GUIEXT_LOGV(x, ...) XLOGV("[GuiExtC] "x, ##__VA_ARGS__)
-#define GUIEXT_LOGD(x, ...) XLOGD("[GuiExtC] "x, ##__VA_ARGS__)
-#define GUIEXT_LOGI(x, ...) XLOGI("[GuiExtC] "x, ##__VA_ARGS__)
-#define GUIEXT_LOGW(x, ...) XLOGW("[GuiExtC] "x, ##__VA_ARGS__)
-#define GUIEXT_LOGE(x, ...) XLOGE("[GuiExtC] "x, ##__VA_ARGS__)
+#define GUIEXT_LOGV(x, ...) ALOGV("[GuiExtC] " x, ##__VA_ARGS__)
+#define GUIEXT_LOGD(x, ...) ALOGD("[GuiExtC] " x, ##__VA_ARGS__)
+#define GUIEXT_LOGI(x, ...) ALOGI("[GuiExtC] " x, ##__VA_ARGS__)
+#define GUIEXT_LOGW(x, ...) ALOGW("[GuiExtC] " x, ##__VA_ARGS__)
+#define GUIEXT_LOGE(x, ...) ALOGE("[GuiExtC] " x, ##__VA_ARGS__)
 
 #define POOL_ID_SHIFT(id)           (id << 10)
 #define POOL_USAGE_SHIFT(usage)     (usage << 6)

@@ -1,6 +1,6 @@
 #define LOG_TAG "GuiExt-Test"
 
-#include <cutils/xlog.h>
+#include <cutils/log.h>
 #ifdef USE_PTHREAD
 #include <pthread.h> 
 #else
@@ -34,7 +34,7 @@ int aal_service_fun(void *arg)
 
 int main(int argc, char** argv)
 {
-    XLOGD("AAL service start...");
+    ALOGD("AAL service start...");
     
 #ifdef USE_PTHREAD
     pthread_t aal_tid; 
@@ -55,6 +55,6 @@ int main(int argc, char** argv)
     sleep(10000);
 
 
-    XLOGD("AAL service finish...");
+    ALOGD("AAL service finish...");
     return 0;    
 }

@@ -120,8 +120,8 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused)))
 	//   insmod /system/lib/modules/mtk_wmt_wifi.ko
 
 	// SMB
-	chown("/proc/smb/ScreenComm", AID_SYSTEM, AID_SYSTEM);
-	chmod("/proc/smb/ScreenComm", 0660);
+	//chown("/proc/smb/ScreenComm", AID_SYSTEM, AID_SYSTEM);
+	//chmod("/proc/smb/ScreenComm", 0660);
 
 	// Create char device file for WMT, GPS, BT, FM, WIFI
 	// xen0n: stp stands for setup... oh what English is this
@@ -143,29 +143,44 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused)))
 
 
 	// Camera
-	chmod("/dev/GAF001AF", 0660);
-	chown("/dev/GAF001AF", AID_SYSTEM, AID_CAMERA);
+	chmod("/dev/FM50AF", 0660);
+	chown("/dev/FM50AF", AID_SYSTEM, AID_CAMERA);
 
-	chmod("/dev/DW9714AF", 0660);
-	chown("/dev/DW9714AF", AID_SYSTEM, AID_CAMERA);
+	chmod("/dev/DW9718AF", 0660);
+	chown("/dev/DW9718AF", AID_SYSTEM, AID_CAMERA);
 
-	chmod("/dev/AD5820AF", 0660);
-	chown("/dev/AD5820AF", AID_SYSTEM, AID_CAMERA);
+	chmod("/dev/DW9814AF", 0660);
+	chown("/dev/DW9814AF", AID_SYSTEM, AID_CAMERA);
 
-	chmod("/dev/BU64745GWZAF", 0660);
-	chown("/dev/BU64745GWZAF", AID_SYSTEM, AID_CAMERA);
+	chmod("/dev/CAM_CAL_DRV", 0660);
+	chown("/dev/CAM_CAL_DRV", AID_SYSTEM, AID_CAMERA);
 
-	chmod("/dev/LC898212AF", 0660);
-	chown("/dev/LC898212AF", AID_SYSTEM, AID_CAMERA);
+	chmod("/dev/camera-sysram", 0660);
+	chown("/dev/camera-sysram", AID_SYSTEM, AID_CAMERA);
 
-	chmod("/dev/LC898212XD", 0660);
-	chown("/dev/LC898212XD", AID_SYSTEM, AID_CAMERA);
+	chmod("/dev/camera-isp", 0660);
+	chown("/dev/camera-isp", AID_SYSTEM, AID_CAMERA);
+
+	chmod("/dev/camera-fdvt", 0660);
+	chown("/dev/camera-fdvt", AID_SYSTEM, AID_CAMERA);
+
+	chmod("/dev/camera-pipemgr", 0660);
+	chown("/dev/camera-pipemgr", AID_SYSTEM, AID_CAMERA);
+
+	chmod("/dev/kd_camera_hw", 0660);
+	chown("/dev/kd_camera_hw", AID_SYSTEM, AID_CAMERA);
+
+	chmod("/dev/kd_camera_flashlight", 0660);
+	chown("/dev/kd_camera_flashlight", AID_SYSTEM, AID_CAMERA);
+
+	chmod("/dev/kd_camera_hw_bus2", 0660);
+	chown("/dev/kd_camera_hw_bus2", AID_SYSTEM, AID_CAMERA);
 
 	// FlashLight
-	chmod("/sys/class/flashlightdrv/kd_camera_flashlight/flash1", 0660);
-	chown("/sys/class/flashlightdrv/kd_camera_flashlight/flash1", AID_MEDIA, AID_SYSTEM);
-	chmod("/sys/class/flashlightdrv/kd_camera_flashlight/flash2", 0660);
-	chown("/sys/class/flashlightdrv/kd_camera_flashlight/flash2", AID_MEDIA, AID_SYSTEM);
+	//chmod("/sys/class/flashlightdrv/kd_camera_flashlight/flash1", 0660);
+	//chown("/sys/class/flashlightdrv/kd_camera_flashlight/flash1", AID_MEDIA, AID_SYSTEM);
+	//chmod("/sys/class/flashlightdrv/kd_camera_flashlight/flash2", 0660);
+	//chown("/sys/class/flashlightdrv/kd_camera_flashlight/flash2", AID_MEDIA, AID_SYSTEM);
 
 	// BT
 	chmod("/dev/stpbt", 0660);
@@ -201,9 +216,9 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused)))
 	//    insmod /system/lib/modules/wlan_mt.ko
 
 	// Char device for BT 3.0 HS
-	s_mknod("/dev/ampc0", S_IFCHR, 151, 0);
-	chown("/dev/ampc0", AID_BLUETOOTH, AID_BLUETOOTH);
-	chmod("/dev/ampc0", 0660);
+	//s_mknod("/dev/ampc0", S_IFCHR, 151, 0);
+	//chown("/dev/ampc0", AID_BLUETOOTH, AID_BLUETOOTH);
+	//chmod("/dev/ampc0", 0660);
 
 	// leds
 	// moved to ueventd.mt6595.rc; COMPATIBILITY WITH FLYME BOOT.IMG IS LOST!
@@ -212,7 +227,7 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused)))
 	// chown("/sys/class/leds/mx-led/trigger", AID_SYSTEM, AID_SYSTEM);
 
 	// Permissions for power saving mode
-	chown("/sys/power/power_mode", AID_SYSTEM, AID_SYSTEM);
+	//chown("/sys/power/power_mode", AID_SYSTEM, AID_SYSTEM);
 
 	// 
 	// Connectivity related device nodes & configuration (end)
@@ -460,12 +475,12 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused)))
 	chmod("/sys/devices/platform/gpio-keys.0/key_hall_state", 0664);
 
 	// for holster and gesture
-	chown("/sys/devices/mx_tsp/hall_mode", AID_SYSTEM, AID_SYSTEM);
-	chown("/sys/devices/mx_tsp/gesture_control", AID_SYSTEM, AID_SYSTEM);
-	chown("/sys/devices/mx_tsp/gesture_data", AID_SYSTEM, AID_SYSTEM);
+	//chown("/sys/devices/mx_tsp/hall_mode", AID_SYSTEM, AID_SYSTEM);
+	//chown("/sys/devices/mx_tsp/gesture_control", AID_SYSTEM, AID_SYSTEM);
+	//chown("/sys/devices/mx_tsp/gesture_data", AID_SYSTEM, AID_SYSTEM);
 
 	// gesture too, for easy manipulation from Java
-	chown("/sys/devices/mx_tsp/gesture_hex", AID_SYSTEM, AID_SYSTEM);
+	chown("/sys/class/tpd_gesture/gesture_mode", AID_SYSTEM, AID_SYSTEM);
 
 	// /dev/ttyMT1 for ext_mdinit
 	chmod("/dev/ttyMT1", 0660);
@@ -473,8 +488,8 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused)))
 
 	// FLYME_EDIT:zhouyueguo@SHELL.PowerSavingMode.Feature Permissions add for power saving mode {@
 	// Permissions for power saving mode
-	chown("/sys/power/power_mode", AID_SYSTEM, AID_SYSTEM);
-	chmod("/sys/power/power_mode", 0660);
+	//chown("/sys/power/power_mode", AID_SYSTEM, AID_SYSTEM);
+	//chmod("/sys/power/power_mode", 0660);
 	// @}
 
 	// workaround: calibrate proximity sensor on boot

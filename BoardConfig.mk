@@ -41,7 +41,7 @@ BOARD_CACHEIMAGE_FILE_SYSTEM_TYPE := ext4
 # Kernel
 BOARD_KERNEL_CMDLINE += \
 	bootopt=64S3,32S1,32S1 \
-	androidboot.selinux=permissive
+	androidboot.selinux=disabled
 
 BOARD_KERNEL_BASE := 0x80000000
 BOARD_KERNEL_PAGESIZE := 2048

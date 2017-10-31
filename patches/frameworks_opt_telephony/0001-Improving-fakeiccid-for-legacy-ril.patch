@@ -1,0 +1,79 @@
+From acaa900a7aa6e7537da3c75046175686ba9fe48e Mon Sep 17 00:00:00 2001
+From: vgdn1942 <vgdn1942@gmail.com>
+Date: Tue, 31 Oct 2017 18:11:30 +0300
+Subject: [PATCH] Improving fakeiccid for legacy ril
+
+Change-Id: I6e1f5f9e6a33badc35fb6bb2f54224da096fedc6
+---
+ .../com/android/internal/telephony/SubscriptionInfoUpdater.java    | 2 +-
+ src/java/com/android/internal/telephony/uicc/IccConstants.java     | 3 +++
+ src/java/com/android/internal/telephony/uicc/RuimRecords.java      | 7 ++++---
+ src/java/com/android/internal/telephony/uicc/SIMRecords.java       | 7 ++++---
+ 4 files changed, 12 insertions(+), 7 deletions(-)
+
+diff --git a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
+index 24c0f2d..c8ac89b 100644
+--- a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
++++ b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
+@@ -309,7 +309,7 @@ public class SubscriptionInfoUpdater extends Handler {
+                         mIccId[slotId] = ICCID_STRING_FOR_NO_SIM;
+                     }
+                 } else {
+-                    mIccId[slotId] = ICCID_STRING_FOR_NO_SIM;
++                    mIccId[slotId] = IccConstants.FAKE_ICCID;
+                     logd("Query IccId fail: " + ar.exception);
+                 }
+                 logd("sIccId[" + slotId + "] = " + mIccId[slotId]);
+diff --git a/src/java/com/android/internal/telephony/uicc/IccConstants.java b/src/java/com/android/internal/telephony/uicc/IccConstants.java
+index d395fc1..3ebfd11 100644
+--- a/src/java/com/android/internal/telephony/uicc/IccConstants.java
++++ b/src/java/com/android/internal/telephony/uicc/IccConstants.java
+@@ -107,4 +107,7 @@ public interface IccConstants {
+ 
+     //UICC access
+     static final String DF_ADF = "7FFF";
++
++	//CM-Specific : Fake ICCID
++    static final String FAKE_ICCID = "00000000000001";
+ }
+diff --git a/src/java/com/android/internal/telephony/uicc/RuimRecords.java b/src/java/com/android/internal/telephony/uicc/RuimRecords.java
+index d348c81..445e25a 100644
+--- a/src/java/com/android/internal/telephony/uicc/RuimRecords.java
++++ b/src/java/com/android/internal/telephony/uicc/RuimRecords.java
+@@ -690,10 +690,11 @@ public final class RuimRecords extends IccRecords {
+                 data = (byte[])ar.result;
+ 
+                 if (ar.exception != null) {
+-                    break;
++                    mIccId = FAKE_ICCID;
++                }
++                else {
++	                mIccId = IccUtils.bcdToString(data, 0, data.length);
+                 }
+-
+-                mIccId = IccUtils.bcdToString(data, 0, data.length);
+ 
+                 log("iccid: " + mIccId);
+ 
+diff --git a/src/java/com/android/internal/telephony/uicc/SIMRecords.java b/src/java/com/android/internal/telephony/uicc/SIMRecords.java
+index 8b6f743..100abd7 100644
+--- a/src/java/com/android/internal/telephony/uicc/SIMRecords.java
++++ b/src/java/com/android/internal/telephony/uicc/SIMRecords.java
+@@ -874,10 +874,11 @@ public class SIMRecords extends IccRecords {
+                 data = (byte[])ar.result;
+ 
+                 if (ar.exception != null) {
+-                    break;
++                    mIccId = FAKE_ICCID;
++                }
++                else {
++                    mIccId = IccUtils.bcdToString(data, 0, data.length);
+                 }
+-
+-                mIccId = IccUtils.bcdToString(data, 0, data.length);
+ 
+                 log("iccid: " + mIccId);
+ 
+-- 
+2.7.4
+

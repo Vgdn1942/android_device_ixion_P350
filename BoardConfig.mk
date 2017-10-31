@@ -177,7 +177,7 @@ TARGET_USE_CUSTOM_LUN_FILE_PATH := "/sys/devices/platform/mt_usb/musb-hdrc.0.aut
 ifeq ($(RECOVERY_VARIANT),twrp)
 TARGET_RECOVERY_FSTAB := $(LOCAL_PATH)/root/twrp.fstab
 else
-TARGET_RECOVERY_FSTAB := $(LOCAL_PATH)/root/fstab.mt6580
+TARGET_RECOVERY_FSTAB := $(LOCAL_PATH)/root/recovery.fstab
 endif
 
 # TWRP

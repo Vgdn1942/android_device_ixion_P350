@@ -17,8 +17,29 @@ Camera  | 8MPx, LED Flash
 ![DEXP](https://content2.onliner.by/catalog/device/main/28756eabf91d930d247cb06211958125.jpeg "DEXP Ixion P350 Tundra Black")
 
 Working:
+- Wi-Fi
+- Bluetooth
+- Audio
+- Modem
+- SMS
+- Voice
+- USSD
+- Mobile data
+- Sensors
+- Lights
+- Camera (only photos)
+- USB connection (ADB/MTP/PTP)
+- SDcard
+
+Not tested:
+- GPS
+- Wi-Fi tethering
+- Second SIM
 
 Not working/Bugs:
+- Reboots when the screen is off
+- Video recording
+- Poweroff charge
 
 # Acknowledgements
 

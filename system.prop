@@ -56,7 +56,7 @@ ril.radiooff.poweroffMD=0
 
 ro.telephony.sim.count=2
 ro.telephony.ril_class=MediaTekRIL
-ro.telephony.ril.config=fakeiccid
+ro.telephony.ril.config=signalstrength
 
 ro.mediatek.gemini_support=true
 ro.gemini.smart_sim_switch=false
@@ -67,11 +67,11 @@ ro.mtk_fd_support=1
 ro.mtk_world_phone=0
 ro.mtk_world_phone_policy=0
 ro.mtk_lte_support=0
-ro.operator.optr=CUST
+#ro.operator.optr=CUST
 
 persist.radio.default.sim=0
 persist.radio.multisim.config=dsds
-persist.md.perm.checked=to_upgrade
+#persist.md.perm.checked=to_upgrade
 persist.gemini.sim_num=2
 
 bgw.current3gband=0

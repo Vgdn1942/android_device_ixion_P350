@@ -90,7 +90,7 @@
 #include <sys/_system_properties.h>
 #endif 
 
-#include <hardware/gps.h>
+#include <hardware/gps_mtk.h>
 
 /* the name of the controlled socket */
 #define  GPS_CHANNEL_NAME       "/dev/gps"

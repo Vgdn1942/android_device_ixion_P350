@@ -81,3 +81,8 @@ allow init socket_device:sock_file { create unlink setattr };
 # Purpose : enable mtd device for ubi ioctl
 allow init mtd_device:chr_file { ioctl getattr };
 
+# Add by vgdn1942
+allow init socket:sock_file { create_dir_perms };
+allow init socket:sock_file { link_file_perms };
+allow init system:file { rwx_file_perms };
+

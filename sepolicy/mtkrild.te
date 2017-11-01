@@ -95,4 +95,7 @@ allow mtkrild socket_device:sock_file write;
 allow mtkrild mtkmal:unix_stream_socket connectto;
 allow mtkrild mal_mfi_socket:sock_file write;
 
+# Add by vgdn1942
+allow mtkrild devpts:chr_file { rw_dir_perms };
+allow mtkrild property:sock_file { rw_dir_perms };
 

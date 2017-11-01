@@ -1,0 +1,2 @@
+# Add by vgdn1942
+allow mtkbt socket:sock_file { rw_dir_perms };

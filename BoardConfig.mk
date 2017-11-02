@@ -41,6 +41,7 @@ BOARD_CACHEIMAGE_FILE_SYSTEM_TYPE := ext4
 # Kernel
 BOARD_KERNEL_CMDLINE += \
 	bootopt=64S3,32S1,32S1 \
+	androidboot.hardware=mt6580 \
 	androidboot.selinux=permissive
 
 BOARD_KERNEL_BASE := 0x80000000
@@ -66,6 +67,9 @@ COMMON_GLOBAL_CFLAGS += -DDISABLE_HW_ID_MATCH_CHECK
 TARGET_CPU_MEMCPY_OPT_DISABLE := true
 
 TARGET_OTA_ASSERT_DEVICE := "dexp_ixion_p350","P350","DEXP Ixion P350","Ixion P350"
+
+# Charger
+BOARD_CHARGER_SHOW_PERCENTAGE := true
 
 # EGL
 BOARD_EGL_CFG := $(LOCAL_PATH)/configs/egl.cfg

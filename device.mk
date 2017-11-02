@@ -50,6 +50,11 @@ PRODUCT_PACKAGES += \
     guiext-server \
     libmtk_drvb
 
+# Charge
+PRODUCT_PACKAGES += \
+    charger \
+    charger_res_images
+
 # Power
 #PRODUCT_PACKAGES += \
 #    power.mt6580 \

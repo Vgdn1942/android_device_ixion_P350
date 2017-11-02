@@ -160,7 +160,6 @@ PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/root/init.mt6580.rc:root/init.mt6580.rc \
     $(LOCAL_PATH)/root/init.mt6580.usb.rc:root/init.mt6580.usb.rc \
     $(LOCAL_PATH)/root/init.recovery.mt6580.rc:root/init.recovery.mt6580.rc \
-    $(LOCAL_PATH)/root/init.aee.rc:root/init.aee.rc \
     $(LOCAL_PATH)/root/init.modem.rc:root/init.modem.rc \
     $(LOCAL_PATH)/root/init.project.rc:root/init.project.rc \
     $(LOCAL_PATH)/root/init.ssd.rc:root/init.ssd.rc \

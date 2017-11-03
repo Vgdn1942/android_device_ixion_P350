@@ -174,6 +174,11 @@ MTK_WVDRM_L1_SUPPORT := no
 # system.prop
 TARGET_SYSTEM_PROP := $(LOCAL_PATH)/system.prop
 
+# Recovery
+# Enable twrp variant only for 'make recoveryimage'
+# Do not enable for full build
+#RECOVERY_VARIANT := twrp
+
 RECOVERY_GRAPHICS_USE_LINELENGTH := true
 TARGET_PREBUILT_RECOVERY_KERNEL := $(LOCAL_PATH)/kernel
 TARGET_USE_CUSTOM_LUN_FILE_PATH := "/sys/devices/platform/mt_usb/musb-hdrc.0.auto/gadget/lun%d/file"

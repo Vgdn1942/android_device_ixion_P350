@@ -1,4 +1,4 @@
-# CyanogenMod 13.0 device tree for DEXP Ixion P350
+# LineageOS 13.0 device tree for DEXP Ixion P350
 
 DEXP Ixion P350
 ==============
@@ -37,7 +37,7 @@ Not tested:
 - Second SIM
 
 Not working/Bugs:
-- Reboots when the screen is off
+- Reboots after deepsleep (when screen off) (temporary fix 99wakelock_for_no_reboots script, but the processor does not go to sleep)
 - Video recording
 - Poweroff charge
 

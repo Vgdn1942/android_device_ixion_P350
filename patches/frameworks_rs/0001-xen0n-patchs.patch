@@ -1,0 +1,26 @@
+From 2a4899974ace3156d2637274e79a89cacabe20d9 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Fri, 3 Nov 2017 12:57:18 +0300
+Subject: [PATCH] xen0n patchs
+
+Change-Id: Id3f1871247263f2e0d43344e6c0e2f7a3941fa0a
+---
+ rsGrallocConsumer.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/rsGrallocConsumer.cpp b/rsGrallocConsumer.cpp
+index f19f171..20ec2d2 100644
+--- a/rsGrallocConsumer.cpp
++++ b/rsGrallocConsumer.cpp
+@@ -70,7 +70,7 @@ status_t GrallocConsumer::lockNextBuffer() {
+         }
+     }
+ 
+-    BufferItem b;
++    BufferQueue::BufferItem b;
+ 
+     err = acquireBufferLocked(&b, 0);
+     if (err != OK) {
+-- 
+2.7.4
+

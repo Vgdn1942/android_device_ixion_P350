@@ -16,6 +16,6 @@
 
 for flavor in eng userdebug user; do
     add_lunch_combo "full_P350-${flavor}"
-    add_lunch_combo "cm_P350-${flavor}"
+    add_lunch_combo "lineage_P350-${flavor}"
 done
 

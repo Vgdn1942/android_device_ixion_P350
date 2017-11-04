@@ -2,9 +2,34 @@
 
 import init.${ro.hardware}.usb.rc
 
+on early-init
+    # GPS calibration, enable audio clk
+    write /sys/power/clk_buf/clk_buf_ctrl "reg 1 1 1 1"
+
 on init
     mkdir /mnt/media_rw/usbotg 0700 media_rw media_rw
     mkdir /storage/usbotg 0700 root root
+
+on post-fs
+
+    # Create char device file for WMT, GPS, BT, FM, WIFI
+    mknod /dev/stpwmt c 190 0;
+    mknod /dev/stpgps c 191 0;
+    mknod /dev/stpbt  c 192 0;
+    mknod /dev/fm     c 193 0;
+    chmod 0660 /dev/stpwmt
+    chown system system /dev/stpwmt
+    chmod 0660 /dev/wmtdetect
+ 		chown system system /dev/wmtdetect
+ 		
+    # FM Radio device, FIXME: this is not a proper way to set permissions
+    chmod 0666 /dev/fm
+ 
+    mknod /dev/wmtWifi c 153 0
+    chmod 0666 /dev/wmtWifi
+    chmod 0660 /dev/stpgps
+    chmod 0660 /dev/stpbt
+    chown bluetooth radio /dev/stpbt
 
 on post-fs-data
 
@@ -15,28 +40,6 @@ on post-fs-data
 #/dev/ttyMT2 for Connectivity BT/FM/GPS usage
     chmod 0660 /dev/ttyMT2
     chown system system /dev/ttyMT2
-
-
-# STP, WMT, GPS, FM and BT Driver
-#   insmod /system/lib/modules/mtk_hif_sdio.ko
-#   insmod /system/lib/modules/mtk_stp_wmt.ko
-#   insmod /system/lib/modules/mtk_stp_uart.ko
-#   insmod /system/lib/modules/mtk_stp_gps.ko
-#   insmod /system/lib/modules/mtk_stp_bt.ko
-#   insmod /system/lib/modules/mtk_fm_drv.ko
-#   insmod /system/lib/modules/mtk_wmt_wifi.ko
-
-
-# Create char device file for WMT, GPS, BT, FM, WIFI
-#    mknod /dev/stpwmt c 190 0;
-#    mknod /dev/stpgps c 191 0;
-#    mknod /dev/stpbt  c 192 0;
-
-#    chmod 0660 /dev/stpwmt
-#    chown system system /dev/stpwmt
-
-#    chmod 0660 /dev/wmtdetect
-#    chown system system /dev/wmtdetect
 
     mknod /dev/wmtWifi c 153 0
     chmod 0660 /dev/wmtWifi
@@ -64,13 +67,11 @@ on post-fs-data
 #    chown bluetooth radio /dev/stpbt
 
 # GPS
-#    chown gps gps /dev/stpgps
-    chown gps gps /sys/class/gpsdrv/gps/pwrctl
-    chown gps gps /sys/class/gpsdrv/gps/suspend
-    chown gps gps /sys/class/gpsdrv/gps/state
-    chown gps gps /sys/class/gpsdrv/gps/pwrsave
-    chown gps gps /sys/class/gpsdrv/gps/status
-#    chmod 0660 /dev/stpgps
+    chown gps gps /sys/devices/virtual/gpsdrv/gps/pwrctl
+    chown gps gps /sys/devices/virtual/gpsdrv/gps/suspend
+    chown gps gps /sys/devices/virtual/gpsdrv/gps/state
+    chown gps gps /sys/devices/virtual/gpsdrv/gps/pwrsave
+    chown gps gps /sys/devices/virtual/gpsdrv/gps/status
 
 # WiFi
     mkdir /data/misc/wifi 0770 wifi wifi

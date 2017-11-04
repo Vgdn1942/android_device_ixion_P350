@@ -334,7 +334,7 @@ typedef struct {
 
 /* non-callback */
 #define MAX_BITSTREAM_BUFFER_INFO_NUM 10
-#define MAX_REF_FREE_YUV_BUFFER_NUM 18
+#define MAX_REF_FREE_YUV_BUFFER_NUM 19
 typedef struct {
 	VCODEC_BUFFER_T       *prRetBitsBuf;    /* for mt6575, mt6577 */
 	unsigned int          u4ReturnInputCnt;

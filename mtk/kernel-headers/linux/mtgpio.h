@@ -1,6 +1,6 @@
 /* alps/ALPS_SW/TRUNK/MAIN/alps/kernel/arch/arm/mach-mt6516/include/mach/fm.h
  *
- * (C) Copyright 2009
+ * (C) Copyright 2009 
  * MediaTek <www.MediaTek.com>
  * William Chung <William.Chung@MediaTek.com>
  *
@@ -51,4 +51,4 @@
 #define GPIO_IOCSDATAHIGH       _IOW(GPIO_IOC_MAGIC, 0x15, uint32_t)
 
 
-#endif				/* __MTGPIO_H__ */
+#endif // __MTGPIO_H__

@@ -78,7 +78,7 @@
 #define ID_TEMPRERATURE					(ID_BASE+SENSOR_TYPE_TEMPERATURE-1)
 #define ID_SIGNIFICANT_MOTION			(ID_BASE+SENSOR_TYPE_SIGNIFICANT_MOTION-1)  
 #define ID_STEP_DETECTOR				(ID_BASE+SENSOR_TYPE_STEP_DETECTOR-1)  
-#define ID_STEP_COUNTER					(ID_BASE+SENSOR_TYPE_STEP_COUNTER-1)                
+#define ID_STEP_COUNTER					(ID_BASE+SENSOR_TYPE_STEP_COUNTER-1) 
 #define ID_GEOMAGNETIC_ROTATION_VECTOR                  (ID_BASE+SENSOR_TYPE_GEOMAGNETIC_ROTATION_VECTOR-1)
 #define ID_HEART_RATE           (ID_BASE+SENSOR_TYPE_HEART_RATE-1)
 #define ID_TILT_DETECTOR        (ID_BASE+SENSOR_TYPE_TILT_DETECTOR-1)
@@ -145,9 +145,9 @@
 #define MAG_PL_DEV_NAME                 "m_mag_pl"
 #define MAG_INPUTDEV_NAME               "m_mag_input"
 #define MAG_MISC_DEV_NAME               "m_mag_misc"
-#define GYRO_PL_DEV_NAME                	"m_gyro_pl"
-#define GYRO_INPUTDEV_NAME              	"m_gyro_input"
-#define GYRO_MISC_DEV_NAME              	"m_gyro_misc"
+#define GYRO_PL_DEV_NAME                "m_gyro_pl"
+#define GYRO_INPUTDEV_NAME              "m_gyro_input"
+#define GYRO_MISC_DEV_NAME              "m_gyro_misc"
 #define ALSPS_PL_DEV_NAME                	"m_alsps_pl"
 #define ALSPS_INPUTDEV_NAME              "m_alsps_input"
 #define ALSPS_MISC_DEV_NAME              "m_alsps_misc"
@@ -203,9 +203,9 @@
 #define TEMP_INPUTDEV_NAME              	"m_temp_input"
 #define TEMP_MISC_DEV_NAME              	"m_temp_misc"
 
-#define BATCH_PL_DEV_NAME               	"m_batch_pl"
-#define BATCH_INPUTDEV_NAME             	"m_batch_input"
-#define BATCH_MISC_DEV_NAME             	"m_batch_misc"
+#define BATCH_PL_DEV_NAME               "m_batch_pl"
+#define BATCH_INPUTDEV_NAME             "m_batch_input"
+#define BATCH_MISC_DEV_NAME             "m_batch_misc"
 
 #define BTS_PL_DEV_NAME               	"m_bts_pl"
 #define BTS_INPUTDEV_NAME             	"m_bts_input"
@@ -246,33 +246,32 @@
 /*-----------------------------------------------------------------------------*/
 
 enum {
-	HWM_MODE_DISABLE = 0,
-	HWM_MODE_ENABLE = 1,
+    HWM_MODE_DISABLE = 0,
+    HWM_MODE_ENABLE  = 1,
 };
 
 /*------------sensors data----------------------------------------------------*/
 typedef struct {
 	/* sensor identifier */
-	int sensor;
+	int 	sensor;
 	/* sensor values */
 	int	values[6];
 	/* sensor values divide */
 	uint32_t value_divide;
-	/* sensor accuracy */
+	/* sensor accuracy*/
 	int8_t status;
 	/* whether updata? */
-	int update;
+	int	update;
 	/* time is in nanosecond */
-	int64_t time;
+	int64_t	time;
 
-	uint32_t reserved;
-} hwm_sensor_data;
+	uint32_t	reserved;
+}hwm_sensor_data;
 
 typedef struct {
 	hwm_sensor_data data[MAX_ANDROID_SENSOR_NUM];
 	int date_type;
-} hwm_trans_data;
-
+}hwm_trans_data;
 
 #define MAX_BATCH_DATA_PER_QUREY    18
 typedef struct {
@@ -306,4 +305,4 @@ typedef struct {
 /* Get sensor data */
 #define BATCH_IO_GET_SENSORS_DATA			_IOWR(BATCH_IOC_MAGIC, 0x01, batch_trans_data)
 
-#endif				/* __HWMSENSOR_H__ */
+#endif // __HWMSENSOR_H__

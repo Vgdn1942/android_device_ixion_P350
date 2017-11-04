@@ -15,8 +15,8 @@
  * have a sched_priority value in the range:
  * 1 (low) to 99 (high).
 ************************************************************************/
-/* ////////////////////////////////////////////////////////////////////// */
-/* DEFINE MM GROUP PRIORITY */
+////////////////////////////////////////////////////////////////////////
+//DEFINE MM GROUP PRIORITY
 #define RTPM_PRIO_MM_GROUP_BASE			(10)
 #define RTPM_PRIO_MM_GROUP_A			(RTPM_PRIO_MM_GROUP_BASE+0)
 #define RTPM_PRIO_MM_GROUP_B			(RTPM_PRIO_MM_GROUP_BASE+10)
@@ -28,8 +28,8 @@
 #define RTPM_PRIO_MM_GROUP_H			(RTPM_PRIO_MM_GROUP_BASE+70)
 #define RTPM_PRIO_MM_GROUP_I			(RTPM_PRIO_MM_GROUP_BASE+80)
 
-/* ////////////////////////////////////////////////////////////////////// */
-/* DEFIN MTK RT PRIORITY */
+////////////////////////////////////////////////////////////////////////
+// DEFIN MTK RT PRIORITY 
 
 #define RTPM_PRIO_CPU_CALLBACK              REG_RT_PRIO(98)
 #define RTPM_PRIO_SWLOCKUP                  REG_RT_PRIO(98)
@@ -38,10 +38,9 @@
 
 #define RTPM_PRIO_TPD                       REG_RT_PRIO(4)
 #define RTPM_PRIO_KSDIOIRQ                  REG_RT_PRIO(1)
-#define RTPM_PRIO_MTLTE_SYS_SDIO_THREAD     REG_RT_PRIO(1)
 
 #define RTPM_PRIO_AUDIO_PLAYBACK            REG_RT_PRIO(RTPM_PRIO_MM_GROUP_I+5)
-#define RTPM_PRIO_VIDEO_PLAYBACK_THREAD     REG_RT_PRIO(RTPM_PRIO_MM_GROUP_I+5)	/* TimeEventQueue */
+#define RTPM_PRIO_VIDEO_PLAYBACK_THREAD     REG_RT_PRIO(RTPM_PRIO_MM_GROUP_I+5) //TimeEventQueue
 #define RTPM_PRIO_SCRN_UPDATE               REG_RT_PRIO(RTPM_PRIO_MM_GROUP_I+4)
 #define RTPM_PRIO_AUDIO_COMMAND             REG_RT_PRIO(RTPM_PRIO_MM_GROUP_I+2)
 #define RTPM_PRIO_AUDIO_CCCI_THREAD         REG_RT_PRIO(RTPM_PRIO_MM_GROUP_I+2)
@@ -58,11 +57,11 @@
 #define RTPM_PRIO_CAMERA_SHUTTER            REG_RT_PRIO(RTPM_PRIO_MM_GROUP_H+9)
 #define RTPM_PRIO_CAMERA_RECORD             REG_RT_PRIO(RTPM_PRIO_MM_GROUP_H+9)
 #define RTPM_PRIO_FB_THREAD                 REG_RT_PRIO(RTPM_PRIO_MM_GROUP_H+7)
-#define RTPM_PRIO_AUDIO_RECORD              REG_RT_PRIO(RTPM_PRIO_MM_GROUP_H+6)
 #define RTPM_PRIO_VSYNC_THREAD              REG_RT_PRIO(RTPM_PRIO_MM_GROUP_H+5)
 #define RTPM_PRIO_SURFACEFLINGER            REG_RT_PRIO(RTPM_PRIO_MM_GROUP_H+4)
 
 #define RTPM_PRIO_VIDEO_YUV_BUFFER          REG_RT_PRIO(RTPM_PRIO_MM_GROUP_G+8)
+#define RTPM_PRIO_AUDIO_RECORD              REG_RT_PRIO(RTPM_PRIO_MM_GROUP_G+7)
 #define RTPM_PRIO_OMX_AUDIO                 REG_RT_PRIO(RTPM_PRIO_MM_GROUP_G+6)
 #define RTPM_PRIO_OMX_CMD_AUDIO             REG_RT_PRIO(RTPM_PRIO_MM_GROUP_G+6)
 #define RTPM_PRIO_OMX_VIDEO_ENCODE          REG_RT_PRIO(RTPM_PRIO_MM_GROUP_G+5)
@@ -74,11 +73,11 @@
 
 #define RTPM_PRIO_AUDIOTRACK_THREAD         REG_RT_PRIO(1)
 #define RTPM_PRIO_GPS_DRIVER				REG_RT_PRIO(1)
-/* Total */
+// Total 
 #define RTPM_PRIO_NUM	30
-/* ////////////////////////////////////////////////////////////////////////////// */
-/* Removed */
-/* #define RTPM_PRIO_FB_THREAD                 REG_RT_PRIO(87) */
-/* #define RTPM_PRIO_SURFACE_OUT               REG_RT_PRIO(80) */
+////////////////////////////////////////////////////////////////////////////////
+//Removed
+//#define RTPM_PRIO_FB_THREAD                 REG_RT_PRIO(87)
+//#define RTPM_PRIO_SURFACE_OUT               REG_RT_PRIO(80)
 
 #endif

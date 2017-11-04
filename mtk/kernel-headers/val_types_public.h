@@ -1,8 +1,8 @@
 #ifndef _VAL_TYPES_PUBLIC_H_
 #define _VAL_TYPES_PUBLIC_H_
 
-/* #include <sys/types.h> */
-/* #include <linux/ion.h> */
+#include <sys/types.h>
+#include <linux/ion.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -295,7 +295,7 @@ typedef struct _VAL_MEMORY_T {
 	VAL_VOID_T *pvAlignMemPa;
 	VAL_MEM_CODEC_T eMemCodec;                  /* /< [IN]     The memory codec for VENC or VDEC */
 	VAL_UINT32_T    i4IonShareFd;
-	struct ion_handle *pIonBufhandle;
+    ion_user_handle_t pIonBufhandle;
 	VAL_VOID_T      *pvReserved;                /* /< [IN/OUT] The reserved parameter */
 	VAL_ULONG_T     u4ReservedSize;             /* /< [IN]     The size of reserved parameter structure */
 #ifdef __EARLY_PORTING__
@@ -515,7 +515,7 @@ typedef struct _VAL_MetaBufInfo {
 	VAL_UINT32_T        u4BuffSize;
 	VAL_BOOL_T          bUseION;
 	int                 fd;
-	struct ion_handle  *pIonBufhandle;
+    ion_user_handle_t   pIonBufhandle;
 } VAL_MetaBufInfo;
 
 typedef struct _VAL_MetaHandleList {

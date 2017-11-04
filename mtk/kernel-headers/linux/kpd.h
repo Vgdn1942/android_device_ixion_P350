@@ -1,82 +1,15 @@
-/* alps/ALPS_SW/TRUNK/MAIN/alps/kernel/include/linux/kpd.h
- *
- * (C) Copyright 2009
- * MediaTek <www.MediaTek.com>
- *
- * MT6516 Sensor IOCTL & data structure
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
-
-#ifndef __KPD_H__
-#define __KPD_H__
-
+#ifndef KPD_IO_H
+#define KPD_IO_H
+		  
 #include <linux/ioctl.h>
-#include <linux/init.h>
-#include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/input.h>
-#include <linux/workqueue.h>
-#include <linux/timer.h>
-#include <linux/interrupt.h>
-#include <linux/fs.h>
-#include <linux/miscdevice.h>
-#include <linux/platform_device.h>
-#include <linux/earlysuspend.h>
-#include <linux/aee.h>
 
-#ifdef CONFIG_MTK_SMARTBOOK_SUPPORT
-#include <linux/sbsuspend.h>	/* smartbook */
-#endif
-
-#include <asm/atomic.h>
-#include <asm/uaccess.h>
-
-#include <mach/hal_pub_kpd.h>
-#if !defined(CONFIG_MTK_LEGACY)
-#define KEY_CALL	KEY_SEND
-#define KEY_ENDCALL	KEY_END
-#define KEY_FOCUS	KEY_HP
-
-struct keypad_dts_data
-{
- 	u32 kpd_key_debounce;
-	u32 kpd_sw_pwrkey;
-	u32 kpd_hw_pwrkey;
-	u32 kpd_sw_rstkey;
-	u32 kpd_hw_rstkey;
-	u32 kpd_use_extend_type;
-	u32 kpd_hw_init_map[72];
-  	u32 kpd_pwrkey_eint_gpio;
-	u32 kpd_pwrkey_gpio_din;
-	u32 kpd_hw_dl_key1;
-	u32 kpd_hw_dl_key2;
-	u32 kpd_hw_dl_key3;
-	u32 kpd_hw_recovery_key;
-	u32 kpd_hw_factory_key;
+struct kpd_ledctl {
+	int onoff;
+	int div;		/* 0 ~ 15 */
+	int duty;	/* 0 ~ 31 */
 };
-extern struct keypad_dts_data kpd_dts_data;
-#define KPD_NO 0
-#define KPD_YES 1
-#endif
 
-
-#define KPD_AUTOTEST	KPD_NO
-#define KPD_DEBUG	KPD_YES
-
-#if KPD_AUTOTEST
+#if 0
 #define PRESS_OK_KEY		_IO('k', 1)
 #define RELEASE_OK_KEY		_IO('k', 2)
 #define PRESS_MENU_KEY		_IO('k', 3)
@@ -105,18 +38,9 @@ extern struct keypad_dts_data kpd_dts_data;
 #define RELEASE_FOCUS_KEY	_IO('k', 26)
 #define PRESS_CAMERA_KEY	_IO('k', 27)
 #define RELEASE_CAMERA_KEY	_IO('k', 28)
-#define PRESS_POWER_KEY		_IO('k', 30)
-#define RELEASE_POWER_KEY	_IO('k', 31)
 #endif
-#define SET_KPD_KCOL		_IO('k', 29)
+#define SET_KPD_BACKLIGHT	_IOW('k', 29, struct kpd_ledctl)
+#define SET_KPD_KCOL				_IO('k', 29)
 
 
-#define KPD_SAY		"kpd: "
-#if KPD_DEBUG
-#define kpd_print(fmt, arg...)	printk(KPD_SAY fmt, ##arg)
-#else
-#define kpd_print(fmt, arg...)	do {} while (0)
 #endif
-
-
-#endif				/* __KPD_H__ */

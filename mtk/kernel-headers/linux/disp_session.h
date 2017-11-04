@@ -7,6 +7,14 @@
 #define DISP_NO_ION_FD                 ((int)(~0U>>1))
 #define DISP_NO_USE_LAEYR_ID           ((int)(~0U>>1))
 
+//sync with define in ddp_ovl.h
+#define OVL_CASCADE_SUPPORT
+#ifdef OVL_CASCADE_SUPPORT
+#define MAX_INPUT_CONFIG 		8
+#else
+#define MAX_INPUT_CONFIG 		4
+#endif
+
 #define MAKE_DISP_FORMAT_ID(id, bpp)  (((id) << 8) | (bpp))
 #define DISP_SESSION_MODE(id) (((id)>>24)&0xff)
 #define DISP_SESSION_TYPE(id) (((id)>>16)&0xff)
@@ -299,7 +307,7 @@ typedef struct disp_caps_t {
 	DISP_CAP_OUTPUT_PASS output_pass;
 	unsigned int max_layer_num;
 #ifdef CONFIG_FOR_SOURCE_PQ
-    unsigned int max_pq_num;
+	unsigned int max_pq_num;
 #endif
 } disp_caps_info;
 

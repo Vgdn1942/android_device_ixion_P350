@@ -60,8 +60,8 @@ PRODUCT_PACKAGES += \
 #    power.mt6580 \
 
 # Lights
-#PRODUCT_PACKAGES += \
-#    lights.mt6580
+PRODUCT_PACKAGES += \
+    lights.mt6580
 
 # Camera
 PRODUCT_PACKAGES += \
@@ -213,6 +213,8 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
 	ro.allow.mock.location=1 \
 	ro.debuggable=1 \
 	ro.zygote=zygote32 \
+    camera.disable_zsl_mode=1 \
+    ro.mount.fs=EXT4 \
 	persist.sys.usb.config=mtp \
 	ro.hardware=mt6580
 

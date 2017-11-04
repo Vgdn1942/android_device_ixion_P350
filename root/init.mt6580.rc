@@ -156,6 +156,11 @@ on post-fs-data
 
     # GPS
     mkdir /data/gps_mnl 0771 gps system
+    mkdir /data/mpe_mnl 0771 gps system
+    chown gps system /data/mpe_mnl
+    chmod 0775 /system/xbin/BGW
+    # xen0n: fix GPS HAL downloading EPO data to non-existent directory
+    mkdir /data/misc/gps 0770 gps system
 
 # -----------------------
 # Add by MTK
@@ -730,11 +735,11 @@ on post-fs-data
     mkdir /data/app/mcRegistry 0770 system system
     mkdir /data/app/mcRegistry/TbStorage 0770 system system
 
-    # Recycle stuffs
-    exec /system/bin/rm -f /cache/.ipoh.img
-
     # AGPS
     mkdir /data/agps_supl 0771 gps system
+
+    # Recycle stuffs
+    exec /system/bin/rm -f /cache/.ipoh.img
 
     chmod 0666 /dev/exm0
 
@@ -1251,7 +1256,7 @@ service agpsd /system/bin/mtk_agpsd
     socket agpsd2 stream 660 gps inet
     socket agpsd3 stream 660 gps inet
     user gps
-    group gps radio inet sdcard_r sdcard_rw misc
+    group gps inet sdcard_r sdcard_rw misc radio
 
 service wifi2agps /system/bin/wifi2agps
     class main
@@ -1514,7 +1519,6 @@ service backuprestore /system/bin/br_app_data_service
 #    user system
 #    group gps system radio
 #    class main
-
 service MtkCodecService /system/bin/MtkCodecService
     class main
     user system

@@ -49,7 +49,7 @@ BOARD_MKBOOTIMG_ARGS := \
 	--kernel_offset 0x00008000 \
 	--ramdisk_offset 0x04000000 \
 	--tags_offset 0x0e000000 \
-	--board 1441186574
+	--board P350_R01_13.02.
 
 TARGET_PREBUILT_KERNEL := $(LOCAL_PATH)/kernel
 
@@ -58,6 +58,9 @@ BOARD_DONT_USE_MTK_BOOTIMG := true
 BLOCK_BASED_OTA := false
 
 TARGET_KMODULES := true
+
+TARGET_GLOBAL_CFLAGS   += -mfpu=neon -mfloat-abi=softfp
+TARGET_GLOBAL_CPPFLAGS += -mfpu=neon -mfloat-abi=softfp
 
 COMMON_GLOBAL_CFLAGS += -DDISABLE_HW_ID_MATCH_CHECK
 
@@ -68,6 +71,9 @@ TARGET_OTA_ASSERT_DEVICE := "dexp_ixion_p350","P350","DEXP Ixion P350","Ixion P3
 
 # Charger
 BOARD_CHARGER_SHOW_PERCENTAGE := true
+
+# LightHAL
+TARGET_PROVIDES_LIBLIGHT := true
 
 # EGL
 BOARD_EGL_CFG := $(LOCAL_PATH)/configs/egl.cfg
@@ -145,6 +151,9 @@ BOARD_CONNECTIVITY_VENDOR := MediaTek
 BOARD_CONNECTIVITY_MODULE := conn_soc
 
 # GPS
+BOARD_GPS_LIBRARIES := true
+BOARD_MEDIATEK_USES_GPS := true
+
 MTK_GPS_CHIP := MTK_GPS_MT6752
 MTK_GPS_SUPPORT := yes
 

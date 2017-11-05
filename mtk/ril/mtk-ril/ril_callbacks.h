@@ -217,9 +217,13 @@ extern int getMtkShareModemCurrent();
 extern void getLogicModemId();
 extern int isDisableCapabilitySwitch();
 /// @}
+/// M: ViLTE @{
+extern bool isVilteSupport();
+/// @}
 /// M: Wfc @{
 extern bool isWfcSupport();
 /// @}
+
 /// M: Ims init flow @{
 extern void imsInit(RIL_SOCKET_ID rid);
 /// @}

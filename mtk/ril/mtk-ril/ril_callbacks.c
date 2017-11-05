@@ -114,6 +114,9 @@ extern void initialCidTable();
 extern int getAttachApnSupport();
 extern void IMS_RILA_register(const RIL_RadioFunctionsSocket *callbacks);
 
+extern int isSimSwitchMD1PowerOff();
+extern void resetSimSwitchMDPowerOff();
+
 /*** Static Variables ***/
 static const RIL_RadioFunctionsSocket s_callbacks = {
     RIL_VERSION,
@@ -185,6 +188,9 @@ extern int bCREGType3Support;
 extern int bEopsSupport;
 extern int bUbinSupport;  //support Universal BIN(WorldMode)
 extern int bWorldModeSwitching;  //[ALPS02277365]
+
+extern int pdnFailCauseSupportVer;
+extern int pdnReasonSupportVer;
 
 //Add log level for ALPS01270573 reproduce
 int mtk_ril_log_level = 0;
@@ -296,7 +302,8 @@ static void onRequest(int request, void *data, size_t datalen, RIL_Token t, RIL_
             request != RIL_REQUEST_GENERAL_SIM_AUTH &&
             request != RIL_REQUEST_CONFIG_MODEM_STATUS &&
             request != RIL_REQUEST_SET_FD_MODE &&
-            request != RIL_LOCAL_REQUEST_SET_MODEM_THERMAL
+            request != RIL_LOCAL_REQUEST_SET_MODEM_THERMAL &&
+            request != RIL_REQUEST_MODEM_POWEROFF
        ) {
         RLOGD("MD off and ignore %s", requestToString(request));
         if (IMS_isRilRequestFromIms(t)) {
@@ -304,6 +311,15 @@ static void onRequest(int request, void *data, size_t datalen, RIL_Token t, RIL_
         } else {
             RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
         }
+        return;
+    }
+
+    if (s_md_off &&
+            (request == RIL_REQUEST_MODEM_POWEROFF
+                    && !isSimSwitchMD1PowerOff())
+       ) {
+        RLOGD("MD off and ignore %s", requestToString(request));
+        RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
         return;
     }
 
@@ -333,7 +349,15 @@ static void onRequest(int request, void *data, size_t datalen, RIL_Token t, RIL_
             request != RIL_REQUEST_SET_FD_MODE &&
             request != RIL_LOCAL_REQUEST_SET_MODEM_THERMAL &&
             request != RIL_REQUEST_STK_SEND_TERMINAL_RESPONSE &&
-            request != RIL_REQUEST_SET_IMS_ENABLE
+            // External SIM [Start]
+            request == RIL_LOCAL_REQUEST_VSIM_NOTIFICATION &&
+            request == RIL_LOCAL_REQUEST_VSIM_OPERATION &&
+            // External SIM [End]
+            request != RIL_REQUEST_SET_IMS_ENABLE &&
+            request != RIL_REQUEST_SET_VOLTE_ENABLE &&
+            request != RIL_REQUEST_SET_WFC_ENABLE &&
+            request != RIL_REQUEST_SET_IMS_VOICE_ENABLE &&
+            request != RIL_REQUEST_SET_IMS_VIDEO_ENABLE
        ) {
         if (IMS_isRilRequestFromIms(t)) {
             IMS_RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
@@ -453,6 +477,10 @@ static void onRequest(int request, void *data, size_t datalen, RIL_Token t, RIL_
               request == RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING ||
               // IMS
               request == RIL_REQUEST_SET_IMS_ENABLE ||
+              request == RIL_REQUEST_SET_VOLTE_ENABLE ||
+              request == RIL_REQUEST_SET_WFC_ENABLE ||
+              request == RIL_REQUEST_SET_IMS_VOICE_ENABLE ||
+              request == RIL_REQUEST_SET_IMS_VIDEO_ENABLE ||
               request == RIL_REQUEST_BTSIM_CONNECT ||
               request == RIL_REQUEST_BTSIM_DISCONNECT_OR_POWEROFF ||
               request == RIL_REQUEST_BTSIM_POWERON_OR_RESETSIM ||
@@ -514,7 +542,11 @@ static void onRequest(int request, void *data, size_t datalen, RIL_Token t, RIL_
                    request == RIL_REQUEST_DEACTIVATE_DATA_CALL ||
                    request == RIL_REQUEST_ADD_IMS_CONFERENCE_CALL_MEMBER ||
                    request == RIL_REQUEST_REMOVE_IMS_CONFERENCE_CALL_MEMBER ||
-                   request == RIL_REQUEST_DIAL_WITH_SIP_URI)) {
+                   request == RIL_REQUEST_DIAL_WITH_SIP_URI ||
+                   request == RIL_REQUEST_VT_DIAL ||
+                   request == RIL_REQUEST_VOICE_ACCEPT ||
+                   request == RIL_REQUEST_VIDEO_CALL_ACCEPT ||
+                   request == RIL_REQUEST_VT_DIAL_WITH_SIP_URI)) {
                  RLOGD("call command accept in radio off if wfc is support");
              }
              /// M: If Epdg support only case. @{
@@ -689,6 +721,19 @@ int isExternalSimSupport() {
     property_get("ro.mtk_external_sim_support", property_value, "0");
     return atoi(property_value);
 }
+
+int isVsimUrc(const char *s)
+{
+    // Should not ignore VSIM URC since it might be received under
+    // RILD's radio status is radio unavailable.
+    // Such as world mode switching or dynamic SBP.
+    if (strStartsWith(s, "+ERSAIND:")) {
+        RLOGD("isVsimUrc=true, don't ignore URC+ERSAIND");
+        return 1;
+    }
+
+    return 0;
+}
 // External SIM [End]
 
 static void resetSystemProperties(RIL_SOCKET_ID rid)
@@ -716,6 +761,8 @@ static void initializeCallback(void *param)
     int current_share_modem = 0;
     int mdType = -1;
     int i=0;
+    char *cmd = NULL;
+    int cmdCeppiRsp = MD_NOT_SUPPORTED;
 
     setRadioState(RADIO_STATE_OFF, rid);
 
@@ -808,6 +855,66 @@ static void initializeCallback(void *param)
     /* To Receive +CIEV: 9 and +CIEV: 10*/
     at_send_command("AT+CTZR=1", NULL, getDefaultChannelCtx(rid));
 
+    for (i = 0; i < TOTAL_FEATURE_NUMBER; i++) {
+        bool isATCmdEgmrRspErr = false;
+        int tempMDSuptVer = MD_NOT_SUPPORTED;
+
+        if (DATA_L4C_LAST_PDN_ERROR_CAUSE == i) {
+            /* Modem support version for last PDN fail cause */
+            asprintf(&cmd, "AT+EGMR=0,17,%d", DATA_L4C_LAST_PDN_ERROR_CAUSE);
+        } else if (DATA_L4C_PDN_CAUSE_REASON == i) {
+            /* Modem support version for PDN cause reason */
+            asprintf(&cmd, "AT+EGMR=0,17,%d", DATA_L4C_PDN_CAUSE_REASON);
+        }
+
+        err = at_send_command_singleline(cmd, "+EGMR:", &p_response, getDefaultChannelCtx(rid));
+        free(cmd);
+        if (err != 0 || p_response->success == 0 || p_response->p_intermediates == NULL) {
+            RLOGE("EGMR=0,17,%d got error response", i);
+            isATCmdEgmrRspErr = true;
+        } else {
+            char* line;
+            int featureId;
+            int supportVersion;
+            line = p_response->p_intermediates->line;
+
+            err = at_tok_start(&line);
+            if (err >= 0) {
+                err = at_tok_nextint(&line, &featureId);
+                if (err >= 0) {
+                    RLOGD("+EGMR:<feature_id> = %d", featureId);
+                    err = at_tok_nextint(&line, &supportVersion);
+                    if (err >= 0) {
+                        RLOGD("+EGMR:<support_version> = %d", supportVersion);
+                        tempMDSuptVer = supportVersion;
+                    }
+                }
+            }
+        }
+        at_response_free(p_response);
+
+        if (isATCmdEgmrRspErr) {
+            if (MD_NOT_SUPPORTED == cmdCeppiRsp) {
+                // For distinguishing between LR11 and before.
+                err = at_send_command("AT+CEPPI=?", &p_response, getDefaultChannelCtx(rid));
+                if (isATCmdRspErr(err, p_response)) {
+                    cmdCeppiRsp = MD_LR9;
+                } else {
+                    cmdCeppiRsp = MD_LR11;
+                }
+                at_response_free(p_response);
+            }
+            RLOGD("+CEPPI:<feature_id> = %d, <support_version> = %d", i, cmdCeppiRsp);
+            tempMDSuptVer = cmdCeppiRsp;
+        }
+
+        if (DATA_L4C_LAST_PDN_ERROR_CAUSE == i) {
+            pdnFailCauseSupportVer = tempMDSuptVer;
+        } else if (DATA_L4C_PDN_CAUSE_REASON == i) {
+            pdnReasonSupportVer = tempMDSuptVer;
+        }
+    }
+
     /*  Enable getting CFU info +ECFU and speech info +ESPEECH*/
     int einfo_value;
 #ifdef MTK_UMTS_TDD128_MODE //Add for TDD rb release[bit 9]
@@ -864,16 +971,35 @@ static void initializeCallback(void *param)
     /// @}
 
     /* Set 4GVT capability */
-#ifdef MTK_VILTE_SUPPORT
-    at_send_command("AT+EIMSCCP=1", NULL, getDefaultChannelCtx(rid));
-    RLOGD("ViLTE is enable and AT+EIMSCCP=1 is sent");
-#else
-    at_send_command("AT+EIMSCCP=0", NULL, getDefaultChannelCtx(rid));
-    RLOGD("ViLTE is disable and AT+EIMSCCP=0 is sent");
-#endif
+    if (isVilteSupport()) {
+        char videoEnable[PROPERTY_VALUE_MAX] = { 0 };
+        property_get("persist.mtk.ims.video.enable", videoEnable, "0");
+
+        if ((atoi(videoEnable) == 0)) {
+            at_send_command("AT+EIMSCCP=0", NULL, getDefaultChannelCtx(rid));
+            RLOGD("Ims video setting is disable and AT+EIMSCCP=0 is sent");
+        } else {
+            at_send_command("AT+EIMSCCP=1", NULL, getDefaultChannelCtx(rid));
+            RLOGD("Ims video setting is enable and AT+EIMSCCP=1 is sent");
+        }
+    } else {
+        at_send_command("AT+EIMSCCP=0", NULL, getDefaultChannelCtx(rid));
+        RLOGD("Ims video isn't supported and AT+EIMSCCP=0 is sent");
+    }
 
     if (isWfcSupport()) {
-        at_send_command("AT+EIMSWFC=1", NULL, getDefaultChannelCtx(rid));
+        char wfcEnable[PROPERTY_VALUE_MAX] = { 0 };
+        property_get("persist.mtk.wfc.enable", wfcEnable, "0");
+        if ((atoi(wfcEnable) == 0)) {
+            at_send_command("AT+EIMSWFC=0", NULL, getDefaultChannelCtx(rid));
+            RLOGD("wfc setting is disable and AT+EIMSWFC=0 is sent");
+        } else {
+            at_send_command("AT+EIMSWFC=1", NULL, getDefaultChannelCtx(rid));
+            RLOGD("wfc setting is enable and AT+EIMSWFC=1 is sent");
+        }
+    } else {
+        at_send_command("AT+EIMSWFC=0", NULL, getDefaultChannelCtx(rid));
+        RLOGD("WFC isn't supported and AT+EIMSWFC=0 is sent");
     }
 
 #ifndef MTK_FD_SUPPORT
@@ -1492,7 +1618,7 @@ static void onUnsolicited(const char *s, const char *sms_pdu, void *pChannel)
      */
     //[ALPS02277365] some URC need to report under world mode switching
     //if (radioState == RADIO_STATE_UNAVAILABLE)
-    if (radioState == RADIO_STATE_UNAVAILABLE && isWorldModeSwitching(s))
+    if (radioState == RADIO_STATE_UNAVAILABLE && !isVsimUrc(s) && isWorldModeSwitching(s))
         return;
 
     //MTK-START [mtk04070][111213][ALPS00093395] ATCI for unsolicited response
@@ -1540,6 +1666,8 @@ int isWorldModeSwitching(const char *s)
     }
     return needIgnore;
 }
+
+
 
 #ifdef  MTK_RIL
 /* Called on command or reader thread */
@@ -1604,7 +1732,8 @@ static void usage(char *s)
 #ifdef  MTK_RIL
 /* These nodes are created by gsm0710muxd */
 #define RIL_SUPPORT_CHANNELS_MAX_NAME_LEN 32
-char s_mux_path[RIL_SUPPORT_CHANNELS][RIL_SUPPORT_CHANNELS_MAX_NAME_LEN] = {
+char s_mux_path[RIL_SUPPORT_CHANNELS][RIL_SUPPORT_CHANNELS_MAX_NAME_LEN];
+char s_mux_path_init[RIL_SUPPORT_CHANNELS][RIL_SUPPORT_CHANNELS_MAX_NAME_LEN] = {
 #ifdef MTK_RIL_MD2
     "/dev/radio/pttynoti-md2",
     "/dev/radio/pttycmd1-md2",
@@ -1663,7 +1792,13 @@ static void switchMuxPath() {
         property_get(PROPERTY_3G_SIM, prop_value, "1");
 
         targetSim = atoi(prop_value);
+        if (targetSim == 0) {
+            targetSim = 1;
+            property_set(PROPERTY_3G_SIM, "1");
+        }
         RLOGD("targetSim : %d", targetSim);
+        // restore muxpath
+        memcpy(s_mux_path, s_mux_path_init, RIL_SUPPORT_CHANNELS*RIL_SUPPORT_CHANNELS_MAX_NAME_LEN);
         if(targetSim*RIL_CHANNEL_OFFSET > getSupportChannels()) {
             RLOGD("!!!! targetSim*RIL_CHANNEL_OFFSET > RIL_SUPPORT_CHANNELS");
         } else if(targetSim != 1){
@@ -1968,6 +2103,14 @@ static void *mainLoop(void *param)
                 property_set("ril.muxreport", "1");
                 return 0;
             }
+        }
+        //reset the sim switching property
+        property_set("ril.cdma.switching", "0");
+
+        if (isCdmaLteDcSupport()) {
+            RLOGI("resetSimSwitchMDPowerOff in mainloop");
+            // C2K use old solution, TBD
+            resetSimSwitchMDPowerOff();
         }
         sendRadioCapabilityDoneIfNeeded();
 
@@ -3070,6 +3213,22 @@ int getSimCount() {
     return SIM_COUNT;
 }
 
+/// M: ViLTE @{
+/**
+ * Checks if ViLTE is supported.
+ * @return true if ViLTE is supported
+ */
+bool isVilteSupport()
+{
+    int isVilteSupport = 0;
+    char property_value[PROPERTY_VALUE_MAX] = { 0 };
+    property_get("ro.mtk_vilte_support", property_value, "0");
+    isVilteSupport = atoi(property_value);
+    RLOGI("isVilteSupport: %d", isVilteSupport);
+    return (isVilteSupport == 1) ? true : false;
+}
+/// @}
+
 /// M: Wfc @{
 /**
  * Checks if Wfc is supported.
@@ -3090,16 +3249,21 @@ bool isWfcSupport()
 /**
  * ims initilization.
  * @param rid ril id.
- * 
+ *
  */
 void imsInit(RIL_SOCKET_ID rid) {
     if (isImsAndVolteSupport() || isWfcSupport()) {
         char volteEnable[PROPERTY_VALUE_MAX] = { 0 };
-        property_get("ro.mtk.volte.enable", volteEnable, "0");
-        if ((atoi(volteEnable) == 0)) {
-            at_send_command("AT+EIMS=0", NULL, getDefaultChannelCtx(rid));
+        char wfcEnable[PROPERTY_VALUE_MAX] = { 0 };
+
+        property_get("persist.mtk.volte.enable", volteEnable, "0");
+        property_get("persist.mtk.wfc.enable", wfcEnable, "0");
+        if ((atoi(volteEnable) == 0) && (atoi(wfcEnable) == 0)) {
+            RLOGD("imsInit: set ims disable !");
+            at_send_command("AT+EIMS=0", NULL, getDefaultChannelCtx(getMainProtocolRid()));
         } else {
-            at_send_command("AT+EIMS=1", NULL, getDefaultChannelCtx(rid));
+            RLOGD("imsInit: set ims enable !");
+            at_send_command("AT+EIMS=1", NULL, getDefaultChannelCtx(getMainProtocolRid()));
         }
     }
 }

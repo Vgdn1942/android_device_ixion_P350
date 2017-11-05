@@ -261,6 +261,7 @@ typedef enum {
     CME_HIDDEN_KEY_REQUIRED = 48,
     CME_UNKNOWN = 100,
     CME_LAST_PDN_NOT_ALLOW = 151, //(0x0097)
+    CME_LAST_PDN_NOT_ALLOW_LR11 = 171,
     // Remote SIM ME Lock added error code
     CME_VERIFICATION_FAILED = 270,
     CME_REBOOT_REQUEST = 271,
@@ -283,6 +284,19 @@ typedef enum {
     CME_L4C_CMD_CONFLICT_C2K_AP_DEACT_RETRY_NEEDED = 4225 //(0x1081)
 
 } AT_CME_Error;
+
+typedef enum {
+    MD_NOT_SUPPORTED = 0,
+    MD_WR8 = 1,
+    MD_LR9 = 2,
+    MD_LR11 = 3
+} MD_Support_Version;
+
+typedef enum {
+    DATA_L4C_LAST_PDN_ERROR_CAUSE = 0,
+    DATA_L4C_PDN_CAUSE_REASON,
+    TOTAL_FEATURE_NUMBER
+} Query_MD_Support_Version_Feature_List;
 
 AT_CME_Error at_get_cme_error(const ATResponse *p_response);
 void sleepMsec(long long msec);

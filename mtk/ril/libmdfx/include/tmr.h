@@ -43,6 +43,7 @@ typedef void (*tmr_sig_hdl_t) (tmr_ptr_t tmr_ptr, void *arg);    // SHOULD be an
 #define TMR_INVAL_TID    (0)
 #define TMR_SIG_BLOCK    ((SIGRTMIN + SIGRTMAX) >> 1)
 #define TMR_SIG_NONBLOCK    ((SIGRTMIN + SIGRTMAX) >> 2)
+#define POSIX_TMR_CLK	CLOCK_BOOTTIME_ALARM
 #endif
 
 // Functions

@@ -66,15 +66,22 @@
 static const struct timeval TIMEVAL_0 = {2, 0};
 static const struct timeval TIMEVAL_SMS = {0, 0};
 static sat_at_string_struct g_stk_at;
+static int cpinRetry;
+static RIL_SOCKET_ID rid_cpin;
 
-static char aIs_stk_service_running[4] = {false,false,false,false};
-static char aIs_proac_cmd_queued[4] = {false,false,false,false};
-static char aIs_pending_open_channel[4] = {false,false,false,false};
-static bool aIs_event_notify_queued[4] = {false,false,false,false};
+#define EVENT_NOTIFY_BUFFER_LEN    10
+static bool aIs_stk_service_running[4] = {false, false, false, false};
+static bool aIs_proac_cmd_queued[4] = {false, false, false, false};
+static bool aIs_pending_open_channel[4] = {false, false, false, false};
+static bool aIs_event_notify_queued[4] = {false, false, false, false};
 static char* pProactive_cmd[4] = {0};
+static char* pEvent_notify[SIM_COUNT][EVENT_NOTIFY_BUFFER_LEN] = {0};
 static char* pOpenChannelTR[4] = {0};
-static char* pEvent_notify[4] = {0};
 #define SETUP_EVENT_LIST_CMD_DETAIL_CODE "81030105"
+
+int getSimIdfromSocketId(RIL_SOCKET_ID rid);
+int getSimIdfromToken(RIL_Token t);
+int checkEventNotifyFreeBuffer(RIL_SOCKET_ID rid);
 
 void requestStkGetProfile (void *data, size_t datalen, RIL_Token t) {
     RIL_STK_UNUSED_PARM(data);
@@ -88,7 +95,7 @@ void requestStkSetProfile (void *data, size_t datalen, RIL_Token t) {
     RIL_STK_UNUSED_PARM(t);
 }
 
-void setStkFlagByTk(RIL_Token t, bool flag, char* source)
+void setStkFlagByTk(RIL_Token t, bool flag, bool* source)
 {
     if (NULL == source) {
         LOGD("setStkFlagByRid source is null.");
@@ -109,7 +116,7 @@ void setStkFlagByTk(RIL_Token t, bool flag, char* source)
         *(source), *(source + 1), *(source + 2), *(source + 3));
 }
 
-void setStkFlagByRid(RIL_SOCKET_ID rid, bool flag, char* source) {
+void setStkFlagByRid(RIL_SOCKET_ID rid, bool flag, bool* source) {
     if (NULL == source) {
         LOGD("setStkFlagByRid source is null.");
         return;
@@ -129,7 +136,7 @@ void setStkFlagByRid(RIL_SOCKET_ID rid, bool flag, char* source) {
         *(source), *(source + 1), *(source + 2), *(source + 3));
 }
 
-char getStkFlagByTk(RIL_Token t, char* source) {
+bool getStkFlagByTk(RIL_Token t, bool* source) {
 
     if (RIL_CHANNEL_SET4_OFFSET <= RIL_queryMyChannelId(t)) {
         return *(source + 3);
@@ -145,7 +152,7 @@ char getStkFlagByTk(RIL_Token t, char* source) {
          *(source), *(source + 1), *(source + 2), *(source + 3));
 }
 
-char getStkFlagByRid(RIL_SOCKET_ID rid, char* source) {
+bool getStkFlagByRid(RIL_SOCKET_ID rid, bool* source) {
     if (RIL_SOCKET_4 == rid) {
         return *(source + 3);
     } else if (RIL_SOCKET_3 == rid) {
@@ -201,36 +208,38 @@ void setStkCachedData(RIL_SOCKET_ID rid, char** source, char* pCmd) {
     LOGD("setStkCachedData rid:%d, [%p][%p][%p][%p].",
         rid, *(source), *(source + 1), *(source + 2), *(source + 3));
 }
+
 void setStkServiceRunningFlag(RIL_SOCKET_ID rid, bool flag) {
     setStkFlagByRid(rid, flag, aIs_stk_service_running);
 }
-void setStkEventNotifyQueuedFlagByTk(RIL_Token t, bool flag) {
+
+bool getStkProactiveCmdQueuedFlag(RIL_Token t) {
+    LOGD("getStkProactiveCmdQueuedFlag[%d][%d][%d][%d].", aIs_proac_cmd_queued[0],
+            aIs_proac_cmd_queued[1], aIs_proac_cmd_queued[2], aIs_proac_cmd_queued[3]);
 
     if (RIL_CHANNEL_SET4_OFFSET <= RIL_queryMyChannelId(t)) {
-	       aIs_event_notify_queued[3] = flag;
+        return aIs_proac_cmd_queued[3];
     } else if (RIL_CHANNEL_SET3_OFFSET <= RIL_queryMyChannelId(t)) {
-        aIs_event_notify_queued[2] = flag;
+        return aIs_proac_cmd_queued[2];
     } else if (RIL_CHANNEL_OFFSET <= RIL_queryMyChannelId(t)) {
-        aIs_event_notify_queued[1] = flag;
+        return aIs_proac_cmd_queued[1];
     } else {
-        aIs_event_notify_queued[0] = flag;
+        return aIs_proac_cmd_queued[0];
     }
-    LOGD("setStkEventNotifyQueuedFlagByTk[%d][%d][%d][%d].", aIs_event_notify_queued[0],
-            aIs_event_notify_queued[1], aIs_event_notify_queued[2], aIs_event_notify_queued[3]);
 }
 
-void setStkEventNotifyQueuedFlag(RIL_SOCKET_ID rid, bool flag) {
-    if (RIL_SOCKET_4 == rid) {
-        aIs_event_notify_queued[3] = flag;
-    } else if (RIL_SOCKET_3 == rid) {
-        aIs_event_notify_queued[2] = flag;
-    } else if (RIL_SOCKET_2 == rid) {
-        aIs_event_notify_queued[1] = flag;
-    } else {
-        aIs_event_notify_queued[0] = flag;
+void freeStkQueuedProactivCmd(RIL_Token t) {
+    int simId = getSimIdfromToken(t);
+
+    if (simId >= SIM_COUNT) {
+        LOGE("freeStkQueuedProactivCmd: Invalid simId:%d !!!", simId);
+        return;
     }
-    LOGD("setStkEventNotifyQueuedFlag[%d][%d][%d][%d].", aIs_event_notify_queued[0],
-            aIs_event_notify_queued[1], aIs_event_notify_queued[2], aIs_event_notify_queued[3]);
+
+    if (NULL != pProactive_cmd[simId]) {
+        free(pProactive_cmd[simId]);
+        pProactive_cmd[simId] = NULL;
+    }
 }
 
 bool getStkEventNotifyQueuedFlag(RIL_Token t) {
@@ -247,41 +256,63 @@ bool getStkEventNotifyQueuedFlag(RIL_Token t) {
     }
 }
 
-char* getStkQueuedEventNotify(RIL_Token t) {
-    if (RIL_CHANNEL_SET4_OFFSET <= RIL_queryMyChannelId(t)) {
-        return pEvent_notify[3];
-    } else if (RIL_CHANNEL_SET3_OFFSET <= RIL_queryMyChannelId(t)) {
-        return pEvent_notify[2];
-    } else if (RIL_CHANNEL_OFFSET <= RIL_queryMyChannelId(t)) {
-        return pEvent_notify[1];
-    } else {
-        return pEvent_notify[0];
+char* getStkQueuedEventNotify(RIL_Token t, int index) {
+    int simId = getSimIdfromToken(t);
+
+    if (simId >= SIM_COUNT) {
+        LOGE("getStkQueuedEventNotify: Invalid simId:%d !!!", simId);
+        return NULL;
     }
+
+    if (index >= EVENT_NOTIFY_BUFFER_LEN) {
+        LOGE("getStkQueuedEventNotify: Invalid index:%d !!!", index);
+        return NULL;
+    }
+
+    return pEvent_notify[simId][index];
 }
-char* getStkQueuedEventNotifyWithRid(RIL_SOCKET_ID rid) {
-    if (RIL_SOCKET_4 == rid) {
-        return pEvent_notify[3];
-    } else if (RIL_SOCKET_3 == rid) {
-        return pEvent_notify[2];
-    } else if (RIL_SOCKET_2 == rid) {
-        return pEvent_notify[1];
-    } else {
-        return pEvent_notify[0];
+
+void freeStkQueuedEventNotify(RIL_Token t, int index) {
+    int simId = getSimIdfromToken(t);
+
+    if (simId >= SIM_COUNT) {
+        LOGE("freeStkQueuedEventNotify: Invalid simId:%d !!!", simId);
+        return;
+    }
+
+    if (index >= EVENT_NOTIFY_BUFFER_LEN) {
+        LOGE("freeStkQueuedEventNotify: Invalid index:%d !!!", index);
+        return;
+    }
+
+    if (NULL != pEvent_notify[simId][index]) {
+        free(pEvent_notify[simId][index]);
+        pEvent_notify[simId][index] = NULL;
     }
 }
 
 void setStkQueuedEventNotifyWithRid(RIL_SOCKET_ID rid, char* pCmd) {
-    LOGD("setStkQueuedEventNotifyWithRid[%p][socketId: %d].", pCmd, rid);
-    if (RIL_SOCKET_4 == rid) {
-        pEvent_notify[3] = pCmd;
-    } else if (RIL_SOCKET_3 == rid) {
-        pEvent_notify[2] = pCmd;
-    } else if (RIL_SOCKET_2 == rid) {
-        pEvent_notify[1] = pCmd;
-    } else {
-        pEvent_notify[0] = pCmd;
+    int i = 0;
+    int simId = getSimIdfromSocketId(rid);
+
+    if (simId >= SIM_COUNT) {
+        LOGE("setStkQueuedEventNotifyWithRid: Invalid simId:%d !!!", simId);
+        return;
     }
-    LOGD("setStkQueuedEventNotifyWithRid[%p][%s].", pCmd, pCmd);
+
+    for (i = 0 ; i < EVENT_NOTIFY_BUFFER_LEN ; i++) {
+        if (NULL == pEvent_notify[simId][i]) {
+            pEvent_notify[simId][i] = pCmd;
+            break;
+        }
+    }
+
+    if (EVENT_NOTIFY_BUFFER_LEN == i) {
+        LOGE("setStkQueuedEventNotifyWithRid: No free buffer !!!");
+    } else {
+        LOGD("setStkQueuedEventNotifyWithRid[socketId:%d][index:%d][%p][%s]",
+            rid, i, pCmd, pCmd);
+    }
 }
 
 void onStkAtSendFromUrc()
@@ -334,6 +365,76 @@ void onStkAtSendFromUrc()
     }
 }
 
+void queryCpinStatus(void *param) {
+    int err;
+    ATResponse *p_response = NULL;
+    char *cpinLine;
+    char *cpinResult;
+
+    if (NULL == param) {
+        LOGE("queryCpinStatus: param is NULL !!!");
+        return;
+    }
+
+    err = at_send_command_singleline("AT+CPIN?", "+CPIN:", &p_response,
+        getRILChannelCtx(RIL_SIM, rid_cpin));
+    if (err != 0) {
+        goto retryQuery;
+    }
+    /* CPIN? has succeeded, now look at the result */
+
+    cpinLine = p_response->p_intermediates->line;
+    LOGD("queryCpinStatus: cpinLine1 = %s", cpinLine);
+    err = at_tok_start(&cpinLine);
+    LOGD("queryCpinStatus: cpinLine2 = %s", cpinLine);
+
+    if (err < 0) {
+        goto retryQuery;
+    }
+
+    err = at_tok_nextstr(&cpinLine, &cpinResult);
+    LOGD("queryCpinStatus: cpinLine3 = %s", cpinLine);
+
+    if (err < 0) {
+        goto retryQuery;
+    }
+
+    /* All what we wait is CPIN:READY */
+    if (0 == strcmp(cpinResult, "READY")) {
+        goto done;
+    }
+
+retryQuery:
+    cpinRetry++;
+    LOGD("queryCpinStatus: cpinRetry:%d", cpinRetry);
+    if (cpinRetry < 15) {
+        RIL_requestProxyTimedCallback(queryCpinStatus, param, &TIMEVAL_0,
+        getChannelCtxbyProxy(rid_cpin)->id, "queryCpinStatus");
+    } else {
+        RIL_onUnsolicitedResponseSocket(
+            RIL_UNSOL_SIM_REFRESH,
+            param, sizeof(RIL_SimRefreshResponse_v7),
+            rid_cpin);
+        free(param);
+    }
+    at_response_free(p_response);
+    p_response = NULL;
+    cpinResult = NULL;
+    return;
+
+done:
+    at_response_free(p_response);
+    p_response = NULL;
+    cpinResult = NULL;
+    LOGD("queryCpinStatus: success");
+
+    RIL_onUnsolicitedResponseSocket(
+        RIL_UNSOL_SIM_REFRESH,
+        param, sizeof(RIL_SimRefreshResponse_v7),
+        rid_cpin);
+    free(param);
+}
+
 void StkSendRequestComplete(int err, ATResponse *p_response, RIL_Token t)
 {
     if (err < 0 || p_response->success == 0) {
@@ -348,23 +449,32 @@ void requestReportStkServiceIsRunning(void *data, size_t datalen, RIL_Token t)
     RIL_STK_UNUSED_PARM(data);
     RIL_STK_UNUSED_PARM(datalen);
     setStkFlagByTk(t, true, aIs_stk_service_running);
-    LOGD("STK service is running is_proac_cmd_queued[%d].",
-            getStkFlagByTk(t, aIs_proac_cmd_queued));
-    if(true == getStkFlagByTk(t, aIs_proac_cmd_queued)) {
-        char *cmd = (char *)getStkCachedData(t, pProactive_cmd);//getStkQueuedProactivCmd(t);
-        LOGD("PC:[%p][%d][%s].", cmd, strlen(cmd), cmd);
-        setStkFlagByTk(t, false, aIs_proac_cmd_queued);
-        if(NULL != cmd) {
+
+    if (true == getStkProactiveCmdQueuedFlag(t)) {
+        LOGD("STK service is running: is_proac_cmd_queued: true");
+        char *cmd = (char *)getStkCachedData(t, pProactive_cmd);
+        if (NULL != cmd) {
+            LOGD("Proactive Cmd:[%d][%s]", strlen(cmd), cmd);
             MTK_UNSOL_STK_PROACTIVE_COMMAND(cmd, STK_CHANNEL_CTX);
-       	}
+            freeStkQueuedProactivCmd(t);
+        }
+        setStkFlagByTk(t, false, aIs_proac_cmd_queued);
     }
-    if(true == getStkEventNotifyQueuedFlag(t)) {
-        char *cmd = (char *)getStkQueuedEventNotify(t);
-        LOGD("Event Notify:[%d][%s].", strlen(cmd), cmd);
-        setStkEventNotifyQueuedFlagByTk(t, false);
-        if(NULL != cmd) {
-            MTK_UNSOL_STK_EVENT_NOTIFY(cmd, STK_CHANNEL_CTX);
-       	}
+
+    if (true == getStkEventNotifyQueuedFlag(t)) {
+        LOGD("STK service is running: is_event_notify_queued: true");
+        int index = 0;
+        while (index < EVENT_NOTIFY_BUFFER_LEN &&
+               NULL != getStkQueuedEventNotify(t, index)) {
+            char *cmd = (char *)getStkQueuedEventNotify(t, index);
+            if (NULL != cmd) {
+                LOGD("Event Notify:[index:%d][%d][%s]", index, strlen(cmd), cmd);
+                MTK_UNSOL_STK_EVENT_NOTIFY(cmd, STK_CHANNEL_CTX);
+                freeStkQueuedEventNotify(t, index);
+            }
+            index++;
+        }
+        setStkFlagByTk(t, false, aIs_event_notify_queued);
     }
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
 }
@@ -815,17 +925,20 @@ void onSimRefresh(char* urc, RILChannelCtx * p_channel)
     int *cmd = NULL;
     int cmd_length = 0;
     RIL_SOCKET_ID rid = getRILIdByChannelCtx(p_channel);
+    rid_cpin = rid;
     RIL_SimRefreshResponse_v7 simRefreshRspV7;
+    RIL_SimRefreshResponse_v7 *pSimRefreshRsp = NULL;
+    int refreshRspMemLen = 0;
 
 #ifdef MTK_WIFI_CALLING_RIL_SUPPORT
     int sessionId = 0;
 #endif
     int aid_len = 0;
     char *aid = NULL;
-    char *efId_str;
+    char *efId_str = NULL;
 
     memset(&simRefreshRspV7, 0, sizeof(RIL_SimRefreshResponse_v7));
-    LOGD("[onSimRefresh]type: %c, %s", urc[9], urc);
+    LOGD("onSimRefresh: type:%c urc:%s", urc[9], urc);
     switch(urc[9]) { // t point to cmd_deatil tag t[9] mean refresh type
         case '0':
             aid_len = decodeStkRefreshAid(urc, &aid);
@@ -859,9 +972,29 @@ void onSimRefresh(char* urc, RILChannelCtx * p_channel)
             break;
         case '4':
             aid_len = decodeStkRefreshAid(urc, &aid);
-            simRefreshRspV7.aid = aid;
-            simRefreshRspV7.result = SIM_RESET;
-            break;
+            LOGD("onSimRefresh: aid = %s, %d", aid, aid_len);
+            refreshRspMemLen = sizeof(RIL_SimRefreshResponse_v7);
+            if (NULL != aid) {
+                refreshRspMemLen += strlen(aid) + 1;
+            }
+            pSimRefreshRsp = malloc(refreshRspMemLen);
+            if (NULL == pSimRefreshRsp) {
+                LOGE("pSimRefreshRsp is NULL !!!");
+                return;
+            }
+            memset(pSimRefreshRsp, 0, refreshRspMemLen);
+            if (NULL != aid) {
+                pSimRefreshRsp->aid = (char*)pSimRefreshRsp
+                    + sizeof(RIL_SimRefreshResponse_v7);
+                memcpy(pSimRefreshRsp->aid, aid, strlen(aid));
+                pSimRefreshRsp->aid[strlen(aid)] = '\0';
+            }
+            pSimRefreshRsp->result = SIM_RESET;
+
+            cpinRetry = 0;
+            RIL_requestProxyTimedCallback(queryCpinStatus, pSimRefreshRsp, &TIMEVAL_0,
+                getChannelCtxbyProxy(rid)->id, "queryCpinStatus");
+            return;
         case '5': // ISIM app_reset
 #ifdef MTK_WIFI_CALLING_RIL_SUPPORT
             aid_len = decodeStkRefreshAid(urc, &aid);
@@ -878,14 +1011,48 @@ void onSimRefresh(char* urc, RILChannelCtx * p_channel)
             break;
         case '6':
             efId_str = decodeStkRefreshFileChange(urc, &cmd , &cmd_length);
+            LOGD("onSimRefresh: efId = %s", efId_str);
             aid_len = decodeStkRefreshAid(urc, &aid);
-            simRefreshRspV7.aid = aid;
-            if (NULL != efId_str && 0 < strlen(efId_str)) {
-                simRefreshRspV7.ef_id = efId_str;
-                LOGD("[onSimRefresh]efId = %s", simRefreshRspV7.ef_id);
+            LOGD("onSimRefresh: aid = %s, %d", aid, aid_len);
+            refreshRspMemLen = sizeof(RIL_SimRefreshResponse_v7);
+            if (NULL != efId_str) {
+                refreshRspMemLen += strlen(efId_str) + 1;
             }
-            simRefreshRspV7.result = SESSION_RESET;
-            break;
+            if (NULL != aid) {
+                refreshRspMemLen += strlen(aid) + 1;
+            }
+            pSimRefreshRsp = malloc(refreshRspMemLen);
+            if (NULL == pSimRefreshRsp) {
+                LOGE("pSimRefreshRsp is NULL !!!");
+                return;
+            }
+            memset(pSimRefreshRsp, 0, refreshRspMemLen);
+            if (NULL != efId_str) {
+                pSimRefreshRsp->ef_id = (char*)pSimRefreshRsp
+                   + sizeof(RIL_SimRefreshResponse_v7);
+                memcpy(pSimRefreshRsp->ef_id, efId_str, strlen(efId_str));
+                pSimRefreshRsp->ef_id[strlen(efId_str)] = '\0';
+                if (NULL != aid) {
+                    pSimRefreshRsp->aid = (char*)pSimRefreshRsp
+                        + sizeof(RIL_SimRefreshResponse_v7) + strlen(efId_str) + 1;
+                    memcpy(pSimRefreshRsp->aid, aid, strlen(aid));
+                    pSimRefreshRsp->aid[strlen(aid)] = '\0';
+                }
+            } else if (NULL != aid) {
+                pSimRefreshRsp->aid = (char*)pSimRefreshRsp
+                    + sizeof(RIL_SimRefreshResponse_v7);
+                memcpy(pSimRefreshRsp->aid, aid, strlen(aid));
+                pSimRefreshRsp->aid[strlen(aid)] = '\0';
+            }
+            pSimRefreshRsp->result = SESSION_RESET;
+
+            cpinRetry = 0;
+            RIL_requestProxyTimedCallback(queryCpinStatus, pSimRefreshRsp, &TIMEVAL_0,
+                getChannelCtxbyProxy(rid)->id, "queryCpinStatus");
+            if (NULL != cmd) {
+                free(cmd);
+            }
+            return;
         default:
             LOGD("Refresh type does not support.");
             return;
@@ -897,6 +1064,10 @@ void onSimRefresh(char* urc, RILChannelCtx * p_channel)
         &simRefreshRspV7, sizeof(RIL_SimRefreshResponse_v7),
         rid);
     free(cmd);
+    if (efId_str != NULL) {
+        free(efId_str);
+        efId_str = NULL;
+    }
 }
 
 bool checkAlphaIdExist(char *cmd) {
@@ -1060,20 +1231,19 @@ void onStkProactiveCommand(char* urc, RILChannelCtx* p_channel)
     if(urc != NULL) urc_len = strlen(urc);
 
     isStkServiceRunning = getStkFlagByRid(rid, aIs_stk_service_running);
-    LOGD("onStkProactiveCommand check %d.",isStkServiceRunning);
+    LOGD("onStkProactiveCommand: isStkServiceRunning:%d", isStkServiceRunning);
 
-    if(false == isStkServiceRunning) {
-        setStkFlagByRid(rid, true, aIs_proac_cmd_queued);
+    if (false == isStkServiceRunning) {
         pProCmd = (char*)calloc(1, urc_len + 1);
+        if (NULL == pProCmd) {
+            LOGE("onStkProactiveCommand: pProCmd is NULL !!!");
+            return;
+        }
         memset(pProCmd, 0x0, urc_len + 1);
         memcpy(pProCmd, urc, urc_len);
-        pTempFullCmd = getStkCachedDataByRid(rid, pProactive_cmd);
-        if (NULL != pTempFullCmd) {
-            free(pTempFullCmd);
-        }
         setStkCachedData(rid, pProactive_cmd, pProCmd);
+        setStkFlagByRid(rid, true, aIs_proac_cmd_queued);
         LOGD("STK service is not running yet.[%p]",pProCmd);
-
         return;
     }
 
@@ -1217,16 +1387,21 @@ void onStkEventNotify(char* urc, RILChannelCtx* p_channel)
     if(urc != NULL) urc_len = strlen(urc);
 
     isStkServiceRunning = getStkFlagByRid(rid, aIs_stk_service_running);
-    LOGD("onStkEventNotify check %d.urc_len %d.", isStkServiceRunning, urc_len);
+    LOGD("onStkEventNotify: isStkServiceRunning:%d", isStkServiceRunning);
 
-    if(false == isStkServiceRunning) {
-        setStkEventNotifyQueuedFlag(rid, true);
-        pEventNotify = (char*)calloc(1, urc_len + 1);
-        memset(pEventNotify, 0x0, urc_len + 1);
-        memcpy(pEventNotify, urc, urc_len);
-        setStkQueuedEventNotifyWithRid(rid, pEventNotify);
-        LOGD("STK service is not running yet.[%p]", pEventNotify);
-
+    if (false == isStkServiceRunning) {
+        if (checkEventNotifyFreeBuffer(rid) > 0) {
+            pEventNotify = (char*)calloc(1, urc_len + 1);
+            if (NULL == pEventNotify) {
+                LOGE("onStkEventNotify: pEventNotify is NULL !!!");
+                return;
+            }
+            memset(pEventNotify, 0x0, urc_len + 1);
+            memcpy(pEventNotify, urc, urc_len);
+            setStkQueuedEventNotifyWithRid(rid, pEventNotify);
+            setStkFlagByRid(rid, true, aIs_event_notify_queued);
+            LOGD("STK service is not running yet.[%p]", pEventNotify);
+        }
         return;
     }
 
@@ -1507,3 +1682,54 @@ extern int rilStkBtSapMain(int request, void *data, size_t datalen, RIL_Token t,
     return 1;
 }
 
+int getSimIdfromSocketId(RIL_SOCKET_ID rid) {
+    int simId = 0;
+
+    if (RIL_SOCKET_4 == rid) {
+        simId = 3;
+    } else if (RIL_SOCKET_3 == rid) {
+        simId = 2;
+    } else if (RIL_SOCKET_2 == rid) {
+        simId = 1;
+    } else {
+        simId = 0;
+    }
+
+    return simId;
+}
+
+int getSimIdfromToken(RIL_Token t) {
+    int simId = 0;
+
+    if (RIL_CHANNEL_SET4_OFFSET <= RIL_queryMyChannelId(t)) {
+        simId = 3;
+    } else if (RIL_CHANNEL_SET3_OFFSET <= RIL_queryMyChannelId(t)) {
+        simId = 2;
+    } else if (RIL_CHANNEL_OFFSET <= RIL_queryMyChannelId(t)) {
+        simId = 1;
+    } else {
+        simId = 0;
+    }
+
+    return simId;
+}
+
+int checkEventNotifyFreeBuffer(RIL_SOCKET_ID rid) {
+    int i = 0;
+    int simId = getSimIdfromSocketId(rid);
+    int freeBufferNum = 0;
+
+    if (simId >= SIM_COUNT) {
+        LOGE("checkEventNotifyFreeBuffer: Invalid simId:%d !!!", simId);
+        return 0;
+    }
+
+    for (i = 0 ; i < EVENT_NOTIFY_BUFFER_LEN ; i++) {
+        if (NULL == pEvent_notify[simId][i]) {
+            freeBufferNum++;
+        }
+    }
+
+    LOGD("checkEventNotifyFreeBuffer: freeBufferNum:%d", freeBufferNum);
+    return freeBufferNum;
+}

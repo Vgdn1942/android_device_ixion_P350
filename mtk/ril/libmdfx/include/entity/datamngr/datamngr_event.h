@@ -390,6 +390,7 @@ typedef struct  {
 	int                             defaultBearerValid;
 	MAL_Dedicate_Data_Call_Struct   defaultBearer;
       int eran_type;  // 1:RDS_RAN_MOBILE_3GPP, 2:RDS_RAN_WIFI
+      int islteonly;  // 0: 2/3, 4G allowed, 1: 4G only
 
 } MAL_Data_Call_Response_v11;
 
@@ -500,8 +501,6 @@ typedef struct {
 
 typedef struct {
 	int ril_status;
-	short total_event;
-	short event_seq;
 	MAL_Data_Call_Response_v11 resp;
 } dm_urc_data_call_list_changed_t;
 

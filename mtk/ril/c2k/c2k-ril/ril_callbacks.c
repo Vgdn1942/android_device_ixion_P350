@@ -347,7 +347,7 @@ extern int ifc_get_info(const char *name, unsigned int *addr,
         unsigned int *mask, unsigned int *flags);
 // For multi channel support
 extern void initRILChannels(void);
-
+extern int isSimSwitchMD3PowerOff();
 
 static void onRequest (int request, void *data, size_t datalen, RIL_Token t);
 static void reportUSBDisconn();
@@ -563,6 +563,9 @@ void turnPSEnable(void *param)
     radioOn = isRadioOn();
     LOGD("%s: isEnable = %d, radioOn = %d", __FUNCTION__, psParm->enable, radioOn);
     if((psParm->enable && !radioOn) || (!psParm->enable && radioOn)) {
+        if (psParm->enable) {
+            combineDataAttach(getChannelCtxbyProxy());
+        }
         err = at_send_command(cmd, &p_response, getDefaultChannelCtx());
         if((err != 0) || (p_response->success == 0)) {
             LOGD("%s: failed to %s", __FUNCTION__, cmd);
@@ -684,9 +687,20 @@ static void onRequest(int request, void *data, size_t datalen, RIL_Token t)
     // Wait until AT channel initialization finished
     waitAtInitDone();
 
-    if (s_md3_off && request != RIL_REQUEST_MODEM_POWERON && request != RIL_REQUEST_SET_MODEM_THERMAL)
+    if (s_md3_off
+            && request != RIL_REQUEST_MODEM_POWERON
+            && request != RIL_REQUEST_SET_MODEM_THERMAL
+            && request != RIL_REQUEST_MODEM_POWEROFF)
     {
         RLOGD("MD off and ignore %s", requestToString(request));
+        RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
+        return;
+    }
+
+    if (s_md3_off
+            && (request == RIL_REQUEST_MODEM_POWEROFF
+                    && !isSimSwitchMD3PowerOff())) {
+        RLOGD("MD off request ignore %s", requestToString(request));
         RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
         return;
     }

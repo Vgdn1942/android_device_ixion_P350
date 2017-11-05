@@ -26,7 +26,6 @@ typedef int bool;
 #include <sys/syscall.h>
 #include <sys/types.h>
 #define gettid() syscall(__NR_gettid)
-extern pid_t mal_pid;
 #endif
 
 // Return value
@@ -39,6 +38,10 @@ extern pid_t mal_pid;
 #define INFO_LV   (4)
 #define DEBUG_LV  (8)
 #define PRINT_LV  (ERR_LV | WARN_LV | INFO_LV | DEBUG_LV)    // NEED_TO_BE_NOTICED, assigned by compilers
+
+// Variables
+extern pid_t mal_pid;
+
 
 // MDFX
 // => Entity ID
@@ -68,7 +71,8 @@ typedef enum entity_id
 typedef enum task_id
 {
     TASK_INVAL_ID,  // for control
-    
+    TASK_X_ID, // don`t care
+
     TASK_FRAMEWORK_DEFAULT,
     TASK_FRAMEWORK_MFI_ERX,
     TASK_FRAMEWORK_HOST_RX,
@@ -81,7 +85,12 @@ typedef enum task_id
     TASK_MDMNGR2,
     TASK_MDMNGR3,
     TASK_MDMNGR4,
-    TASK_MDMNGR5,
+	TASK_MDMNGR5,
+    TASK_MDMNGR_CDMA_START,
+    TASK_MDMNGR_CDMA1 = TASK_MDMNGR_CDMA_START,
+    TASK_MDMNGR_PROXY_START,
+    TASK_MDMNGR_PROXY1 = TASK_MDMNGR_PROXY_START,
+    TASK_MDMNGR_END,
 
     TASK_RILPROXY_START = 200,
     TASK_RILPROXY,
@@ -136,7 +145,10 @@ typedef enum srv_id
 typedef enum event_id
 {
     EVENT_INVAL_ID,     // for control
- 
+    EVENT_INIT_ID, // for control
+    EVENT_CONTEXT_EXIT,     // for control
+    EVENT_CONTEXT_SET_COND,     // for control
+
     // => Main entity
     // N/A
  
@@ -157,34 +169,8 @@ typedef enum event_id
     EVENT_ATI_BYPASS_URC, 
     EVENT_ATI_HIJACK, 
 
-/*
-    EVENT_ATI_ATC_CFUN, 
-    EVENT_ATI_ATC_CGDCONT, 
-    EVENT_ATI_ATC_CGSDCONT, 
-    EVENT_ATI_ATC_CGQREQ,	
-    EVENT_ATI_ATC_CGQMIN,	
-    EVENT_ATI_ATC_CGEQREQ, 
-    EVENT_ATI_ATC_CGEQMIN, 
-    EVENT_ATI_ATC_CGATT, 
-    EVENT_ATI_ATC_CGACT, 
-    EVENT_ATI_ATC_CGCMOD, 
-    EVENT_ATI_ATC_CGDATA, 
-    EVENT_ATI_ATC_CGPADDR, 
-    EVENT_ATI_ATC_CGCONTRDP, 
-    EVENT_ATI_ATC_CGSCONTRDPT, 
-    EVENT_ATI_ATC_CGREG, 
-    EVENT_ATI_ATC_CGPRCO, 
-    EVENT_ATI_ATC_EREP, 
-    EVENT_ATI_ATC_CGANS, 
-    EVENT_ATI_ATC_CGSDATA, 
-    EVENT_ATI_ATC_ACTTEST, 
-    EVENT_ATI_ATC_EGCH, 
-    EVENT_ATI_ATC_EGTYPE, 
-    EVENT_ATI_ATC_MBPC, 
-    EVENT_ATI_ATC_VZWAPNE, 
-    EVENT_ATI_ATC_EFUN, 
-	EVENT_ATI_URC_CME, 
-*/
+    // => MAL interface
+    EVENT_MAL_RESTART, 
 
     // => Modem Manager event
     EVENT_MDMNGR_START = 100,
@@ -194,7 +180,9 @@ typedef enum event_id
     EVENT_MDMNGR_ATURC_NOTIFY,          /* mdmngr_aturc_notify_t */
     EVENT_MDMNGR_ATCMD_REQ_EX,          /* mdmngr_atcmd_req_t */
     EVENT_MDMNGR_STATE_NOTIFY,          /* mdmngr_state_t */
-    
+    EVENT_MDMNGR_ATCMD_CDMA_REQ_EX,     /* mdmngr_atcmd_req_t */
+    EVENT_MDMNGR_ATCMD_PROXY_REQ_EX,    /* mdmngr_atcmd_req_t */
+
     // => SIM Manager event
     EVENT_SIMMNGR_START = 200,
     EVENT_SIMMNGR_QUERY_CSQ,
@@ -266,7 +254,14 @@ typedef enum event_id
     EVENT_SETUP_DATA_CALL_IND,
     EVENT_SETUP_DATA_CALL_IND_FAIL,
     EVENT_DM_HO_RESP,
+    EVENT_LIFETIME_UPDATE, 
+    EVENT_DATAMNGR_NO_RA_REQ, 
+    EVENT_DATAMNGR_NO_RA_RESP, 
+    EVENT_IMS_ENABLE,
 
+    EVENT_SETUP_DATA_CALL_RESP_NOTIFY,
+    EVENT_SETUP_DATA_CALL_RESP_FAIL_NOTIFY,
+    EVENT_SETUP_DATA_CALL_RESP_ACK,
 
     // => => DATI
     EVENT_DATAMNGR_ATCMD_REQ, 
@@ -287,6 +282,7 @@ typedef enum event_id
     EVENT_IMSMNGR_START = 500,
     EVENT_IMSMNGR_REQ,                  /* imsmngr_req_t / imsmngr_resp_t */
     EVENT_IMSMNGR_NOTIFY,               /* imsmngr_notify_t */
+    EVENT_IMCB_TIMER_EXPIRE,
 
     // => RDS event 
     EVENT_RDS_START = 600,
@@ -303,6 +299,8 @@ typedef enum event_id
     EVENT_MFI_RU_SET_MDSTATUS_REQ,      /* 9: FWK set MD status */
     EVENT_RU_NM_CGREG_REQ,              /* 10: CGREG request to NM */
     EVENT_RU_NM_CGREG_CNF,              /* 11: CGREG confirm from NM */
+    EVENT_RU_RRPL_CHECK_REQ,            /* 12: Request RU check rrpl*/ 
+    EVENT_MFI_RU_WIFI_DISABLE_IND,      /* 13: wifi disable indication */
 
     EVENT_RDS_RB = EVENT_RDS_START+30,   
     /* RB IF */
@@ -330,6 +328,7 @@ typedef enum event_id
     EVENT_RB_SYSHO_TO_IND,              /* 52: H.O. timeout indication */
     EVENT_MFI_RB_WIFI_RVOUT_IND,        /* 53: wifi rove out indication */
     EVENT_MFI_RB_WIFIPDN_ACT_IND,       /* 54: wifi PDN State indication */
+    EVENT_RB_RU_WIFIPDN_ACT_IND,        /* 55: wifi PDN State notify */
 
     EVENT_RDS_RRA = EVENT_RDS_START+60,   
     /* RRA IF */
@@ -360,9 +359,12 @@ typedef enum event_id
     EVENT_RDS_INTERNAL_ERR_RSP,         /* 87: for error response */
     /* Timer to RDS */
     EVENT_RU_TM_WSL_TIMER_IND,          /* 88: WPA Supplicant timer indication */
-    EVENT_UT_RU_CONIF_REQ,              /* 89: UT purpose */
-    EVENT_UT_RB_DUMPDNI4,               /* 90: */
-    EVENT_UT_RB_NWDDCIND,               /* 91: */
+    EVENT_RU_TM_WFC_TIMER_IND,          /* 89: WPA Supplicant timer indication */
+    EVENT_UT_RU_CONIF_REQ,              /* 90: UT purpose */
+    EVENT_UT_RB_DUMPDNI4,               /* 91: */
+    EVENT_UT_RB_NWDDCIND,               /* 92: */
+    /* To UT RRA */
+    EVENT_RRA_UT_SYS_RETRY_TO_IND,      /* 93: */
 
     EVENT_RDS_RB_SKIP1IMS_UT,
     EVENT_RDS_RB_MOBILE_DDC_UT,

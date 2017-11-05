@@ -313,6 +313,8 @@ static const CTClient_CommandParam CTCLIENT_CommandParams[] =
     {"ATI",         5, MULTILINE, "+GMI:", 0, AT_CHANNEL},      //report cp platform infomation
 };
 
+static const char *SIM_SWITCH_MD3_POWER_OFF = "cdma.simswitch.offmd3";
+
 static void requestScreenState(void *data, size_t datalen, RIL_Token t);
 static void requestIdentity(void *data, size_t datalen, RIL_Token t);
 static void requestPhoneTestInfo( void *data,size_t datalen, RIL_Token t);
@@ -1973,6 +1975,7 @@ extern void requestSetRadioCapability(void * data, size_t datalen, RIL_Token t)
             }
 
             if (s_md3_off != 1) {
+                setSimSwitchMD3PowerOff(1);
                 s_md3_off = 1;
                 LOGD("%s: sState is %d.", __FUNCTION__, getRadioState());
                 err = at_send_command("AT+EPOF", NULL, getRILChannelCtxFromToken(t));
@@ -2015,4 +2018,20 @@ extern void requestGetRadioCapability(void * data, size_t datalen, RIL_Token t)
     //C2K rild always return this string,because MD3 not has uid
     strcpy(rc->logicalModemUuid, "modem_sys3");
     RIL_onRequestComplete(t, RIL_E_SUCCESS, rc, sizeof(RIL_RadioCapability));
+}
+
+int isSimSwitchMD3PowerOff() {
+    int isSimSwitchPowerOff = 0;
+    if (isCdmaLteDcSupport()) {
+        char property_value[PROPERTY_VALUE_MAX] = { 0 };
+        property_get(SIM_SWITCH_MD3_POWER_OFF, property_value, "0");
+        isSimSwitchPowerOff = atoi(property_value);
+    }
+    RLOGI("%s(): %s: %d", __FUNCTION__, SIM_SWITCH_MD3_POWER_OFF,
+            isSimSwitchPowerOff);
+    return isSimSwitchPowerOff;
+}
+void setSimSwitchMD3PowerOff(int is_off) {
+    RLOGI("set %s to %d", SIM_SWITCH_MD3_POWER_OFF, is_off);
+    property_set(SIM_SWITCH_MD3_POWER_OFF, is_off ? "1" : "0");
 }

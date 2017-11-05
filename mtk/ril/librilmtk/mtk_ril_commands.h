@@ -199,3 +199,12 @@
 /// M: EPDG feature. Update PS state from MAL @{
 {RIL_REQUEST_MAL_PS_RGEGISTRATION_STATE, dispatchString, responseVoid, RIL_CMD_PROXY_3},
 /// @}
+/// M:set Ims capability to MD @{
+{RIL_REQUEST_SET_VOLTE_ENABLE, dispatchInts, responseVoid, RIL_CMD_PROXY_1},
+{RIL_REQUEST_SET_WFC_ENABLE, dispatchInts, responseVoid, RIL_CMD_PROXY_1},
+{RIL_REQUEST_SET_IMS_VOICE_ENABLE, dispatchInts, responseVoid, RIL_CMD_PROXY_1},
+{RIL_REQUEST_SET_IMS_VIDEO_ENABLE, dispatchInts, responseVoid, RIL_CMD_PROXY_1},
+/// @}
+/// M: ViLTE. @{
+{RIL_REQUEST_VT_DIAL_WITH_SIP_URI, dispatchString, responseVoid, RIL_CMD_PROXY_2}, //[ViLTE]Make video call with SIP uri
+/// @}

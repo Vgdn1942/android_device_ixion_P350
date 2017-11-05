@@ -66,7 +66,6 @@
 #include <linux/route.h>
 
 #define PROPERTY_RIL_SPECIFIC_SM_CAUSE "ril.specific.sm_cause"
-#define PROPERTY_SIM_OPERATOR_NUMERIC "gsm.sim.operator.numeric"
 
 #define DATA_CHANNEL_CTX getRILChannelCtxFromToken(t)
 
@@ -114,6 +113,8 @@ char TEMP_IA_PASSWORD[256] = {0};
 extern int max_pdn_support;
 extern int pdnInfoSize;
 extern int isCid0Support;
+extern int pdnFailCauseSupportVer;
+extern int pdnReasonSupportVer;
 
 /* Refer to system/core/libnetutils/ifc_utils.c */
 extern int ifc_disable(const char *ifname);
@@ -187,11 +188,13 @@ extern int queryEpdgRat(reqSetupConf_t *pConfig, RIL_Default_Bearer_VA_Config_St
 
 extern int deactivatePdnThruEpdg(int interfaceId, int reason);
 extern void dumpReqSetupConfig(const reqSetupConf_t * pConfig);
-
+extern bool isLegalPdnRequest(int interfaceId, int isReqFromMAL);
 extern pSetupDataCallFunc setupDataCallFunc[E_SETUP_DATA_CALL_FUNC_CNT];
 /// [IMS][EPDG] code end. @}
 
 
+extern int isCC33Support();
+extern int isCdmaIratSupport();
 
 #ifdef MTK_RIL
 extern const char *proxyIdToString(int id);
@@ -241,7 +244,11 @@ typedef struct {
 } OnReAttachInfo;
 
 #define TELSTRA_PDP_RETRY_PLMN "50501"
-static int isFallbackPdpRetryRunning(RIL_SOCKET_ID rid, const char* apn, int protocol);
+#define TELCEL_PDP_RETRY_PLMN "33402"
+#define TELCEL_PDP_RETRY_PLMN2 "334020"
+
+static int isFallbackPdpRetryRunning(RIL_SOCKET_ID rid, const char* apn);
+static int isFallbackPdpNeeded(RIL_SOCKET_ID rid, const char* apn, int protocol);
 
 //M:  [C2K][IRAT code start. {@
 extern PDN_IRAT_ACTION nIratAction;
@@ -396,10 +403,8 @@ int getLastDataCallFailCause()
             gprs_failure_cause == SM_CONDITIONAL_IE_ERROR ||
             gprs_failure_cause == SM_MESSAGE_NOT_COMPATIBLE_WITH_PROTOCOL_STATE ||
             gprs_failure_cause == SM_PROTOCOL_ERROR ||
-            gprs_failure_cause == SM_APN_RESTRICTION_VALUE_INCOMPATIBLE_WITH_PDP_CONTEXT
-#ifdef MTK_FALLBACK_RETRY_SUPPORT
-            || gprs_failure_cause == PDP_FAIL_FALLBACK_RETRY
-#endif
+            gprs_failure_cause == SM_APN_RESTRICTION_VALUE_INCOMPATIBLE_WITH_PDP_CONTEXT ||
+            gprs_failure_cause == PDP_FAIL_FALLBACK_RETRY
             ) {
         return gprs_failure_cause;
     } else if (gprs_failure_cause == 0x0E0F){
@@ -466,6 +471,10 @@ void requestSetupDataCall(void * data, size_t datalen, RIL_Token t)
     reqSetupConf.retryCount = 1;
 /// M: IMS/EPDG @}
 
+    RIL_SOCKET_ID rid = getRILIdByChannelCtx(getRILChannelCtxFromToken(t));
+    int isFB = isFallbackPdpNeeded(rid, reqSetupConf.requestedApn, reqSetupConf.protocol);
+    int setupFuncIdx = E_SETUP_DATA_CALL_FUNC_ERR;
+
     //VoLTE
     RIL_Default_Bearer_VA_Config_Struct defaultBearerVaConfig;
     memset(&defaultBearerVaConfig, 0, sizeof(RIL_Default_Bearer_VA_Config_Struct));
@@ -488,6 +497,11 @@ void requestSetupDataCall(void * data, size_t datalen, RIL_Token t)
             }
         }
         LOGD("requestSetupData selected ineterfaceId is %d", reqSetupConf.interfaceId);
+    }
+
+    if (!isLegalPdnRequest(reqSetupConf.interfaceId, isReqFromMAL)) {
+         LOGD("requestSetupData illegal pdn request by ifid = %d", reqSetupConf.interfaceId);
+         goto error;
     }
 
     if (requestParamNumber > 8) {
@@ -551,11 +565,6 @@ void requestSetupDataCall(void * data, size_t datalen, RIL_Token t)
         goto error;
     }
 
-#ifdef MTK_FALLBACK_RETRY_SUPPORT
-    RIL_SOCKET_ID rid = getRILIdByChannelCtx(getRILChannelCtxFromToken(t));
-    int flag_T_PdpRetry = isFallbackPdpRetryRunning(rid, apn, protocol);
-#endif
-
 #if defined(PURE_AP_USE_EXTERNAL_MODEM) && !defined(MT6280_SUPER_DONGLE)
     if (strcmp(profile, "1002") == 0) {
         // Always request for CID 1 for default connection
@@ -566,16 +575,13 @@ void requestSetupDataCall(void * data, size_t datalen, RIL_Token t)
                             reqSetupConf.authType, reqSetupConf.protocol, 1, 2, reqSetupConf.profile, t);
     }
 #else
-    int setupFuncIdx = E_SETUP_DATA_CALL_FUNC_ERR;
     if (!isReqFromMAL) {
         if (isEpdgSupport() && reqSetupConf.availableCid != INVALID_CID) {
             setupFuncIdx = E_SETUP_DATA_CALL_OVER_EPDG;
         } else if (defaultBearerVaConfig.emergency_ind == 1) {  // Emergency
             setupFuncIdx = E_SETUP_DATA_CALL_EMERGENCY;
-#ifdef MTK_FALLBACK_RETRY_SUPPORT
-        } else if (flag_T_PdpRetry) {
+        } else if (isFB) {
             setupFuncIdx = E_SETUP_DATA_CALL_FALLBACK;
-#endif
         } else {
             setupFuncIdx = E_SETUP_DATA_CALL_OVER_IPV6;
         }
@@ -654,6 +660,8 @@ void requestDeactiveDataCall(void * data, size_t datalen, RIL_Token t)
             case CME_L4C_CONTEXT_CONFLICT_DEACT_ALREADY_DEACTIVATED:
                 LOGD("[%s] deactivateDataCall cid%d already deactivated", __FUNCTION__, i);
                 break;
+            case CME_LAST_PDN_NOT_ALLOW_LR11:
+                if(pdnFailCauseSupportVer < MD_LR11) goto error;
             case CME_LAST_PDN_NOT_ALLOW:
                 if (needHandleLastPdn == 0) {
                     needHandleLastPdn = 1;
@@ -689,10 +697,10 @@ void requestDeactiveDataCall(void * data, size_t datalen, RIL_Token t)
             if (pdn_info_wifi[i].interfaceId == interfaceId) {
                 // reason 100 means that RDS disconnect LTE pdn, no need to ask RDS again
                 pdnInfo = &pdn_info_wifi[i];
-                if (reason != REASON_RDS_DEACT_LTE_PDN && 1 == deactivatePdnThruEpdg(interfaceId, reason)) {
+                if (reason != REASON_RDS_DEACT_LTE_PDN) {
+                    deactivatePdnThruEpdg(interfaceId, reason);
                     clearPdnInfo(pdnInfo);
                 }
-                break;
             }
         }
     }
@@ -1397,6 +1405,7 @@ void onMePdnActive(void* param)
     MePdnActiveInfo* pInfo = (MePdnActiveInfo*)param;
     RILChannelCtx* rilchnlctx = pInfo->pDataChannel;
     int activatedCid = pInfo->activeCid;
+    int reason = pInfo->reason;
     int err = 0;
     ATLine *p_cur = NULL;
     ATResponse *p_response = NULL;
@@ -1416,6 +1425,7 @@ void onMePdnActive(void* param)
         pdn_info[activatedCid].active = DATA_STATE_LINKDOWN; // Update with link down state.
         pdn_info[activatedCid].cid = activatedCid;
         pdn_info[activatedCid].primaryCid = activatedCid;
+        pdn_info[activatedCid].reason = reason;
     }
 
     //Check no data PDN
@@ -1528,11 +1538,10 @@ int isAlwaysAttach()
     return 1;
 }
 
-static int isFallbackPdpRetryRunning(RIL_SOCKET_ID rid, const char* apn, int protocol)
+static int isFallbackPdpRetryRunning(RIL_SOCKET_ID rid, const char* apn)
 {
     char SimOperatorNumeric[PROPERTY_VALUE_MAX] = {0};
     getMSimProperty(rid, PROPERTY_SIM_OPERATOR_NUMERIC, SimOperatorNumeric);
-    char operatorNumeric[PROPERTY_VALUE_MAX] = {0};
     char networkType[PROPERTY_VALUE_MAX] = {0};
     char *nwType;
     int sim_index = rid;
@@ -1541,41 +1550,35 @@ static int isFallbackPdpRetryRunning(RIL_SOCKET_ID rid, const char* apn, int pro
     //Check HPLMN
     if (0 == strncmp(SimOperatorNumeric, TELSTRA_PDP_RETRY_PLMN, PROPERTY_VALUE_MAX-1)) {
         LOGD("requestSetupData SIM in Telstra 505-01 [%s]", SimOperatorNumeric);
-        property_get(PROPERTY_OPERATOR_NUMERIC, operatorNumeric, "");
-        //Check registered PLMN
-        if (0 == strncmp(operatorNumeric, TELSTRA_PDP_RETRY_PLMN, PROPERTY_VALUE_MAX-1)) {
-            LOGD("requestSetupData registered in Telstra 505-01 [%s]", operatorNumeric);
-            property_get(PROPERTY_DATA_NETWORK_TYPE, networkType, "");
-            //Check if 3G network
-            nwType = strtok(networkType, ",");
-            while(sim_index > 0) {
-                if (nwType != NULL) {
-                    nwType = strtok(NULL,",");
-                }
-                sim_index--;
+        property_get(PROPERTY_DATA_NETWORK_TYPE, networkType, "");
+        //Check if 3G network
+        nwType = strtok(networkType, ",");
+        while(sim_index > 0) {
+            if (nwType != NULL) {
+                nwType = strtok(NULL,",");
             }
+            sim_index--;
+        }
 
-            if (nwType == NULL) {
-                LOGD("requestSetupData: Not register yet\n");
-            } else {
-                LOGD("requestSetupData: registered in [%s] NW\n", nwType);
-                if ((0 == strcmp(nwType, "UMTS")) ||
-                    (0 == strcmp(nwType, "HSDPA")) ||
-                    (0 == strcmp(nwType, "HSUPA")) ||
-                    (0 == strcmp(nwType, "HSPA")) ||
-                    (0 == strcmp(nwType, "HSPAP"))) {
-                    //Check if IPv4v6 and default APN
-                    if ((NULL != apn) &&
-                       (NULL == strstr(apn, "mms")) &&
-                       (IPV4V6 == protocol)) {
-                        LOGD("requestSetupData: match FALLBACK PDP retry support\n");
-                        ret = 1;
-                        return ret;
-                    }
+        if (nwType == NULL) {
+            LOGD("requestSetupData: Not register yet\n");
+        } else {
+            LOGD("requestSetupData: registered in [%s] NW\n", nwType);
+            if ((0 == strcmp(nwType, "UMTS")) ||
+                (0 == strcmp(nwType, "HSDPA")) ||
+                (0 == strcmp(nwType, "HSUPA")) ||
+                (0 == strcmp(nwType, "HSPA")) ||
+                (0 == strcmp(nwType, "HSPAP"))) {
+                //Check if IPv4v6 and default APN
+                if ((NULL != apn) && (NULL == strstr(apn, "mms"))) {
+                    LOGD("requestSetupData: match FALLBACK PDP retry support\n");
+                    ret = 1;
+                    return ret;
                 }
             }
         }
     }
+
     LOGD("requestSetupData: Not FALLBACK PDP retry \n");
 
     return ret;
@@ -1589,6 +1592,38 @@ int isPsDualTalkMode()
     } else {
         return isDualTalkMode();
     }
+}
+
+static int isFallbackPdpNeeded(RIL_SOCKET_ID rid, const char* apn, int protocol)
+{
+    int ret = 0;
+    char operatorNumeric[PROPERTY_VALUE_MAX] = {0};
+    property_get(PROPERTY_OPERATOR_NUMERIC, operatorNumeric, "");
+
+    //Check registered PLMN
+    if (0 == strncmp(operatorNumeric, TELSTRA_PDP_RETRY_PLMN, PROPERTY_VALUE_MAX-1)) {
+        LOGD("requestSetupData registered in Telstra 505-01 [%s]", operatorNumeric);
+        ret = isFallbackPdpRetryRunning(rid, apn);
+    } else if (0 == strncmp(operatorNumeric, TELCEL_PDP_RETRY_PLMN, PROPERTY_VALUE_MAX-1)
+            || 0 == strncmp(operatorNumeric, TELCEL_PDP_RETRY_PLMN2, PROPERTY_VALUE_MAX-1)) {
+        LOGD("requestSetupData registered in Telcel 334-02/334-020 [%s]", operatorNumeric);
+        if (isCC33Support() == 0) ret = 1;
+    } else {
+        LOGD("requestSetupData common");
+        if (!isCdmaIratSupport()) ret = 1;
+    }
+
+    if (ret) {
+        if ((IPV4V6 != protocol)
+                || ((NULL != apn) && (NULL != strstr(apn, "ims")))
+                || (pdnReasonSupportVer < MD_LR11)) {
+            LOGD("requestSetupData DON'T trigger AP IPv4v6 fallback because NOT support \
+(IPv4 or IPv6 only)/IMS/no PDN reason cause report");
+            ret = 0;
+        }
+    }
+
+    return ret;
 }
 
 extern int rilDataMain(int request, void *data, size_t datalen, RIL_Token t)
@@ -1747,11 +1782,38 @@ extern int rilDataUnsolicited(const char *s, const char *sms_pdu, RILChannelCtx*
         return 1;
     } else if (strStartsWith(s, "+CGEV: ME")) {
         if (strStartsWith(s, "+CGEV: ME PDN ACT")) {
-            char *p = strstr(s, ME_PDN_URC);
-            if( p == NULL) {
-                return 1;
+            int err = 0;
+            int activatedCid = INVALID_CID;
+            int reason = NO_CAUSE;
+            int otherCid = INVALID_CID;
+
+            err = at_tok_start(&s);
+            /* s => +CGEV: ME PDN ACT X */
+
+            if (err >= 0 && strStartsWith(s, " ME PDN ACT ")) {
+                char *tempParam = NULL;
+
+                err = at_tok_nextstr(&s, &tempParam);
+
+                char *firstParam = tempParam + strlen(ME_PDN_URC);
+                activatedCid = atoi(firstParam);
+
+                LOGD("[%s] default bearer activated [CID=%d]", __FUNCTION__, activatedCid);
+
+                if (err >= 0 && at_tok_hasmore(&s)) {
+                    err = at_tok_nextint(&s, &reason);
+
+                    LOGD("[%s] default bearer activated [CID=%d, Reason=%d]", __FUNCTION__,
+                            activatedCid, reason);
+
+                    if (err >= 0 && at_tok_hasmore(&s)) {
+                        err = at_tok_nextint(&s, &otherCid);
+
+                       LOGD("[%s] default bearer activated [CID=%d, Reason=%d, OtherCID=%d]",
+                               __FUNCTION__, activatedCid, reason, otherCid);
+                    }
+                }
             }
-            p = p + strlen(ME_PDN_URC) + 1;
 
             MePdnActiveInfo* pInfo = calloc(1, sizeof(MePdnActiveInfo));
 
@@ -1760,7 +1822,8 @@ extern int rilDataUnsolicited(const char *s, const char *sms_pdu, RILChannelCtx*
                 return 1;
             }
 
-            pInfo->activeCid = atoi(p);
+            pInfo->activeCid = activatedCid;
+            pInfo->reason = reason;
             pInfo->pDataChannel = pDataChannel;
 
             LOGD("rilDataUnsolicited CID%d is activated and current state is %d", pInfo->activeCid, pdn_info[pInfo->activeCid].active);

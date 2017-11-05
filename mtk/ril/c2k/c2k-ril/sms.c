@@ -18,6 +18,16 @@
 #include <utils/Log.h>
 #include "sms.h"
 
+#define MESSAGE_TYPE_LEN         (1)
+#define TELESERVICE_ID_LEN       (1 + 1 + 2)
+#define ADDRE_LEN                (1 + 1 + 1 + 1 + RIL_CDMA_SMS_ADDRESS_MAX)
+#define BEARER_REPLY_OPT_LEN     (1 + 1 + 1)
+#define BEARER_DATA_LEN          (1 + 1 + RIL_CDMA_SMS_BEARER_DATA_MAX)
+
+#define RIL_CDMA_SMS_MAX_PDU_LEN (MESSAGE_TYPE_LEN + TELESERVICE_ID_LEN + \
+                                  ADDRE_LEN + BEARER_REPLY_OPT_LEN +      \
+                                  BEARER_DATA_LEN)
+
 void RILCdmaSmsPdu (RIL_CDMA_SMS_Message *SmsMsg, unsigned char *PduP, unsigned char *nlength)
 {
     if ( SmsMsg == NULL || PduP == NULL || nlength == NULL )
@@ -551,9 +561,14 @@ char ParseSmsAtString(char* SmsAtStr, char** SmsPdu, unsigned short* length)
  */
 int RILEncodeCdmaSmsPdu(RIL_CDMA_SMS_Message* p_message, char** s_pdu, char** s_number)
 {
-
-    if ( p_message == NULL )
+    if (p_message == NULL ||
+        p_message->sAddress.number_of_digits > RIL_CDMA_SMS_ADDRESS_MAX ||
+        p_message->sSubAddress.number_of_digits > RIL_CDMA_SMS_SUBADDRESS_MAX ||
+        p_message->uBearerDataLen > RIL_CDMA_SMS_BEARER_DATA_MAX)
+    {
+        LOGE("Invalid RIL_CDMA_SMS_Message\n");
         return -1;
+    }
 
     *s_number = (char*)malloc(p_message->sAddress.number_of_digits + 1);
     memset(*s_number, 0, p_message->sAddress.number_of_digits + 1);
@@ -561,9 +576,9 @@ int RILEncodeCdmaSmsPdu(RIL_CDMA_SMS_Message* p_message, char** s_pdu, char** s_
     int i = 0;
 
 
-    unsigned char pdu[255] = {0};
+    unsigned char pdu[RIL_CDMA_SMS_MAX_PDU_LEN] = {0};
     unsigned char length = 0;
-    char strPdu[255*2 + 1] = {0};  
+    char strPdu[RIL_CDMA_SMS_MAX_PDU_LEN * 2 + 1] = {0};
 
     //transform RIL_CDMA_SMS_Message number encoding from 8bit encoding to 4bit encoding
     unsigned char adjust = p_message->sAddress.number_of_digits % 2 == 0 ? 0 : 1;

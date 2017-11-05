@@ -13,8 +13,11 @@
 
 // Additional information
 #ifdef __ANDROID__
-#define DEFAULT_TAG_NAME    "MAL-MAIN"
+#define MAL_DAEMON_TAG_IDX 0
+#define MFI_CONN_TAG_IDX 1
+
 extern int android_log_prio[];
+extern const char* android_log_tag[];
 #endif
 
 // API
@@ -22,12 +25,12 @@ extern int android_log_prio[];
 #ifdef __GCC_COMPILER__
 #define lv_print(lv, format, args ...)    (((lv) & PRINT_LV) == 0 ? SYS_SUCC : \
                                           ((format) == NULL ? SYS_FAIL : \
-                                          (__android_log_print(android_log_prio[(lv)], DEFAULT_TAG_NAME, format "%s%s%s%d%s", ## args, "[", __func__, ", ", __LINE__, "]: ") < 0 ? \
+                                          (__android_log_print(android_log_prio[(lv)], getpid() == mal_pid ? android_log_tag[MAL_DAEMON_TAG_IDX] : android_log_tag[MFI_CONN_TAG_IDX], format "%s%s%s%d%s", ## args, "[", __func__, ", ", __LINE__, "]: ") < 0 ? \
                                           SYS_FAIL : (fflush(stdout), SYS_SUCC))))
 #else
 #define lv_print(lv, format, args ...)    (((lv) & PRINT_LV) == 0 ? SYS_SUCC : \
                                           ((format) == NULL ? SYS_FAIL : \
-                                          (__android_log_print(android_log_prio[(lv)], DEFAULT_TAG_NAME, (format),  ## args) < 0 ? \
+                                          (__android_log_print(android_log_prio[(lv)], getpid() == mal_pid ? android_log_tag[MAL_DAEMON_TAG_IDX] : android_log_tag[MFI_CONN_TAG_IDX], (format),  ## args) < 0 ? \
                                           SYS_FAIL : (fflush(stdout), SYS_SUCC))))
 #endif
 #else

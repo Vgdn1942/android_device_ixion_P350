@@ -137,4 +137,5 @@
 // M: [LTE][Low Power][UL traffic shaping] End
 // M: IMS/EPDG start
 {RIL_UNSOL_SETUP_DATA_CALL_RESPONSE, responseUnsolSetupDataCall, WAKE_PARTIAL},
+{RIL_UNSOL_MAL_DATA_CALL_LIST_CHANGED, responseUnsolSetupDataCall, WAKE_PARTIAL},
 // M: IMS/EPDG end

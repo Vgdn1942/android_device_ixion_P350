@@ -17,5 +17,8 @@
 for flavor in eng userdebug user; do
     add_lunch_combo "full_P350-${flavor}"
     add_lunch_combo "lineage_P350-${flavor}"
+    add_lunch_combo "aicp_P350-${flavor}"
 done
 
+# Hack for aicp
+cp -f device/ixion/P350/aicp.mk vendor/aicp/products/P350.mk

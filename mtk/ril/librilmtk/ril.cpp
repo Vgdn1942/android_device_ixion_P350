@@ -300,6 +300,9 @@ static size_t s_prevEmsrDataSize[SIM_COUNT];
 static void *s_prevEcopsData[SIM_COUNT] = {NULL};
 static size_t s_prevEcopsDataSize[SIM_COUNT];
 
+pthread_mutex_t s_pendingUrcMutex[MAX_SIM_COUNT];
+int s_fdCommand[MAX_SIM_COUNT];
+
 #if RILC_LOG
     static char printBuf[PRINTBUF_SIZE];
 #endif
@@ -5630,6 +5633,7 @@ static void processCommandsCallback(int fd, short flags, void *param) {
 
         close(fd);
         p_info->fdCommand = -1;
+        s_fdCommand[p_info->socket_id] = -1;
 
         ril_event_del(p_info->commands_event);
 
@@ -5844,7 +5848,12 @@ static void listenCallback (int fd, short flags, void *param) {
                 p_info->processCommandsCallback, p_info);
         rilEventAddWakeup (p_info->commands_event);
 
-       onNewCommandConnect(p_info->socket_id);
+        onNewCommandConnect(p_info->socket_id);
+    #ifdef MTK_RIL
+        pthread_mutex_lock(&s_pendingUrcMutex[p_info->socket_id]);
+        sendPendedUrcs(p_info->socket_id, p_info->fdCommand);
+        pthread_mutex_unlock(&s_pendingUrcMutex[p_info->socket_id]);
+    #endif
     } else {
         RLOGI("libril: new connection");
 
@@ -5857,9 +5866,6 @@ static void listenCallback (int fd, short flags, void *param) {
         rilEventAddWakeup(sapSocket->getCallbackEvent());
         sapSocket->onNewCommandConnect();
     }
-#ifdef MTK_RIL
-    sendPendedUrcs(p_info->socket_id, p_info->fdCommand);
-#endif
 }
 static void clientListenCallback (int fd, short flags, void *param) {
     int ret;
@@ -7422,6 +7428,11 @@ RIL_registerSocket (const RIL_RadioFunctionsSocket *callbacks) {
         /* add mal at client */
         registerRILClient(&s_mal_at_client);
     }
+
+    // initialize mutex
+    for (int i = 0; i < MAX_SIM_COUNT; i++) {
+        pthread_mutex_init(&s_pendingUrcMutex[i], NULL);
+    }
     RLOGE("finish RIL_registerSocket");
 }
 
@@ -7988,7 +7999,9 @@ void RIL_onUnsolicitedResponseSocket(int unsolResponse, const void *data,
                     cacheEcopsUrc(unsolResponse, data, datalen, soc_id);
                     return;
                 }
+                pthread_mutex_lock(&s_pendingUrcMutex[soc_id]);
                 cacheUrc(unsolResponse, data, datalen , soc_id);
+                pthread_mutex_unlock(&s_pendingUrcMutex[soc_id]);
                 return;
             }
         } else {
@@ -7999,7 +8012,9 @@ void RIL_onUnsolicitedResponseSocket(int unsolResponse, const void *data,
                     cacheEcopsUrc(unsolResponse, data, datalen, soc_id);
                     return;
                 }
+                pthread_mutex_lock(&s_pendingUrcMutex[soc_id]);
                 cacheUrc(unsolResponse, data, datalen , soc_id);
+                pthread_mutex_unlock(&s_pendingUrcMutex[soc_id]);
                 return; //cahche then return
         }
     }
@@ -8802,6 +8817,19 @@ requestToString(int request) {
         case RIL_REQUEST_MAL_PS_RGEGISTRATION_STATE: return "RIL_REQUEST_MAL_PS_RGEGISTRATION_STATE";
         /// @}
         case RIL_UNSOL_SETUP_DATA_CALL_RESPONSE: return "RIL_UNSOL_SETUP_DATA_CALL_RESPONSE";
+        case RIL_UNSOL_MAL_DATA_CALL_LIST_CHANGED: return "RIL_UNSOL_MAL_DATA_CALL_LIST_CHANGED";
+
+        /// M:set Ims capability to MD. @{
+        case RIL_REQUEST_SET_VOLTE_ENABLE: return "RIL_REQUEST_SET_VOLTE_ENABLE";
+        case RIL_REQUEST_SET_WFC_ENABLE: return "RIL_REQUEST_SET_WFC_ENABLE";
+        case RIL_REQUEST_SET_IMS_VOICE_ENABLE: return "RIL_REQUEST_SET_IMS_VOICE_ENABLE";
+        case RIL_REQUEST_SET_IMS_VIDEO_ENABLE: return "RIL_REQUEST_SET_IMS_VIDEO_ENABLE";
+        /// @}
+
+        /// M: IMS ViLTE feature. @{
+        case RIL_REQUEST_VT_DIAL_WITH_SIP_URI: return "RIL_REQUEST_VT_DIAL_WITH_SIP_URI";
+        /// @}
+
         default: return "<unknown request>";
     }
 }

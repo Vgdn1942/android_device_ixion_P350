@@ -218,7 +218,7 @@ void clearCnap() {
 
 extern void requestGetCurrentCalls(void *data, size_t datalen, RIL_Token t) {
     int err;
-    ATResponse *p_response;
+    ATResponse *p_response = NULL;
     ATLine *p_cur;
     int countCalls;
     int countValidCalls;
@@ -228,18 +228,8 @@ extern void requestGetCurrentCalls(void *data, size_t datalen, RIL_Token t) {
 
     err = at_send_command_multiline("AT+CLCC", "+CLCC:", &p_response, CC_CHANNEL_CTX);
 
-    if (p_response == NULL) {
-        clearCnap();
-        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-        LOGD("p_response = NULL");
-        return;
-    }
-
-    if (err != 0 || p_response->success == 0) {
-        clearCnap();
-        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-        at_response_free(p_response);
-        return;
+    if (err < 0 || p_response == NULL || p_response->success == 0) {
+        goto error;
     }
 
     /* count the calls */
@@ -313,18 +303,20 @@ void requestDial(void *data, size_t datalen, RIL_Token t, int isEmergency) {
     if (dial_source == IMSPHONE) {
         LOGE("IMS: requestDial from IMS !!");
         ret = at_send_command("AT+EVADSMOD=0", &p_response, CC_CHANNEL_CTX);
-        if (ret < 0 || p_response->success == 0) {
+        if (ret < 0 || p_response == NULL || p_response->success == 0) {
             LOGE("IMS: AT+EVADSMOD=0 Fail !!");
         }
         dispatch_flag = IMS;
     } else {
         LOGE("IMS: AT+EVADSMOD=1");
         ret = at_send_command("AT+EVADSMOD=1", &p_response, CC_CHANNEL_CTX);
-        if (ret < 0 || p_response->success == 0) {
+        if (ret < 0 || p_response == NULL || p_response->success == 0) {
             LOGE("IMS: AT+EVADSMOD=1 Fail !!");
         }
         dispatch_flag = GSM;
     }
+    at_response_free(p_response);
+    p_response = NULL;
     LOGE("IMS: requestDial, dial_source = %d", dial_source);
 
     if (isEmergency) {
@@ -360,7 +352,6 @@ void requestDial(void *data, size_t datalen, RIL_Token t, int isEmergency) {
             } else {
                 RIL_onRequestComplete(t, RIL_E_CANCELLED, NULL, 0);
             }
-            at_response_free(p_response);
 
             // [ALPS00251057][Call]It didn't pop FDN dialog when dial an invalid number
             // But this is not related to FDN issue, it returned to AP since number is too long.
@@ -383,8 +374,9 @@ void requestDial(void *data, size_t datalen, RIL_Token t, int isEmergency) {
 
     free(cmd);
 
-    if (ret < 0 || p_response->success == 0)
+    if (ret < 0 || p_response == NULL || p_response->success == 0) {
         goto error;
+    }
     /* success or failure is ignored by the upper layer here.
      * it will call GET_CURRENT_CALLS and determine success that way */
     if (IMS_isRilRequestFromIms(t)) {
@@ -475,8 +467,9 @@ void requestSwitchWaitingOrHoldingAndActive(void *data, size_t datalen, RIL_Toke
 
     ret = at_send_command("AT+CHLD=2", &p_response, CC_CHANNEL_CTX);
 
-    if (ret < 0 || p_response->success == 0)
+    if (ret < 0 || p_response == NULL || p_response->success == 0) {
         goto error;
+    }
 
     if (IMS_isRilRequestFromIms(t)) {
         IMS_RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
@@ -516,8 +509,9 @@ void requestConference(void *data, size_t datalen, RIL_Token t) {
 
     ret = at_send_command("AT+CHLD=3", &p_response, CC_CHANNEL_CTX);
 
-    if (ret < 0 || p_response->success == 0)
+    if (ret < 0 || p_response == NULL || p_response->success == 0) {
         goto error;
+    }
 
     if (IMS_isRilRequestFromIms(t)) {
         IMS_RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
@@ -567,8 +561,7 @@ void requestSeparateConnection(void *data, size_t datalen, RIL_Token t) {
         sprintf(cmd, "AT+CHLD=2%d", party);
         ret = at_send_command(cmd, &p_response, CC_CHANNEL_CTX);
 
-        if (ret < 0 || p_response->success == 0) {
-            at_response_free(p_response);
+        if (ret < 0 || p_response == NULL || p_response->success == 0) {
             goto error;
         }
 
@@ -579,6 +572,7 @@ void requestSeparateConnection(void *data, size_t datalen, RIL_Token t) {
 
 error:
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    at_response_free(p_response);
 }
 
 void requestExplicitCallTransfer(void *data, size_t datalen, RIL_Token t) {
@@ -596,8 +590,9 @@ void requestExplicitCallTransfer(void *data, size_t datalen, RIL_Token t) {
 
     ret = at_send_command("AT+CHLD=4", &p_response, CC_CHANNEL_CTX);
 
-    if (ret < 0 || p_response->success == 0)
+    if (ret < 0 || p_response == NULL || p_response->success == 0) {
         goto error;
+    }
 
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     at_response_free(p_response);
@@ -610,7 +605,6 @@ error:
 }
 
 void requestLastCallFailCause(void *data, size_t datalen, RIL_Token t) {
-    /* MTK proprietary start */
     RIL_LastCallFailCauseInfo callFailCause;
     char *line;
     int ret;
@@ -627,8 +621,9 @@ void requestLastCallFailCause(void *data, size_t datalen, RIL_Token t) {
     else {
         ret = at_send_command_singleline("AT+CEER", "+CEER:", &p_response, CC_CHANNEL_CTX);
 
-       if (ret < 0 || p_response->success == 0)
+       if (ret < 0 || p_response == NULL || p_response->success == 0) {
            goto error;
+       }
 
        line = p_response->p_intermediates->line;
 
@@ -684,10 +679,7 @@ error:
     } else {
         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     }
-    if (NULL != p_response) {
-        at_response_free(p_response);
-    }
-    /* MTK proprietary end */
+    at_response_free(p_response);
 }
 
 void requestDtmf(void *data, size_t datalen, RIL_Token t) {
@@ -1007,6 +999,10 @@ extern int rilCcMain(int request, void *data, size_t datalen, RIL_Token t) {
 
     case RIL_REQUEST_VIDEO_CALL_ACCEPT:
         requestVideoAccept(data, datalen, t);
+        break;
+
+    case RIL_REQUEST_VT_DIAL_WITH_SIP_URI:
+        requestVtDialWithSipUri(data, datalen, t);
         break;
     /* MTK proprietary end */
 

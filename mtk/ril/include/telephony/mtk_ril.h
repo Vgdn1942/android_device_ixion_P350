@@ -6194,6 +6194,18 @@ typedef enum {
 /// M: EPDG feature. Update PS state from MAL @{
 #define RIL_REQUEST_MAL_PS_RGEGISTRATION_STATE (RIL_REQUEST_VENDOR_BASE + 138)
 /// @}
+
+/// M:set Ims capability to MD @{
+#define RIL_REQUEST_SET_VOLTE_ENABLE (RIL_REQUEST_VENDOR_BASE + 139)
+#define RIL_REQUEST_SET_WFC_ENABLE (RIL_REQUEST_VENDOR_BASE + 140)
+#define RIL_REQUEST_SET_IMS_VOICE_ENABLE (RIL_REQUEST_VENDOR_BASE + 141)
+#define RIL_REQUEST_SET_IMS_VIDEO_ENABLE (RIL_REQUEST_VENDOR_BASE + 142)
+/// @}
+
+/// M: IMS ViLTE feature. @{
+#define RIL_REQUEST_VT_DIAL_WITH_SIP_URI (RIL_REQUEST_VENDOR_BASE + 143)
+/// @}
+
 /******************************************************************/
 
 #define RIL_LOCAL_REQUEST_VENDOR_BASE 2500
@@ -6416,6 +6428,7 @@ typedef enum {
 
 /// M: IMS/EPDG @{
 #define RIL_UNSOL_SETUP_DATA_CALL_RESPONSE (RIL_UNSOL_VENDOR_BASE + 80)
+#define RIL_UNSOL_MAL_DATA_CALL_LIST_CHANGED (RIL_UNSOL_VENDOR_BASE + 81)
 /// M: IMS/EPDG @}
 
 typedef enum {

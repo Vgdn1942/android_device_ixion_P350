@@ -152,6 +152,7 @@ extern void requestSwitchAntenna(void * data, size_t datalen, RIL_Token t);
 
 /// M: IMS ViLTE feature. @{
 extern void requestVideoAccept(void * data, size_t datalen, RIL_Token t);
+extern void requestVtDialWithSipUri(void *data, size_t datalen, RIL_Token t);
 /// @}
 
 #endif /* RIL_CC_H */

@@ -3,7 +3,7 @@
 
 #include "mdfx.h"
 
-#define EPDGA_MAX_NUM_PCSCFS    10
+#define EPDGA_MAX_NUM_PCSCFS    6//10 align datamngr
 #define EPDGA_IPV6_ADDR_BIN_LEN 16
 
 typedef struct epdga_pcscfs_t {

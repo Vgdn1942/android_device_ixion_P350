@@ -365,6 +365,7 @@ extern void requestSwitchExternalSim(RIL_SOCKET_ID rid);
 extern void onVsimEventDetected(const char *s, RIL_SOCKET_ID rid);
 extern void requestVsimNotification(void *data, size_t datalen, RIL_Token t);
 extern void requestVsimOperation(void *data, size_t datalen, RIL_Token t);
+extern int isVsimEnabledByRid(int rid);
 //External SIM [End]
 
 

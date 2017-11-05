@@ -151,6 +151,8 @@ extern void turnPSEnable(void *param);
 extern void onPCModemDisconn(void *param);
 extern void setIccidProperty(VIA_ICCID_TYPE type, char* pIccid);
 extern void updateRadioStatus(void);
+extern int isSimSwitchMD3PowerOff();
+extern void setSimSwitchMD3PowerOff(int is_off);
 /// M: [C2K][IR] Support CT 3g dual Mode card IR feature.
 extern int switchStkUtkMode(int mode, RIL_Token t);
 
@@ -967,7 +969,7 @@ extern int rilNwUnsolicited(const char *s, const char *sms_pdu) {
              break;
          }
 
-         evdo_dbm = 114 - evdo_dbm * 2;
+         evdo_dbm = 113 - evdo_dbm * 2;
          s_unsol_msg_cache.signal_strength.EVDO_SignalStrength.dbm = evdo_dbm;
          LOGD("onUnsolicited s_unsol_msg_cache.signal_strength.EVDO_SignalStrength.dbm = %d",
                  s_unsol_msg_cache.signal_strength.EVDO_SignalStrength.dbm);
@@ -1283,6 +1285,7 @@ extern int rilNwUnsolicited(const char *s, const char *sms_pdu) {
                 RIL_requestProxyTimedCallback(trigger_update_cache, NULL,
                         &TIMEVAL_0, getDefaultChannelCtx()->id);
             }
+            RIL_onUnsolicitedResponse(RIL_UNSOL_EXIT_EMERGENCY_CALLBACK_MODE, NULL, 0);
         } else if (ind == 12 && val == 0) {
             iccid_readable = 0;
             cta_no_uim = 1;
@@ -2134,6 +2137,7 @@ void requestModemPowerOff(void *data, size_t datalen, RIL_Token t)
     ATResponse *p_cbp_version_response = NULL;
     char *cbp_version = NULL;
     char* line = NULL;
+    int slotid = getCdmaModemSlot();
 
     /*sync rfs image only in ipo/normal power off cause force rfs image sync removed from CPOF in CBP8.2*/
     do
@@ -2171,13 +2175,37 @@ void requestModemPowerOff(void *data, size_t datalen, RIL_Token t)
 
     if (s_md3_off == 1)
     {
+        if (isSimSwitchMD3PowerOff()) {
+            switch (slotid) {
+                case 1:
+                    property_set("gsm.sim.ril.phbready", "false");
+                    property_set("ril.ipo.radiooff", "1");
+                    LOGD("C2K set ril.ipo.radiooff to 1");
+                    break;
+                case 2:
+                    property_set("gsm.sim.ril.phbready.2", "false");
+                    property_set("ril.ipo.radiooff.2", "1");
+                    LOGD("C2K set ril.ipo.radiooff.2 to 1");
+                    break;
+                default:
+                    LOGE("reportPbSmsReady, unsupport slot id %d", slotid);
+                    break;
+            }
+            last_flight_mode = 1;
+            setRadioState(RADIO_STATE_OFF);
+            LOGD("%s: setRadioState to RADIO_STATE_OFF.", __FUNCTION__);
+
+            LOGD("%s: sim switch enter flight mode.", __FUNCTION__);
+            triggerIoctl(CCCI_IOC_ENTER_DEEP_FLIGHT);
+            setSimSwitchMD3PowerOff(0);
+        }
         LOGD("Flight mode power off modem but already modem powered off");
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
         return;
     }
     s_md3_off = 1;
 
-	int slotid = getCdmaModemSlot();
+    //int slotid = getCdmaModemSlot();
     switch (slotid) {
     case 1:
         property_set("ril.ipo.radiooff", "-1");
@@ -2241,7 +2269,6 @@ void requestModemPowerOn(void *data, size_t datalen, RIL_Token t)
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
         return;
     }
-    s_md3_off = 0;
 
     LOGD("%s: leave flight mode.", __FUNCTION__);
     triggerIoctl(CCCI_IOC_LEAVE_DEEP_FLIGHT);
@@ -2547,10 +2574,12 @@ static void requestBasebandVersion(void *data, size_t datalen, RIL_Token t)
     if (err < 0) goto error;
 
     #ifndef ADD_MTK_REQUEST_URC
-    asprintf(&response, "Hw: %s  Sw %s Month: %s Date: %s Time %s:%s", response_hard, response_string11,response_string4,response_string5,response_string7,response_string8);
+    asprintf(&response, "%s Month: %s Date: %s Time %s:%s",
+            response_string11, response_string4, response_string5,
+            response_string7, response_string8);
     #else
-    asprintf(&response, "Hw: %s  Sw:%s, 20%s/%s/%s %s:%s",
-                response_hard, response_string11, response_string6,
+    asprintf(&response, "%s, 20%s/%s/%s %s:%s",
+                response_string11, response_string6,
                 response_string4, response_string5, response_string7,
                 response_string8);
     #endif

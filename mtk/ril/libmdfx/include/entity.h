@@ -8,7 +8,7 @@
 #define __ENTITY_H__
 
 #include "sys_info.h"
-#include "task.h"
+#include "context/task.h"
 #include "conn.h"
 #include "event.h"
 #include "compiler.h"

@@ -214,14 +214,21 @@ int getSingnalStrength(char *line, int *response)
 
         err = at_tok_nextint(&line, rssnr_in_qdbm);
         if (err < 0) {
-            // for consistance with google's define of mLteRssnr
-            // assign 301 to make sure mLteRssnr will be assign INVALID value
-            // in SignalStrength.validateInput()
-            response[10] = 301;
+            // assign google's invalid value
+            *rssnr_in_qdbm = INVALID;
         } else {
-            // for consistance with google's define of mLteRssnr
-            // abs(rssnr_in_qdbm /4) = mLteRssnr
-            *rssnr_in_qdbm = ((*rssnr_in_qdbm)/4) * 10;
+            if (*rssnr_in_qdbm == 0x7FFF) {
+                *rssnr_in_qdbm = INVALID;
+            } else {
+                if (*rssnr_in_qdbm > 120) {
+                    *rssnr_in_qdbm = 120;
+                } else if (*rssnr_in_qdbm < -80) {
+                    *rssnr_in_qdbm = -80;
+                }
+                // for consistance with google's define of mLteRssnr
+                // abs(rssnr_in_qdbm /4) = mLteRssnr
+                *rssnr_in_qdbm = ((*rssnr_in_qdbm) * 10) / 4;
+            }
         }
     }
 
@@ -2835,7 +2842,7 @@ void requestGetPacketSwitchBearer(RIL_SOCKET_ID rid)
     int ret;
     char *bearer = NULL;
 
-    err = at_send_command_singleline("AT+EPSB?", "+EPSB:", &p_response, getRILChannelCtx(RIL_NW,getMainProtocolRid()));
+    err = at_send_command_singleline("AT+EPSB?", "+EPSB:", &p_response, getDefaultChannelCtx(rid));
 
     if (err < 0 || p_response->success == 0) {
         // assume radio is off
@@ -2852,11 +2859,13 @@ void requestGetPacketSwitchBearer(RIL_SOCKET_ID rid)
 
     asprintf(&bearer, "%d", ret);
 
+    if (rid == getMainProtocolRid()) {
     #ifdef MTK_RIL_MD2
         property_set(PROPERTY_GSM_BASEBAND_CAPABILITY_MD2, bearer);
     #else
         property_set(PROPERTY_GSM_BASEBAND_CAPABILITY, bearer);
     #endif
+    }
 
     free(bearer);
 

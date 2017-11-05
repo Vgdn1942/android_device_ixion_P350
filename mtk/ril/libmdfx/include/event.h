@@ -45,7 +45,12 @@ typedef enum event_addr_ext_type {EVENT_ADDR_EXT_TYPE_NONE, EVENT_ADDR_EXT_TYPE_
 // => MAL
 #define EVENT_UNSOLICITED    (-1)
 #endif
+#ifdef __EVENT_USAGE_MONITOR__
 #define EVENT_USAGE_THRESHOLD   (1 << 20)  // NEED_TO_BE_NOTICED, temporarily methods to monitor memory usage
+#define EVENT_USAGE_ADD_ALL (~((ssize_t)1 << ((sizeof(ssize_t) << 3) - 1)))
+#define EVENT_USAGE_SUB_ALL ((ssize_t)1 << ((sizeof(ssize_t) << 3) - 1))
+#endif
+
 
 // Implementation
 // => Internal data type for the event
@@ -80,10 +85,6 @@ struct event
     chain_t addr_track;
 //    chain_t scatter_list;    // NEED_TO_BE_NOTICED, to do
     // Individual variables which must be private
-#ifdef __EVENT_USAGE_MONITOR__
-    pid_t tid;  // NEED_TO_BE_NOTICED, temporarily methods to monitor memory usage
-#endif
-
 #ifdef MAL_SUPPORT
     // N/A
 #endif
@@ -120,6 +121,7 @@ extern mailbox_addr_ptr_t event_addr_set_src_addr (event_addr_ptr_t addr_ptr, co
 extern mailbox_addr_ptr_t event_addr_get_src_addr (event_addr_ptr_t addr_ptr);
 extern mailbox_addr_ptr_t event_addr_set_dst_addr (event_addr_ptr_t addr_ptr, const mailbox_addr_ptr_t dst_addr_ptr);
 extern mailbox_addr_ptr_t event_addr_get_dst_addr (event_addr_ptr_t addr_ptr);
+extern int event_addr_reset_ext_type (event_addr_ptr_t addr_ptr);
 extern event_addr_ext_type_t event_addr_get_ext_type (event_addr_ptr_t addr_ptr);
 extern chnl_ptr_t event_addr_set_ext_chnl (event_addr_ptr_t addr_ptr, const chnl_ptr_t ext_chnl_ptr);
 extern chnl_ptr_t event_addr_get_ext_chnl (event_addr_ptr_t addr_ptr);

@@ -161,6 +161,7 @@ if (data != NULL) {     \
 #define PROPERTY_REQUEST_FROM_MAL "ril.data.mal"
 #define PROPERTY_HANDOVER_START_IND "ril.volte.hos.interface"
 #define PROPERTY_HANDOVER_STOP_IND "ril.volte.hoe.interface"
+#define PROPERTY_SIM_OPERATOR_NUMERIC "gsm.sim.operator.numeric"
 #define ATTACH_APN_NOT_SUPPORT 0
 #define ATTACH_APN_PARTIAL_SUPPORT 1
 #define ATTACH_APN_FULL_SUPPORT 2
@@ -419,6 +420,7 @@ typedef struct {
     int deactbyNw;  // 0: not deact, 1: deact by nw for HO stop used
     int ho_start_cnt;
     int ho_stop_cnt;
+    int reason; // -1: no cause, 0: ipv4 only, 1: ipv6 only, 2: single bearer only allowed
 } PdnInfo;
 
 typedef struct {
@@ -429,6 +431,7 @@ typedef struct {
 
 typedef struct {
     int activeCid;
+    int reason;
     RILChannelCtx* pDataChannel;
 } MePdnActiveInfo;
 
@@ -459,6 +462,13 @@ typedef enum {
 	ENABLE_CCMNI=1
 } CCMNI_STATUS;
 // [C2K][IRAT] end @}
+
+typedef enum {
+    NO_CAUSE = -1,
+    IPV4_ONLY = 0,
+    IPV6_ONLY = 1,
+    SINGLE_BEARER_ONLY_ALLOWED = 2
+} PDN_REASON;
 
 #endif /* RIL_DATA_H */
 

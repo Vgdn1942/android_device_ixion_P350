@@ -1,4 +1,4 @@
-# LineageOS 13.0 device tree for DEXP Ixion P350
+# LineageOS 13.0/AICP 11.0 device tree for DEXP Ixion P350
 
 DEXP Ixion P350
 ==============
@@ -29,7 +29,7 @@ Working:
 - Lights
 - Camera (only photos)
 - USB connection (ADB/MTP/PTP)
-- SDcard
+- SD-Card
 
 Not tested:
 - GPS

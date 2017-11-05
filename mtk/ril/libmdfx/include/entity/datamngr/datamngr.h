@@ -18,6 +18,8 @@ extern int dm_set_initial_attach_apn_req(dm_req_set_initial_attach_apn_t *req, e
 extern int dm_set_initial_attach_apn_resp(dm_resp_set_initial_attach_apn_t *resp, event_t *event);
 extern int dm_setup_data_call_req(dm_req_setup_data_call_t *req, event_t *event);
 extern int dm_setup_data_call_resp(dm_resp_setup_data_call_t *resp, event_t *event);
+extern int dm_setup_data_call_resp_notify(dm_resp_setup_data_call_t *resp, event_t *event);
+extern int dm_setup_data_call_resp_fail_notify(dm_resp_t *resp, event_t *event);
 extern int dm_setup_data_call_fail_ind(dm_resp_t *resp, event_t *event);
 extern int dm_deactivate_data_call_req(dm_req_deactivate_data_call_t *req, event_t *event);
 extern int dm_deactivate_data_call_resp(dm_resp_deactivate_data_call_t *resp, event_t *event);

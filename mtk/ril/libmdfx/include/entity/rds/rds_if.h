@@ -66,6 +66,10 @@ typedef signed short int        rds_int16;
 typedef unsigned int            rds_uint32;
 /* portable 32-bit signed integer */
 typedef signed int              rds_int32;
+/* portable 64-bit unsigned integer */
+typedef unsigned long long int  rds_uint64;
+/* portable 64-bit signed integer */
+typedef signed long long int    rds_int64;
 /* boolean representation */
 typedef enum
 {
@@ -165,10 +169,10 @@ typedef enum {
     NETWORK_FAILURE               = ERROR_NOTIFY_BASE + 10500,
     ROAMING_NOR_ALLOWED           = ERROR_NOTIFY_BASE + 11000,
     RAT_DISALLOWED                = ERROR_NOTIFY_BASE + 11001,
-    EA_TMO_NETWORK_FAILURE,
-    EA_TMO_NETWORK_TOO_BUSY,
-    EA_TMO_RAT_DISALLOWED,
-    EA_TMO_ROAMING_NOR_ALLOWED,
+    EA_TMO_NETWORK_FAILURE        = NETWORK_FAILURE,
+    EA_TMO_NETWORK_TOO_BUSY       = NETWORK_TOO_BUSY,
+    EA_TMO_RAT_DISALLOWED         = RAT_DISALLOWED,
+    EA_TMO_ROAMING_NOR_ALLOWED    = ROAMING_NOR_ALLOWED,
     EA_ATCH_ERR_CNT,
 } ea_atch_err;
 /*****************************/
@@ -276,6 +280,7 @@ typedef struct _rds_rb_get_demand_req_t{
 
 typedef struct _rds_rb_get_ran_type_rsp_t{
     rds_int32  i4rds_ret; // RDS_TRUE / RDS_FALSE
+    rds_int32  u4_ifid;  //interfaceid
     rds_uint32 u4ran_type; //ran_type_e
 } rds_rb_get_ran_type_rsp_t;
 
@@ -320,13 +325,23 @@ typedef struct _rds_wifi_pdnact_t{
     rds_bool  pdn_rdy;  //RDS_TRUE: ready
 } rds_wifi_pdnact_t;
 
+typedef struct _rds_wifi_disi4_t{
+    rds_int32 u4pdn_cnt;  //count of alive pdn
+} rds_wifi_disi4_t;
+
 typedef int (*rds_ho_status_ind_fn)(rds_ho_status_t *prstatus);
 typedef int (*rds_rvout_alert_ind_fn)(rds_rvout_alert_t *pralert);
 typedef int (*rds_wifi_pdnact_ind_fn)(rds_wifi_pdnact_t *pralert);
+typedef int (*rds_get_rantype_ind_fn)( rds_rb_get_ran_type_rsp_t *prran);
+typedef int (*rds_wifi_disable_ind_fn)(rds_wifi_disi4_t *prdis);
+typedef int (*rds_get_lasterr_ind_fn)( rds_rb_get_last_err_rsp_t *prran);
 typedef struct _rds_notify_funp_t{
     rds_ho_status_ind_fn      pfrds_ho_status_ind;
     rds_rvout_alert_ind_fn    pfrds_rvout_alert_ind;
     rds_wifi_pdnact_ind_fn    pfrds_wifi_pdnact_ind;
+    rds_get_rantype_ind_fn    pfrds_get_rantype_ind;    //for ims pdn rantype update
+    rds_wifi_disable_ind_fn   pfrds_wifi_disable_ind;
+    rds_get_lasterr_ind_fn    pfrds_get_lasterr_ind;    //for ims pdn last err update
 } rds_notify_funp_t;
 
 typedef rds_sdc_req_t rr_sdc_req_t;
@@ -335,20 +350,22 @@ typedef rds_ddc_cnf_t rr_ddc_cnf_t;
 typedef rds_ddc_req_t rr_ddc_req_t;
 
 typedef struct _wfca_callinfo_t {
-    wfca_state_e  state;
+    int           version;
+    int           state;    //wfca_state_e
     int           id;
     int           loss_rate; 
     int           thrpt;     //throughput*
 } wfca_callinfo_t;
 
 typedef struct _rds_wfca_cfg_t{
+    int    version;
     int    id;
     int    threshold;
     int    duration;
 } rds_wfca_cfg_t;
 
 typedef struct _rds_wfca_req_t{
-    rds_wfca_cmd_e    cmd;
+    int                cmd;    //rds_wfca_cmd_e
     rds_wfca_cfg_t     cfg; 
 } rds_wfca_req_t;
 
@@ -362,6 +379,8 @@ typedef enum {
     UT_CFG_WPREF,
     UT_CFG_MONLY,
     UT_CFG_MPREF,
+    UT_IMSVOPS_CTRL = 252,
+    UT_TEST_START = 253,
     UT_SKIP_1stIMS = 254,
     ENABLE_ENTITY_UT = 255,
 } ut_cmd_t;
@@ -369,7 +388,11 @@ typedef enum {
 typedef struct _rds_ut_cmd_t{
     rds_uint32 evnt_id;
     rds_uint32 cmd;
-    rds_uint32 ril_ifid;
+    union {
+        rds_uint32 ril_ifid;
+        rds_uint32 pol_lv; // policy level
+        rds_uint32 status;
+    };
     rds_char iipv6[16]; //for SDC IND UT
 } rds_ut_cmd_t;
 
@@ -386,6 +409,11 @@ typedef struct _ru_nm_cgreg_mode_cnf_t{
 	unsigned int        result;
 	char                data[4096];
 } ru_nm_cgreg_mode_cnf_t;
+
+typedef struct _rds_queryif_info_t{
+	rds_rb_get_ran_type_rsp_t  i4imsran;
+	rds_rb_get_last_err_rsp_t  i4imserr;
+} rds_queryif_info_t;
 
 /* =========================================== *
  * Public APIs  							   *

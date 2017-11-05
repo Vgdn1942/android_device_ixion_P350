@@ -118,11 +118,23 @@ extern int rilOemUnsolicited(const char *s, const char *sms_pdu, RILChannelCtx* 
 extern int handleOemUnsolicited(const char *s, const char *sms_pdu, RILChannelCtx* p_channel);
 extern void requestSetModemThermal(void * data, size_t datalen, RIL_Token t);
 
+//To avoid Radio Capability switch conflict with power off flow
+extern int isSimSwitchMD1PowerOff();
+extern void setSimSwitchMD1PowerOff(int is_off);
+extern void resetSimSwitchMDPowerOff();
+
 // M: Epdg feature, long format for screen on, short format for scree off
 extern int mal_set_ps_format(int long_format);
 
 void updateCFUQueryType(const char *cfuType);
 void initCFUQueryType();
+
+/// M: set Ims capability to MD @{
+extern void requestSetVolteEnabled(void * data, size_t datalen, RIL_Token t);
+extern void requestSetWfcEnabled(void * data, size_t datalen, RIL_Token t);
+extern void requestSetImsVoiceEnabled(void * data, size_t datalen, RIL_Token t);
+extern void requestSetImsVideoEnabled(void * data, size_t datalen, RIL_Token t);
+/// @}
 
 #define OEM_CHANNEL_CTX getRILChannelCtxFromToken(t)
 

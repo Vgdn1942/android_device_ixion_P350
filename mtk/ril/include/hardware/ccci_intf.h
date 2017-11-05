@@ -298,105 +298,115 @@ static inline char *ccci_get_node_name(CCCI_USER usr_id, CCCI_MD md_id)
 /************************************* IOCTL command set *************************************/
 /* CCCI == EEMCS*/
 #define CCCI_IOC_MAGIC 'C'
-#define CCCI_IOC_MD_RESET                _IO(CCCI_IOC_MAGIC, 0) /* mdlogger META/muxreport */
+#define CCCI_IOC_MD_RESET                _IO(CCCI_IOC_MAGIC,  0) /* mdlogger META/muxreport */
 #define CCCI_IOC_GET_MD_STATE            _IOR(CCCI_IOC_MAGIC, 1, unsigned int) /* audio */
-#define CCCI_IOC_PCM_BASE_ADDR            _IOR(CCCI_IOC_MAGIC, 2, unsigned int) /* audio */
-#define CCCI_IOC_PCM_LEN                _IOR(CCCI_IOC_MAGIC, 3, unsigned int) /* audio */
-#define CCCI_IOC_FORCE_MD_ASSERT        _IO(CCCI_IOC_MAGIC, 4) /* muxreport  mdlogger */
-#define CCCI_IOC_ALLOC_MD_LOG_MEM        _IO(CCCI_IOC_MAGIC, 5) /* mdlogger */
-#define CCCI_IOC_DO_MD_RST                _IO(CCCI_IOC_MAGIC, 6) /* md_init */
-#define CCCI_IOC_SEND_RUN_TIME_DATA        _IO(CCCI_IOC_MAGIC, 7) /* md_init */
-#define CCCI_IOC_GET_MD_INFO            _IOR(CCCI_IOC_MAGIC, 8, unsigned int) /* md_init */
-#define CCCI_IOC_GET_MD_EX_TYPE            _IOR(CCCI_IOC_MAGIC, 9, unsigned int) /* mdlogger */
-#define CCCI_IOC_SEND_STOP_MD_REQUEST    _IO(CCCI_IOC_MAGIC, 10) /* muxreport */
-#define CCCI_IOC_SEND_START_MD_REQUEST    _IO(CCCI_IOC_MAGIC, 11) /* muxreport */
-#define CCCI_IOC_DO_STOP_MD                _IO(CCCI_IOC_MAGIC, 12) /* md_init */
-#define CCCI_IOC_DO_START_MD            _IO(CCCI_IOC_MAGIC, 13) /* md_init */
-#define CCCI_IOC_ENTER_DEEP_FLIGHT        _IO(CCCI_IOC_MAGIC, 14) /* RILD  factory */
-#define CCCI_IOC_LEAVE_DEEP_FLIGHT        _IO(CCCI_IOC_MAGIC, 15) /* RILD  factory */
-#define CCCI_IOC_POWER_ON_MD            _IO(CCCI_IOC_MAGIC, 16) /* md_init */
-#define CCCI_IOC_POWER_OFF_MD            _IO(CCCI_IOC_MAGIC, 17) /* md_init */
-#define CCCI_IOC_POWER_ON_MD_REQUEST    _IO(CCCI_IOC_MAGIC, 18)
-#define CCCI_IOC_POWER_OFF_MD_REQUEST    _IO(CCCI_IOC_MAGIC, 19)
-#define CCCI_IOC_SIM_SWITCH                _IOW(CCCI_IOC_MAGIC, 20, unsigned int) /* RILD  factory */
-#define CCCI_IOC_SEND_BATTERY_INFO        _IO(CCCI_IOC_MAGIC, 21) /* md_init */
-#define CCCI_IOC_SIM_SWITCH_TYPE        _IOR(CCCI_IOC_MAGIC, 22, unsigned int) /* RILD */
-#define CCCI_IOC_STORE_SIM_MODE            _IOW(CCCI_IOC_MAGIC, 23, unsigned int)    /* RILD */
+#define CCCI_IOC_PCM_BASE_ADDR           _IOR(CCCI_IOC_MAGIC, 2, unsigned int) /* audio */
+#define CCCI_IOC_PCM_LEN                 _IOR(CCCI_IOC_MAGIC, 3, unsigned int) /* audio */
+#define CCCI_IOC_FORCE_MD_ASSERT         _IO(CCCI_IOC_MAGIC,  4) /* muxreport  mdlogger */
+#define CCCI_IOC_ALLOC_MD_LOG_MEM        _IO(CCCI_IOC_MAGIC,  5) /* mdlogger */
+#define CCCI_IOC_DO_MD_RST               _IO(CCCI_IOC_MAGIC,  6) /* md_init */
+#define CCCI_IOC_SEND_RUN_TIME_DATA      _IO(CCCI_IOC_MAGIC,  7) /* md_init */
+#define CCCI_IOC_GET_MD_INFO             _IOR(CCCI_IOC_MAGIC, 8, unsigned int) /* md_init */
+#define CCCI_IOC_GET_MD_EX_TYPE          _IOR(CCCI_IOC_MAGIC, 9, unsigned int) /* mdlogger */
+#define CCCI_IOC_SEND_STOP_MD_REQUEST    _IO(CCCI_IOC_MAGIC,  10) /* muxreport */
+#define CCCI_IOC_SEND_START_MD_REQUEST   _IO(CCCI_IOC_MAGIC,  11) /* muxreport */
+#define CCCI_IOC_DO_STOP_MD              _IO(CCCI_IOC_MAGIC,  12) /* md_init */
+#define CCCI_IOC_DO_START_MD             _IO(CCCI_IOC_MAGIC,  13) /* md_init */
+#define CCCI_IOC_ENTER_DEEP_FLIGHT       _IO(CCCI_IOC_MAGIC,  14) /* RILD  factory */
+#define CCCI_IOC_LEAVE_DEEP_FLIGHT       _IO(CCCI_IOC_MAGIC,  15) /* RILD  factory */
+#define CCCI_IOC_POWER_ON_MD             _IO(CCCI_IOC_MAGIC,  16) /* md_init */
+#define CCCI_IOC_POWER_OFF_MD            _IO(CCCI_IOC_MAGIC,  17) /* md_init */
+#define CCCI_IOC_POWER_ON_MD_REQUEST     _IO(CCCI_IOC_MAGIC,  18)
+#define CCCI_IOC_POWER_OFF_MD_REQUEST    _IO(CCCI_IOC_MAGIC,  19)
+#define CCCI_IOC_SIM_SWITCH              _IOW(CCCI_IOC_MAGIC, 20, unsigned int) /* RILD  factory */
+#define CCCI_IOC_SEND_BATTERY_INFO       _IO(CCCI_IOC_MAGIC,  21) /* md_init */
+#define CCCI_IOC_SIM_SWITCH_TYPE         _IOR(CCCI_IOC_MAGIC, 22, unsigned int) /* RILD */
+#define CCCI_IOC_STORE_SIM_MODE          _IOW(CCCI_IOC_MAGIC, 23, unsigned int)    /* RILD */
 #define CCCI_IOC_GET_SIM_MODE            _IOR(CCCI_IOC_MAGIC, 24, unsigned int)    /* RILD */
-#define CCCI_IOC_RELOAD_MD_TYPE            _IO(CCCI_IOC_MAGIC, 25)    /* META  md_init // muxreport */
+#define CCCI_IOC_RELOAD_MD_TYPE          _IO(CCCI_IOC_MAGIC,  25)    /* META  md_init // muxreport */
 #define CCCI_IOC_GET_SIM_TYPE            _IOR(CCCI_IOC_MAGIC, 26, unsigned int)    /* terservice */
-#define CCCI_IOC_ENABLE_GET_SIM_TYPE    _IOW(CCCI_IOC_MAGIC, 27, unsigned int)    /* terservice */
-#define CCCI_IOC_SEND_ICUSB_NOTIFY        _IOW(CCCI_IOC_MAGIC, 28, unsigned int)    /* icusbd */
+#define CCCI_IOC_ENABLE_GET_SIM_TYPE     _IOW(CCCI_IOC_MAGIC, 27, unsigned int)    /* terservice */
+#define CCCI_IOC_SEND_ICUSB_NOTIFY       _IOW(CCCI_IOC_MAGIC, 28, unsigned int)    /* icusbd */
 #define CCCI_IOC_SET_MD_IMG_EXIST        _IOW(CCCI_IOC_MAGIC, 29, unsigned int)    /* md_init */
 #define CCCI_IOC_GET_MD_IMG_EXIST        _IOR(CCCI_IOC_MAGIC, 30, unsigned int)    /* META */
-#define CCCI_IOC_GET_MD_TYPE            _IOR(CCCI_IOC_MAGIC, 31, unsigned int)    /* RILD */
-#define CCCI_IOC_STORE_MD_TYPE            _IOW(CCCI_IOC_MAGIC, 32, unsigned int)    /* RILD */
-#define CCCI_IOC_GET_MD_TYPE_SAVING        _IOR(CCCI_IOC_MAGIC, 33, unsigned int)    /* META */
-#define CCCI_IOC_GET_EXT_MD_POST_FIX    _IOR(CCCI_IOC_MAGIC, 34, unsigned int)    /* char[32] emcs_fsd  mdlogger */
+#define CCCI_IOC_GET_MD_TYPE             _IOR(CCCI_IOC_MAGIC, 31, unsigned int)    /* RILD */
+#define CCCI_IOC_STORE_MD_TYPE           _IOW(CCCI_IOC_MAGIC, 32, unsigned int)    /* RILD */
+#define CCCI_IOC_GET_MD_TYPE_SAVING      _IOR(CCCI_IOC_MAGIC, 33, unsigned int)    /* META */
+/* char[32] emcs_fsd  mdlogger */
+#define CCCI_IOC_GET_EXT_MD_POST_FIX     _IOR(CCCI_IOC_MAGIC, 34, unsigned int)
 #define CCCI_IOC_FORCE_FD                _IOW(CCCI_IOC_MAGIC, 35, unsigned int)    /* RILD(6577) */
 #define CCCI_IOC_AP_ENG_BUILD            _IOW(CCCI_IOC_MAGIC, 36, unsigned int)    /* md_init(6577) */
-#define CCCI_IOC_GET_MD_MEM_SIZE        _IOR(CCCI_IOC_MAGIC, 37, unsigned int)    /* md_init(6577) */
-#define CCCI_IOC_UPDATE_SIM_SLOT_CFG    _IOW(CCCI_IOC_MAGIC, 38, unsigned int)    /* RILD */
-#define CCCI_IOC_GET_CFG_SETTING        _IOW(CCCI_IOC_MAGIC, 39, unsigned int)    /* md_init */
-#define CCCI_IOC_SET_MD_SBP_CFG         _IOW(CCCI_IOC_MAGIC, 40, unsigned int)    /* md_init */
-#define CCCI_IOC_GET_MD_SBP_CFG         _IOW(CCCI_IOC_MAGIC, 41, unsigned int)    /* md_init */
-#define CCCI_IOC_GET_MD_PROTOCOL_TYPE    _IOR(CCCI_IOC_MAGIC, 42, char[16])    /*metal tool to get modem protocol type: AP_TST or DHL */
-#define CCCI_IOC_SEND_SIGNAL_TO_USER    _IOW(CCCI_IOC_MAGIC, 43, unsigned int)    /* md_init */
-#define CCCI_IOC_IGNORE_MD_EXCP         _IO(CCCI_IOC_MAGIC, 44)    /* RILD */
-#define CCCI_IOC_RESET_MD1_MD3_PCCIF    _IO(CCCI_IOC_MAGIC, 45)    /* md_init */
-#define CCCI_IOC_RESET_AP                 _IOW(CCCI_IOC_MAGIC, 46, unsigned int)    /* md_init */
+#define CCCI_IOC_GET_MD_MEM_SIZE         _IOR(CCCI_IOC_MAGIC, 37, unsigned int)    /* md_init(6577) */
+#define CCCI_IOC_UPDATE_SIM_SLOT_CFG     _IOW(CCCI_IOC_MAGIC, 38, unsigned int)    /* RILD */
+#define CCCI_IOC_GET_CFG_SETTING         _IOW(CCCI_IOC_MAGIC, 39, unsigned int)    /* md_init */
+#define CCCI_IOC_SET_MD_SBP_CFG          _IOW(CCCI_IOC_MAGIC, 40, unsigned int)    /* md_init */
+#define CCCI_IOC_GET_MD_SBP_CFG          _IOW(CCCI_IOC_MAGIC, 41, unsigned int)    /* md_init */
+/*metal tool to get modem protocol type: AP_TST or DHL */
+#define CCCI_IOC_GET_MD_PROTOCOL_TYPE    _IOR(CCCI_IOC_MAGIC, 42, char[16])
+#define CCCI_IOC_SEND_SIGNAL_TO_USER     _IOW(CCCI_IOC_MAGIC, 43, unsigned int)    /* md_init */
+#define CCCI_IOC_IGNORE_MD_EXCP          _IO(CCCI_IOC_MAGIC,  44)                  /* RILD */
+#define CCCI_IOC_RESET_MD1_MD3_PCCIF     _IO(CCCI_IOC_MAGIC,  45)                  /* md_init */
+#define CCCI_IOC_RESET_AP                _IOW(CCCI_IOC_MAGIC, 46, unsigned int)    /* md_init */
+/* set MD boot env data before power on MD */
+#define CCCI_IOC_SET_BOOT_DATA           _IOW(CCCI_IOC_MAGIC, 47, unsigned int[16])
+
 
 /* EEMCS only*/
-#define CCCI_IOC_BOOT_MD                _IO(CCCI_IOC_MAGIC,  100) /*mdinit */
-#define CCCI_IOC_GATE_MD                _IO(CCCI_IOC_MAGIC,  101) /*nouser */
-#define CCCI_IOC_ASSERT_MD                _IO(CCCI_IOC_MAGIC,  102) /*nouser */
-#define CCCI_IOC_CHECK_STATE            _IOR(CCCI_IOC_MAGIC, 103, unsigned int) /*nouser */
-#define CCCI_IOC_SET_STATE                _IOW(CCCI_IOC_MAGIC, 104, unsigned int)/*nouser */
+#define CCCI_IOC_BOOT_MD                 _IO(CCCI_IOC_MAGIC,  100) /*mdinit */
+#define CCCI_IOC_GATE_MD                 _IO(CCCI_IOC_MAGIC,  101) /*nouser */
+#define CCCI_IOC_ASSERT_MD               _IO(CCCI_IOC_MAGIC,  102) /*nouser */
+#define CCCI_IOC_CHECK_STATE             _IOR(CCCI_IOC_MAGIC, 103, unsigned int) /*nouser */
+#define CCCI_IOC_SET_STATE               _IOW(CCCI_IOC_MAGIC, 104, unsigned int)/*nouser */
 #define CCCI_IOC_GET_MD_BOOT_INFO        _IOR(CCCI_IOC_MAGIC, 105, unsigned int)/*mdinit */
-#define CCCI_IOC_START_BOOT                _IO(CCCI_IOC_MAGIC,  106) /*mdinit */
-#define CCCI_IOC_BOOT_DONE                _IO(CCCI_IOC_MAGIC,  107) /*mdinit */
-#define CCCI_IOC_REBOOT                    _IO(CCCI_IOC_MAGIC,  108) /*mdinit */
+#define CCCI_IOC_START_BOOT              _IO(CCCI_IOC_MAGIC,  106) /*mdinit */
+#define CCCI_IOC_BOOT_DONE               _IO(CCCI_IOC_MAGIC,  107) /*mdinit */
+#define CCCI_IOC_REBOOT                  _IO(CCCI_IOC_MAGIC,  108) /*mdinit */
 #define CCCI_IOC_MD_EXCEPTION            _IO(CCCI_IOC_MAGIC,  109) /*nouser */
 #define CCCI_IOC_MD_EX_REC_OK            _IO(CCCI_IOC_MAGIC,  110) /*nouser */
 #define CCCI_IOC_GET_RUNTIME_DATA        _IOR(CCCI_IOC_MAGIC, 111, char[1024])    /*mdinit */
-#define CCCI_IOC_SET_HEADER                _IO(CCCI_IOC_MAGIC,  112) /*UT    */
-#define CCCI_IOC_CLR_HEADER                _IO(CCCI_IOC_MAGIC,  113) /*UT    */
-#define CCCI_IOC_SET_EXCEPTION_DATA        _IOW(CCCI_IOC_MAGIC, 114, char[1024]) /*nouser */
+#define CCCI_IOC_SET_HEADER              _IO(CCCI_IOC_MAGIC,  112) /*UT    */
+#define CCCI_IOC_CLR_HEADER              _IO(CCCI_IOC_MAGIC,  113) /*UT    */
+#define CCCI_IOC_SET_EXCEPTION_DATA      _IOW(CCCI_IOC_MAGIC, 114, char[1024]) /*nouser */
 #define CCCI_IOC_GET_EXCEPTION_LENGTH    _IOR(CCCI_IOC_MAGIC, 115, unsigned int) /*nouser */
-#define CCCI_IOC_SET_BOOT_STATE            _IOW(CCCI_IOC_MAGIC, 116, unsigned int) /*boot_IT */
-#define CCCI_IOC_GET_BOOT_STATE            _IOR(CCCI_IOC_MAGIC, 117, unsigned int) /*boot_IT */
-#define CCCI_IOC_WAIT_RDY_RST            _IO(CCCI_IOC_MAGIC,  118) /*mdinit For MD reset flow must wait for mux/fsd/mdlogger close port */
-#define CCCI_IOC_DL_TRAFFIC_CONTROL        _IOW(CCCI_IOC_MAGIC, 119, unsigned int)    /* For MD LOGER to turn on/off downlink traffic */
-#define CCCI_IOC_FLOW_CTRL_SETTING      _IOW(CCCI_IOC_MAGIC, 120, unsigned int)    /*set flow control limit&threshold of mdlog for debug */
-#define CCCI_IOC_BOOT_UP_TIMEOUT        _IOW(CCCI_IOC_MAGIC, 121, unsigned int[2])    /*notify kernel of md boot up timeout */
-#define CCCI_IOC_SET_BOOT_TO_VAL    _IOW(CCCI_IOC_MAGIC, 122, unsigned int)  /* Set boot time out value */
+#define CCCI_IOC_SET_BOOT_STATE          _IOW(CCCI_IOC_MAGIC, 116, unsigned int) /*boot_IT */
+#define CCCI_IOC_GET_BOOT_STATE          _IOR(CCCI_IOC_MAGIC, 117, unsigned int) /*boot_IT */
+/*mdinit For MD reset flow must wait for mux/fsd/mdlogger close port */
+#define CCCI_IOC_WAIT_RDY_RST            _IO(CCCI_IOC_MAGIC,  118)
+/* For MD LOGER to turn on/off downlink traffic */
+#define CCCI_IOC_DL_TRAFFIC_CONTROL      _IOW(CCCI_IOC_MAGIC, 119, unsigned int)
+/*set flow control limit&threshold of mdlog for debug */
+#define CCCI_IOC_FLOW_CTRL_SETTING       _IOW(CCCI_IOC_MAGIC, 120, unsigned int)
+/*notify kernel of md boot up timeout */
+#define CCCI_IOC_BOOT_UP_TIMEOUT         _IOW(CCCI_IOC_MAGIC, 121, unsigned int[2])
+/* Set boot time out value */
+#define CCCI_IOC_SET_BOOT_TO_VAL         _IOW(CCCI_IOC_MAGIC, 122, unsigned int)
 
 /* ext md*/
 /*Block to get extern md assert flag for mdlogger */
-#define CCCI_IOC_GET_MD_ASSERTLOG       _IOW(CCCI_IOC_MAGIC, 200, unsigned int)
+#define CCCI_IOC_GET_MD_ASSERTLOG        _IOW(CCCI_IOC_MAGIC, 200, unsigned int)
 /*get extern md assert log status */
-#define CCCI_IOC_GET_MD_ASSERTLOG_STATUS  _IOW(CCCI_IOC_MAGIC, 201, unsigned int)
+#define CCCI_IOC_GET_MD_ASSERTLOG_STATUS _IOW(CCCI_IOC_MAGIC, 201, unsigned int)
 /*Enter dwonload extern md img mode */
-#define CCCI_IOC_ENTER_MD_DL_MODE         _IOW(CCCI_IOC_MAGIC, 202, unsigned int)
+#define CCCI_IOC_ENTER_MD_DL_MODE        _IOW(CCCI_IOC_MAGIC, 202, unsigned int)
 
 #define CCCI_IPC_MAGIC 'P'    /* only for IPC user */
 /* CCCI == EEMCS*/
-#define CCCI_IPC_RESET_RECV        _IO(CCCI_IPC_MAGIC,0)
-#define CCCI_IPC_RESET_SEND        _IO(CCCI_IPC_MAGIC,1)
-#define CCCI_IPC_WAIT_MD_READY    _IO(CCCI_IPC_MAGIC,2)
+#define CCCI_IPC_RESET_RECV         _IO(CCCI_IPC_MAGIC,0)
+#define CCCI_IPC_RESET_SEND         _IO(CCCI_IPC_MAGIC,1)
+#define CCCI_IPC_WAIT_MD_READY      _IO(CCCI_IPC_MAGIC,2)
 #define CCCI_IPC_KERN_WRITE_TEST    _IO(CCCI_IPC_MAGIC,3)
 #define CCCI_IPC_UPDATE_TIME        _IO(CCCI_IPC_MAGIC,4)
-#define CCCI_IPC_WAIT_TIME_UPDATE    _IO(CCCI_IPC_MAGIC,5)
+#define CCCI_IPC_WAIT_TIME_UPDATE   _IO(CCCI_IPC_MAGIC,5)
 #define CCCI_IPC_UPDATE_TIMEZONE    _IO(CCCI_IPC_MAGIC,6)
 
 #define CCCI_FS_IOC_MAGIC 'K'    /* only for ccci_fsd */
 /* CCCI only*/
-#define CCCI_FS_IOCTL_GET_INDEX    _IO(CCCI_FS_IOC_MAGIC, 1)
-#define CCCI_FS_IOCTL_SEND        _IOR(CCCI_FS_IOC_MAGIC, 2, unsigned int)
+#define CCCI_FS_IOCTL_GET_INDEX     _IO(CCCI_FS_IOC_MAGIC, 1)
+#define CCCI_FS_IOCTL_SEND          _IOR(CCCI_FS_IOC_MAGIC, 2, unsigned int)
 
 #define CCCI_RPC_IOC_MAGIC        'R'
 #define CCCI_RPC_IOCTL_GET_INDEX    _IO(CCCI_RPC_IOC_MAGIC, 1)
-#define CCCI_RPC_IOCTL_SEND        _IOR(CCCI_RPC_IOC_MAGIC, 2, unsigned int)
+#define CCCI_RPC_IOCTL_SEND         _IOR(CCCI_RPC_IOC_MAGIC, 2, unsigned int)
 
 /* API exported by ccci so*/
 int query_kcfg_setting(char name[], char val[], int size);

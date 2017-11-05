@@ -216,7 +216,7 @@ extern int rilCcMain(int request, void *data, size_t datalen, RIL_Token t)
             asprintf(&cmd, "AT+VP=%d", ((int *) data)[0]);
             err = at_send_command(cmd, &p_response, CC_CHANNEL_CTX);
             free(cmd);
-            if (err < 0 || p_response->success == 0) {
+            if (err < 0 || p_response == NULL || p_response->success == 0) {
                 RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
             } else {
                 RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
@@ -307,12 +307,21 @@ extern int rilCcUnsolicited(const char *s, const char *sms_pdu) {
             return 1;
         }
         line = dup;
-        at_tok_start(&line);
+        err = at_tok_start(&line);
+        if (err < 0) {
+            free(dup); return 1;
+        }
         err = at_tok_nextstr(&line, &number);
+        if (err < 0) {
+            free(dup); return 1;
+        }
         cdmawait->number = (char *) alloca(strlen(number) + 1);
         strcpy(cdmawait->number, number);
 
-        at_tok_nextint(&line, &callType);
+        err = at_tok_nextint(&line, &callType);
+        if (err < 0) {
+            free(dup); return 1;
+        }
         if (145 == callType) {
             cdmawait->number_type = 1;
         } else if (129 == callType) {
@@ -500,9 +509,8 @@ static void requestGetCurrentCalls(void *data, size_t datalen, RIL_Token t)
 
     err = at_send_command_multiline ("AT+CLCC", "+CLCC:", &p_response, CC_CHANNEL_CTX);
 
-    if (err != 0 || p_response->success == 0) {
-        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-        return;
+    if (err < 0 || p_response == NULL || p_response->success == 0) {
+        goto error;
     }
 
     /* count the calls */
@@ -581,6 +589,7 @@ static void sendCallStateChanged(void *param) {
 
 static void requestDial(void *data, size_t datalen, RIL_Token t)
 {
+    ATResponse *p_response = NULL;
     RIL_Dial *p_dial;
     char *cmd;
     const char *clir;
@@ -588,7 +597,6 @@ static void requestDial(void *data, size_t datalen, RIL_Token t)
     char ecclist[128] = { 0 };
     PS_PARAM psParam;
     memset(&psParam, 0, sizeof(psParam));
-
     p_dial = (RIL_Dial *)data;
 
     switch (p_dial->clir) {
@@ -632,12 +640,21 @@ static void requestDial(void *data, size_t datalen, RIL_Token t)
     }
 #endif
 
-    ret = at_send_command(cmd, NULL, CC_CHANNEL_CTX);
+    ret = at_send_command(cmd, &p_response, CC_CHANNEL_CTX);
     free(cmd);
-
+    if (ret < 0 || p_response == NULL || p_response->success == 0) {
+        goto error;
+    }
     /* success or failure is ignored by the upper layer here.
        it will call GET_CURRENT_CALLS and determine success that way */
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+    rilCcUnsolicited(p_response->finalResponse, NULL);
+    at_response_free(p_response);
+    return;
+
+error:
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    at_response_free(p_response);
 }
 
 static int isCallEnded(RIL_CALL_STATUS* callStatus)
@@ -656,8 +673,8 @@ static int isCallEnded(RIL_CALL_STATUS* callStatus)
 
     err = at_send_command_multiline ("AT+CLCC", "+CLCC:", &p_response, getDefaultChannelCtx());
 
-    if (err != 0 || p_response->success == 0) {
-        return -1;
+    if (err < 0 || p_response == NULL || p_response->success == 0) {
+        goto error;
     }
 
     /* count the calls */
@@ -705,7 +722,7 @@ static void requestHangup(void *data, size_t datalen, RIL_Token t)
     RIL_CALL_STATUS callStatus;
 
     ret = at_send_command("AT+CHV", &p_response, CC_CHANNEL_CTX);
-    if (ret < 0 || p_response->success == 0) {
+    if (ret < 0 || p_response == NULL || p_response->success == 0) {
         goto error;
     }
     /*wait +CHV to take effect*/
@@ -721,9 +738,11 @@ static void requestHangup(void *data, size_t datalen, RIL_Token t)
     /* success or failure is ignored by the upper layer here.
        it will call GET_CURRENT_CALLS and determine success that way */
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+    at_response_free(p_response);
     return;
 error:
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    at_response_free(p_response);
 }
 
 static void requestGetLastCallFailCause(void *data, size_t datalen, RIL_Token t)
@@ -767,7 +786,7 @@ static void requestQueryPreferredVoicePrivacy(
 
     err = at_send_command_singleline("AT+VP?", "+VP:", &p_response, CC_CHANNEL_CTX);
 
-    if (err < 0 || p_response->success == 0) {
+    if (err < 0 || p_response == NULL || p_response->success == 0) {
         goto error;
     }
 
@@ -834,6 +853,7 @@ error:
 #ifdef ADD_MTK_REQUEST_URC
 static void requestEmergencyDial(void *data, size_t datalen, RIL_Token t)
 {
+    ATResponse *p_response = NULL;
     RIL_Dial *p_dial;
     char *cmd;
     const char *clir;
@@ -841,7 +861,6 @@ static void requestEmergencyDial(void *data, size_t datalen, RIL_Token t)
     char ecclist[128] = { 0 };
     PS_PARAM psParam;
     memset(&psParam, 0, sizeof(psParam));
-
     p_dial = (RIL_Dial *)data;
 
     switch (p_dial->clir) {
@@ -858,12 +877,21 @@ static void requestEmergencyDial(void *data, size_t datalen, RIL_Token t)
     turnPSEnable((void *)&psParam);
     asprintf(&cmd, "AT+CDV=%s,1", p_dial->address);
 
-    ret = at_send_command(cmd, NULL, CC_CHANNEL_CTX);
+    ret = at_send_command(cmd, &p_response, CC_CHANNEL_CTX);
     free(cmd);
-
+    if (ret < 0 || p_response == NULL || p_response->success == 0) {
+        goto error;
+    }
     /* success or failure is ignored by the upper layer here.
        it will call GET_CURRENT_CALLS and determine success that way */
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+    rilCcUnsolicited(p_response->finalResponse, NULL);
+    at_response_free(p_response);
+    return;
+
+error:
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    at_response_free(p_response);
 }
 
 /*
@@ -898,7 +926,7 @@ static void requestSwitchHPF(void *data, size_t datalen, RIL_Token t)
     asprintf(&cmd, "AT+VGSMST=%d", onOff);
     err = at_send_command(cmd, &p_response, CC_CHANNEL_CTX);
     free(cmd);
-    if ((err < 0) || (p_response->success == 0)) {
+    if (err < 0 || p_response == NULL || p_response->success == 0) {
         goto error;
     }
 
@@ -1034,7 +1062,7 @@ void requestSetSpeechCodecInfo(void * data, size_t datalen, RIL_Token t)
     asprintf(&cmd, "AT+EVOCD=%d", support);
     err = at_send_command(cmd, &p_response, CC_CHANNEL_CTX);
     free(cmd);
-    if (err < 0 || p_response->success == 0) {
+    if (err < 0 || p_response == NULL || p_response->success == 0) {
         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     } else {
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);

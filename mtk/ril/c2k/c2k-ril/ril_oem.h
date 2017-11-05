@@ -63,4 +63,7 @@ int rilOemMain(int request, void *data, size_t datalen, RIL_Token t);
 int rilOemUnsolicited(const char *s, const char *sms_pdu);
 void triggerIoctl(int param);
 
+//To avoid Radio Capability switch conflict with power off flow
+extern int isSimSwitchMD3PowerOff();
+extern void setSimSwitchMD3PowerOff(int is_off);
 #endif /* RIL_SS_H */

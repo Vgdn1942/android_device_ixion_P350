@@ -106,6 +106,9 @@ extern bool IMS_isRilRequestFromIms(RIL_Token t);
 extern int combineAttachAndFollowOn(RIL_SOCKET_ID rid, int onOff, RILChannelCtx *pChannel);
 extern int defineAttachApnIfIACacheExisted(RIL_SOCKET_ID rid, RILChannelCtx *pChannel);
 
+static const char *SIM_SWITCH_MD1_POWER_OFF = "gsm.simswitch.offmd1";
+static const char *SIM_SWITCH_MD3_POWER_OFF = "cdma.simswitch.offmd3";
+
 //MTK-START [mtk80950][120410][ALPS00266631]check whether download calibration data or not
 void requestGetCalibrationData(void * data, size_t datalen, RIL_Token t)
 {
@@ -274,6 +277,7 @@ RIL_Errno resetRadioForSvlte() {
         {
             // power off modem
             if (isCCCIPowerOffModem()) {
+                setSimSwitchMD1PowerOff(1);
                 s_md_off = 1;
             }
 
@@ -1197,7 +1201,11 @@ extern void requestSetRadioCapability(void * data, size_t datalen, RIL_Token t)
                     RIL_onRequestComplete(t, RIL_E_SUCCESS, responseRc, sizeof(RIL_RadioCapability));
                     break;
                 case APPLYRC_FAIL:
-                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, responseRc, sizeof(RIL_RadioCapability));
+                    if (s_md_off == 1) {
+                        RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, responseRc, sizeof(RIL_RadioCapability));
+                    } else {
+                        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, responseRc, sizeof(RIL_RadioCapability));
+                    }
                     break;
             }
 
@@ -2393,6 +2401,20 @@ extern int rilOemMain(int request, void *data, size_t datalen, RIL_Token t)
         case RIL_LOCAL_REQUEST_SET_MODEM_THERMAL:
             requestSetModemThermal(data, datalen, t);
             break;
+        /// M: set Ims capability to MD
+        case RIL_REQUEST_SET_VOLTE_ENABLE:
+            requestSetVolteEnabled(data, datalen, t);
+            break;
+        case RIL_REQUEST_SET_WFC_ENABLE:
+            requestSetWfcEnabled(data, datalen, t);
+            break;
+        case RIL_REQUEST_SET_IMS_VOICE_ENABLE:
+            requestSetImsVoiceEnabled(data, datalen, t);
+            break;
+        case RIL_REQUEST_SET_IMS_VIDEO_ENABLE:
+            requestSetImsVideoEnabled(data, datalen, t);
+            break;
+        /// @}
         default:
             return 0;  /* no matched request */
             break;
@@ -2406,3 +2428,25 @@ extern int rilOemUnsolicited(const char *s, const char *sms_pdu, RILChannelCtx* 
     return handleOemUnsolicited(s, sms_pdu, p_channel);
 }
 
+int isSimSwitchMD1PowerOff() {
+    int isSimSwitchPowerOff = 0;
+    if (isCdmaLteDcSupport()) {
+        char property_value[PROPERTY_VALUE_MAX] = { 0 };
+        property_get(SIM_SWITCH_MD1_POWER_OFF, property_value, "0");
+        isSimSwitchPowerOff = atoi(property_value);
+    }
+    LOGD("%s(): %s: %d", __FUNCTION__, SIM_SWITCH_MD1_POWER_OFF,
+            isSimSwitchPowerOff);
+    return isSimSwitchPowerOff;
+}
+void setSimSwitchMD1PowerOff(int is_off) {
+    LOGD("set %s to %d", SIM_SWITCH_MD1_POWER_OFF, is_off);
+    property_set(SIM_SWITCH_MD1_POWER_OFF, is_off ? "1" : "0");
+}
+void resetSimSwitchMDPowerOff() {
+    LOGD("reset %s to 0", SIM_SWITCH_MD1_POWER_OFF);
+    property_set(SIM_SWITCH_MD1_POWER_OFF, "0");
+    LOGD("reset %s to 0", SIM_SWITCH_MD3_POWER_OFF);
+    property_set(SIM_SWITCH_MD3_POWER_OFF, "0");
+
+}

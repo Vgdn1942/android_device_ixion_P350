@@ -19,8 +19,8 @@
 
 #include "io/mailbox.h"
 #include "entity.h"
-#include "task.h"
-#include "srv.h"
+#include "context/task.h"
+#include "context/srv.h"
 #include "conn.h"
 
 #include <stdarg.h>
@@ -30,14 +30,13 @@
 // N/A
 
 // Type definitions
-typedef int context_id_t;
+// N/A
 
 // Macros
 #define MDFX_MFI_CHNL	MFI_TASK_PATH
-#define CONTEXT_INVAL_ID	TASK_INVAL_ID
 
 // Global variables
-// N/A
+extern bool is_dongle_mode;
 
 // Functions
 extern void mdfx_mfia_start (void);
@@ -119,6 +118,9 @@ extern int mdfx_event_dump (event_ptr_t event_ptr);
 extern context_id_t mdfx_event_get_src_id (event_ptr_t event_ptr);
 extern context_id_t mdfx_event_get_ext_id (event_ptr_t event_ptr);
 extern context_id_t mdfx_event_get_xsrc_id (event_ptr_t event_ptr);
+#ifdef __EVENT_USAGE_MONITOR__
+extern void mdfx_event_do_statistic (event_ptr_t event_ptr, ssize_t diff);
+#endif
 // ==== NEED_TO_BE_NOTICED, legacy event APIs, higjly NOT recommended to use ====
 extern bool mdfx_event_cmp_chnl(event_ptr_t event_ptr_1, event_ptr_t event_ptr_2);  // NEED_TO_BE_NOTICED, requested by Box Wu
 // ==== NEED_TO_BE_NOTICED, legacy event APIs, higjly NOT recommended to use ====
@@ -134,14 +136,14 @@ extern int mdfx_task_hijack_atc (task_ptr_t task_ptr, const char *atc_prefix, ev
 extern int mdfx_task_send_event (task_ptr_t task_ptr, event_ptr_t event_ptr, task_id_t task_id);
 extern int mdfx_task_reply_event (task_ptr_t task_ptr, event_ptr_t orig_event_ptr, event_ptr_t event_ptr);
 extern int mdfx_task_bcast_event (task_ptr_t task_ptr, event_ptr_t event_ptr);
-extern int mdfx_task_send_recv_event (task_ptr_t task_ptr, event_ptr_t event_ptr, task_id_t task_id, task_rx_cond_t rx_cond, void *rx_cond_arg);
+extern int mdfx_task_send_recv_event (task_ptr_t task_ptr, event_ptr_t event_ptr, task_id_t task_id, task_cond_fp_t rx_cond, void *rx_cond_arg, size_t rx_cond_arg_len);
 extern int mdfx_task_send_ext_event (task_ptr_t task_ptr, event_ptr_t event_ptr, ...);
 extern int mdfx_task_bcast_ext_event (task_ptr_t task_ptr, event_ptr_t event_ptr, ...);
 // ==== NEED_TO_BE_NOTICED, legacy task APIs, higjly NOT recommended to use ====
-extern bool rx_cond_event_id (task_ptr_t task_ptr,event_ptr_t event_ptr,void * arg);    // NEED_TO_BE_NOTICED, requested by Box Wu
-#define mdfx_task_send_and_wait_for_event(task_ptr, event_ptr, task_id, event_id)	(mdfx_task_send_recv_event((task_ptr), (event_ptr), (task_id), rx_cond_event_id, (void*)(event_id)))    /* NEED_TO_BE_NOTICED, requested by Box Wu */
-extern event_ptr_t mdfx_task_recv_event (task_ptr_t task_ptr, task_rx_cond_t rx_cond, void *rx_cond_arg);   // NEED_TO_BE_NOTICED, requested by Ian Cheng
-#define mdfx_task_wait_for_event(task_ptr, event_id)	(mdfx_task_recv_event((task_ptr), rx_cond_event_id, (void*)(event_id))) /* NEED_TO_BE_NOTICED, requested by Ian Cheng */
+extern bool rx_cond_event_id (task_ptr_t task_ptr,event_ptr_t event_ptr, void * arg);    // NEED_TO_BE_NOTICED, requested by Box Wu
+#define mdfx_task_send_and_wait_for_event(task_ptr, event_ptr, task_id, event_id)	(mdfx_task_send_recv_event((task_ptr), (event_ptr), (task_id), rx_cond_event_id, (void*)(&(event_id)), sizeof(event_id)))    /* NEED_TO_BE_NOTICED, requested by Box Wu */
+extern event_ptr_t mdfx_task_recv_event (task_ptr_t task_ptr, task_cond_fp_t rx_cond, void *rx_cond_arg, size_t rx_cond_arg_len);   // NEED_TO_BE_NOTICED, requested by Ian Cheng
+#define mdfx_task_wait_for_event(task_ptr, event_id)	(mdfx_task_recv_event((task_ptr), rx_cond_event_id, (void*)(&(event_id)), sizeof(event_id))) /* NEED_TO_BE_NOTICED, requested by Ian Cheng */
 // ==== NEED_TO_BE_NOTICED, legacy task APIs, higjly NOT recommended to use ====
 
 // => Entity API
@@ -166,10 +168,10 @@ extern srv_ptr_t mdfx_srv_exit (srv_ptr_t srv_ptr);
 #define mdfx_srv_exec(srv_ptr, hdl, arg)	(srv_exec((srv_ptr), (hdl), (arg)))
 #define mdfx_srv_get_id(srv_ptr)	(unlikely((srv_ptr) == NULL) ? SRV_INVAL_ID : (srv_ptr)->id)
 extern int mdfx_srv_subscribe_event (srv_ptr_t srv_ptr, event_id_t event_id);
-int mdfx_srv_send_event (srv_ptr_t srv_ptr, event_ptr_t event_ptr, task_id_t srv_id);
+extern int mdfx_srv_send_event (srv_ptr_t srv_ptr, event_ptr_t event_ptr, task_id_t srv_id);
 event_ptr_t mdfx_srv_recv_event (srv_ptr_t srv_ptr);
-int mdfx_srv_reply_event (srv_ptr_t srv_ptr, event_ptr_t orig_event_ptr, event_ptr_t event_ptr);
-extern event_ptr_t mdfx_srv_send_recv_event (srv_ptr_t srv_ptr, event_ptr_t event_ptr, task_id_t task_id, srv_rx_cond_t rx_cond, void *rx_cond_arg);
+extern int mdfx_srv_reply_event (srv_ptr_t srv_ptr, event_ptr_t orig_event_ptr, event_ptr_t event_ptr);
+extern event_ptr_t mdfx_srv_send_recv_event (srv_ptr_t srv_ptr, event_ptr_t event_ptr, task_id_t task_id, srv_cond_fp_t rx_cond, void *rx_cond_arg, size_t rx_cond_arg_len);
 extern int mdfx_srv_send_ext_event (srv_ptr_t srv_ptr, event_ptr_t event_ptr);
 #if 0
 // => Event API
@@ -195,5 +197,5 @@ extern int mdfx_conn_send (conn_ptr_t conn_ptr, event_ptr_t event_ptr);
 extern int mdfx_conn_recv (conn_ptr_t conn_ptr, event_ptr_t event_ptr);
 extern event_ptr_t mdfx_conn_send_recv (conn_ptr_t conn_ptr, event_ptr_t event_ptr);
 extern event_ptr_t mdfx_conn_send_cb (conn_ptr_t conn_ptr, event_ptr_t event_ptr, rx_cond_hdl_t rx_cond, void *rx_cond_arg, conn_hdl_t cb_hdl);
-#define mdfx_conn_get_id(conn_ptr)   (unlikely((conn_ptr) == NULL) ? CONTEXT_INVAL_ID : (conn_ptr)->->chnl.idv.uds.sock + SRV_MAX_ID)
+#define mdfx_conn_get_id(conn_ptr)   (unlikely((conn_ptr) == NULL) ? CONTEXT_INVAL_ID : (conn_ptr)->chnl.idv.uds.sock + SRV_MAX_ID)	// NEED_TO_BE_NOTICED, should NEVER be used
 #endif

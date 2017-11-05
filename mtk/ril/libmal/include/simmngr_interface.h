@@ -188,12 +188,14 @@ typedef int (*simmngr_sim_usim_detect_notify_fn)(sim_data_notify_t *usim_detect,
 typedef int (*simmngr_sim_isim_ch_notify_fn)(sim_data_notify_t *isim_ch, void *priv);
 typedef int (*simmngr_sim_insert_check_notify_fn)(sim_data_notify_t *insert_check, void *priv);
 typedef int (*simmngr_sim_stk_refresh_notify_fn)(sim_stk_notify_t *stk_notify, void *priv);
+typedef int (*simmngr_sim_discovery_pcscf_notify_fn)(sim_pcscf_result_t *sim_pcscf, void *priv);
 typedef struct _mal_simmngr_notify_function_ {
     simmngr_sim_insert_state_notify_fn          sim_insert_state;
     simmngr_sim_usim_detect_notify_fn           sim_usim_detect;
     simmngr_sim_isim_ch_notify_fn               sim_isim_ch;
     simmngr_sim_insert_check_notify_fn          sim_insert_check;
     simmngr_sim_stk_refresh_notify_fn			sim_stk_refresh;
+    simmngr_sim_discovery_pcscf_notify_fn       sim_discovery_pcscf;
 } mal_simmngr_notify_function_t;
 
 
@@ -210,6 +212,7 @@ int mal_sim_aka_verify(void *conn_ptr, sim_aka_info_t *aka_info, char *response,
 int mal_ims_func_enable(void *conn_ptr, int *error_code);
 int mal_ims_func_disable(void *conn_ptr, int *error_code);
 int mal_sim_insert_check(void *conn_ptr, int sim_id);
+int mal_sim_discovery_pcscf(void *conn_ptr, int sim_id);
 int mal_simmngr_register(mal_simmngr_notify_function_t *callback_fn);
 
 #endif

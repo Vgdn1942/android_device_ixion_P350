@@ -107,7 +107,7 @@ LOCAL_C_INCLUDES :=
 
 LOCAL_C_INCLUDES += $(MTK_PATH_SOURCE)/hardware/ccci/include \
     $(LOCAL_PATH)/../include \
-#    $(MTK_ROOT)/external/aee/binary/inc
+    $(MTK_ROOT)/external/aee/binary/inc
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADER)/librilutils
 LOCAL_C_INCLUDES += external/nanopb-c
@@ -256,7 +256,7 @@ LOCAL_C_INCLUDES :=
 
 LOCAL_C_INCLUDES += $(MTK_PATH_SOURCE)/hardware/ccci/include \
     $(LOCAL_PATH)/../include \
-#    $(MTK_ROOT)/external/aee/binary/inc
+    $(MTK_ROOT)/external/aee/binary/inc
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADER)/librilutils
 LOCAL_C_INCLUDES += external/nanopb-c

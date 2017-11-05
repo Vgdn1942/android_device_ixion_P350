@@ -1394,13 +1394,14 @@ static void requestSimOpenNFCChannel(void *data, size_t datalen, RIL_Token t)
     char* line = NULL;
     char *cmd = NULL;
     int sessionid;
+    int channelid;
 
     c = (char *)data;
     LOGD("%s, data is %s", __FUNCTION__, c);
     asprintf(&cmd, "AT+CCHO=\"%s\"", c);
     err = at_send_command_singleline(cmd, "+CCHO:", &p_response, SIM_CHANNEL_CTX);
     free(cmd);
-    if ((err < 0) || (p_response->success == 0)) {
+    if (err < 0 || p_response == NULL || p_response->success == 0) {
         err = RIL_E_GENERIC_FAILURE;
         if (p_response != NULL) {
             switch (at_get_cme_error(p_response)) {
@@ -1431,7 +1432,8 @@ static void requestSimOpenNFCChannel(void *data, size_t datalen, RIL_Token t)
     }
 
     at_response_free(p_response);
-    RIL_onRequestComplete(t, RIL_E_SUCCESS, &sessionid, sizeof(int));
+    channelid = sessionid - 1;      //sessionid = channelid + 1
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, &channelid, sizeof(int));
     return;
 
 error:
@@ -1446,12 +1448,12 @@ error:
 */
 static void requestSimCloseNFCChannel(void *data, size_t datalen, RIL_Token t)
 {
-    int sessionid = ((int *)data)[0];
+    int channelid = ((int *)data)[0];
     char *cmd = NULL;
     int err = 0;
 
-    LOGD("%s, sessionid is %d", __FUNCTION__, sessionid);
-    asprintf(&cmd, "AT+CCHC=%d", sessionid);
+    LOGD("%s, channelid is %d", __FUNCTION__, channelid);
+    asprintf(&cmd, "AT+CCHC=%d", channelid + 1);    //CCHC using sessionid
     err = at_send_command(cmd, NULL, SIM_CHANNEL_CTX);
     free(cmd);
     if (err < 0) {
@@ -1476,9 +1478,9 @@ static void requestSimTransmitChannel(void *data, size_t datalen, RIL_Token t)
 
     memset(&sr, 0, sizeof(sr));
     p_args = (RIL_SIM_APDU *)data;
+    p_args->sessionid++;    // We return channelid to upper layer
     LOGD("%s, sessionid:%d, cla:%02x, ins:%02x, p1:%02x, p2:%02x, p3:%02x, data:%s", __FUNCTION__,
             p_args->sessionid, p_args->cla, p_args->instruction, p_args->p1, p_args->p2, p_args->p3, p_args->data);
-
     if ((p_args->data == NULL) || (strlen(p_args->data) == 0)) {
         if (p_args->p3 < 0) {
             asprintf(&cmd, "AT+CGLA=%d,%d,\"%02x%02x%02x%02x\"",
@@ -1489,7 +1491,7 @@ static void requestSimTransmitChannel(void *data, size_t datalen, RIL_Token t)
             err = at_send_command_singleline(cmd, "+CGLA:", &p_response, SIM_CHANNEL_CTX);
             free(cmd);
 
-            if (err < 0 || p_response->success == 0) {
+            if (err < 0 || p_response == NULL || p_response->success == 0) {
                 LOGD("CGLA Send Error");
                 goto error;
             }
@@ -1612,7 +1614,7 @@ static void requestSimGetATRFORNFC(void *data, size_t datalen, RIL_Token t)
     char * responseStr = NULL;
 
     err = at_send_command_singleline ("AT+ESIMINFO=0", "+ESIMINFO", &p_response, SIM_CHANNEL_CTX);
-    if ((err < 0) || (p_response->success == 0))
+    if (err < 0 || p_response == NULL || p_response->success == 0)
     {
         LOGE("GetATR error!");
         goto error;
@@ -1757,7 +1759,7 @@ select_error:
     err = at_send_command_singleline(cmd, "+CGLA:", &p_response, SIM_CHANNEL_CTX);
     LOGD("Select AID failed, close channel:%d", NFCchannel);
 
-    if (err < 0 || p_response->success == 0) {
+    if (err < 0 || p_response == NULL || p_response->success == 0) {
         LOGD("%s, close channel failed", __FUNCTION__);
         err = RIL_E_GENERIC_FAILURE;
     } else {
@@ -1880,6 +1882,7 @@ static void requestCardSwitch(void *data, size_t datalen, RIL_Token t)
             #ifdef ADD_MTK_REQUEST_URC
             s_unsol_msg_cache.service_state = 2;
             #endif
+            combineDataAttach(SIM_CHANNEL_CTX);
             err = at_send_command("AT+CPON", &p_response, SIM_CHANNEL_CTX);
             if (err < 0|| p_response->success == 0)
             {
@@ -2091,7 +2094,7 @@ redo:
 
     err = at_send_command_singleline (cmd, "+CGLA:", &p_response, SIM_CHANNEL_CTX);
 
-    if ((err < 0) || (p_response->success == 0)) {
+    if (err < 0 || p_response == NULL || p_response->success == 0) {
         LOGE("%s, err = %d", __FUNCTION__, err);
         err = RIL_E_GENERIC_FAILURE;
         if (p_response != NULL && p_response->finalResponse != NULL) {
@@ -2204,7 +2207,7 @@ static int requestSimChannelAccess(int sessionid, char * senddata, RIL_SIM_IO_Re
     err = at_send_command_singleline(cmd, "+CGLA:", &p_response, getChannelCtxbyId(AT_CHANNEL));
     free(cmd);
 
-    if (err < 0 || p_response->success == 0) {
+    if (err < 0 || p_response == NULL || p_response->success == 0) {
         LOGD("%s, AT+CGLA send failed", __FUNCTION__);
         goto error;
     }
@@ -4146,6 +4149,7 @@ static void TriggerMD3BootPower() {
     if (err < 0 || p_response->success == 0) {
         LOGE("%s: failed to send CPOF, err is %d", __FUNCTION__, err);
     } else {
+        combineDataAttach(getChannelCtxbyId(AT_CHANNEL));
         err = at_send_command("AT+CPON", &p_response, getChannelCtxbyId(AT_CHANNEL));
         if (err < 0|| p_response->success == 0) {
             LOGE("%s: failed to send CPON, err is %d", __FUNCTION__, err);

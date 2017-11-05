@@ -67,7 +67,7 @@ extern void  AT_DUMP(const char* prefix, const char*  buff, int  len);
                                         did not get back an intermediate
                                         response */
 
-#define MAX_TIMEOUTSECS_TO_RECEIVE_HCMGSS 30000 /* the max timeout from excuting CMGS to receiving the HCMGSS/HCMGSF. ex.30000=30s */
+#define MAX_TIMEOUTSECS_TO_RECEIVE_HCMGSS 150000 /* the max timeout from excuting CMGS to receiving the HCMGSS/HCMGSF. ex.30000=30s */
 
 
 extern const struct RIL_Env *s_rilenv;

@@ -765,9 +765,12 @@ RLOGD("getCardStatus: entering ");
        {
            sleepMsec(200);
            count++;     //to avoid block; if the busy time is too long; need to check modem.
-           if(count == 30)
+           // Since VSIM might take more time to initilaization, we stop retry continuously to
+           // to avoid the occuppy the channel too long.
+           // Reference CR: ALPS02414879
+           if(count == 30 || isVsimEnabledByRid(rid))
            {
-                RLOGE("Error in getSIM Status");
+                RLOGE("Error in getSIM Status, isVsimEnabled()=%d", isVsimEnabledByRid(rid));
                 if(isUsim == 1) {
                     sim_status = USIM_NOT_READY; //to avoid exception in RILD
                 } else {
@@ -2458,10 +2461,16 @@ static void requestSimAuthentication(void *data, size_t datalen, RIL_Token t) {
     // Lc:length of authentication context
     // Data: authentication context decided by user's parameter
     // Le: max length of data expected in response. use 00 represent unknown.
-    asprintf(&cmd, "AT+CGLA=%d,%d,\"%02x%02x%02x%02x%02x%s00\"",
-        channel, (12 + strlen(out_put)),
-        ((channel <= 3) ? channel : (4 * 16 + channel - 4)), 0x88, 0, sim_auth_data->authContext,
-        (strlen(out_put)/2), out_put);
+    if (isUsimDetect[rid] == 1) {
+        asprintf(&cmd, "AT+CGLA=%d,%d,\"%02x%02x%02x%02x%02x%s00\"",
+                channel, (12 + strlen(out_put)),
+                ((channel <= 3) ? channel : (4 * 16 + channel - 4)), 0x88, 0, sim_auth_data->authContext,
+                (strlen(out_put)/2), out_put);
+    } else {
+        asprintf(&cmd, "AT+CGLA=%d,%d,\"%02x%02x%02x%02x%s0C\"",
+                channel, (10 + strlen(out_put)),
+                0xA0, 0x88, 0x00, 0x00, out_put);
+    }
     err = at_send_command_singleline(cmd, "+CGLA:", &p_response, SIM_CHANNEL_CTX);
     free(cmd);
     free(out_put);
@@ -3186,6 +3195,17 @@ extern int rilSimUnsolicited(const char *s, const char *sms_pdu, RILChannelCtx* 
         onPhbStateChanged(rid, TRUE);
     } else if (strStartsWith(s, "+EIND: 32")) {
         onPhbStateChanged(rid, FALSE);
+        // Add for slow SIM card error handling.
+        // Backgournd: get sim status try 30 times with 0.2 second sleep duration.
+        // If the card can't get non-busy status within 6 second, then Java layer always can't
+        // get correct sim status and broadcast them.
+        // Solution: we need a sim status changed unsolicited message to trigger java layer once
+        // modem complete SIM card initialization.
+        // FIXME: Actually, we need an event represent the SIM card complete initialization.
+        // Modem suggest AP use phonebook start to initialization event as a SIM card
+        // initialization done. Might change to other exactly URC in the further.
+        // Reference CR: ALPS02408560
+        setSimStatusChanged(rid);
     } else if (strStartsWith(s, "+EUSIM:")) {
         RLOGD("EUSIM URC:%s",s);
         onUsimDetected(s,rid);

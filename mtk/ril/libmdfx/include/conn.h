@@ -7,7 +7,7 @@
 
 #include "sys_info.h"
 #include "compiler.h"
-#include "task.h"
+#include "context/task.h"
 #include "event.h"
 #include "io/mailbox.h"
 #include "io/chnl.h"
@@ -57,6 +57,7 @@ struct conn
 	mailbox_t mailbox;
 	chnl_t chnl;
 	event_seq_t seq;
+    bool is_set_task;
 	task_t task;
 	struct conn_data *data_ptr;
 	thrd_lock_t mutex;

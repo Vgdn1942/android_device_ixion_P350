@@ -21,4 +21,7 @@ for flavor in eng userdebug user; do
 done
 
 # Hack for aicp
+if [ -d vendor/aicp/products/ ]; then
 cp -f device/ixion/P350/aicp.mk vendor/aicp/products/P350.mk
+fi
+

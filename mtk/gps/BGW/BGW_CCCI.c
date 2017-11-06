@@ -35,6 +35,7 @@
 
 #include "BGW_CCCI.h"
 #include <cutils/sockets.h>
+#include <cutils/properties.h>
 
 #define WIFI_PROP "bgw.current3gband"
 

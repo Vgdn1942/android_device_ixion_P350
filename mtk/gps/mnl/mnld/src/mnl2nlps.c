@@ -33,6 +33,7 @@
 * applicable license agreements with MediaTek Inc.
 */
 
+#define MTK_LOG_ENABLE 1
 #include "data_coder.h"
 #include "mnl2nlps.h"
 
@@ -58,7 +59,7 @@
 #define MNL2NLP_BUFF_SIZE 32
 
 typedef enum {
-    MNL_NLPS_CMD_QUIT          = 100, // Say good bye to server
+    MNL_NLPS_CMD_QUIT          = 100,  // Say good bye to server
     MNL_NLPS_CMD_GPS_NIJ_REQ   = 101  // Request a NLP data
 } mnl_nlps_cmd_enum_t;
 
@@ -96,11 +97,11 @@ static int write_cmd3(int socket_fd, mnl_nlps_cmd_enum_t cmd, int data1, int dat
     char buff[MNL2NLP_BUFF_SIZE];
     int len = fillCmd3(buff, cmd, data1, data2, data3);
     int wlen = write(socket_fd, buff, len);
-    int ret = 0; // ok
+    int ret = 0;  // ok
 
     if (len != wlen) {
         MND_ERR("[nlp] cmd(%d) error:%s\n", cmd, strerror(errno));
-        ret = -1; // error
+        ret = -1;  // error
     } else {
         MND_MSG("[nlp] cmd(%d) ok\n", cmd);
     }
@@ -136,7 +137,7 @@ static int mnl2nlp_send_cmd0_and_quit(mnl_nlps_cmd_enum_t cmd)
     return mnl2nlp_send_cmd3_and_quit(cmd, 0, 0, 0);
 }
 
-// ret val: 0 (OK),  -1 (error)
+// ret val: 0 (OK), -1 (error)
 int mnl2nlp_request_nlp()
 {
     MND_MSG("[nlp] request_nlp");

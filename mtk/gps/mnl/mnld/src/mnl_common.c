@@ -60,7 +60,7 @@
 #endif
 #endif
 
-#define MNL_CONFIG_STATUS "persist.radio.mnl.prop"   
+#define MNL_CONFIG_STATUS "persist.radio.mnl.prop"
 /*******************************************************************************
 * structure & enumeration
 *******************************************************************************/
@@ -85,11 +85,12 @@ debug.nema=1 (0:none; 1:normal; 2:full)
 debug.mnl=1
 ******************************************************************************/
 const char *mnl_prop_path[] = {
-    "/data/misc/mnl.prop",   /*mainly for target*/
+    "/data/misc/gps/mnl.prop",   /*mainly for target*/
     "/sbin/mnl.prop",   /*mainly for emulator*/
 };
 #define PROPBUF_SIZE 512
 static char propbuf[512];
+extern int epo_setconfig;
 #define IS_SPACE(ch) ((ch == ' ') || (ch == '\t') || (ch == '\n'))
 /******************************************************************************
 * Read property from file and overwritting the existing property
@@ -114,7 +115,7 @@ int get_prop(char *pStr, char** ppKey, char** ppVal)
     {
         if (len >= PROPBUF_SIZE-1)
         {
-            MNL_ERR("%s: buffer is not enough!!\n", __FUNCTION__);            
+            MNL_ERR("%s: buffer is not enough!!\n", __FUNCTION__);
 			return -1;
         }
         else
@@ -143,144 +144,83 @@ int get_prop(char *pStr, char** ppKey, char** ppVal)
 /*****************************************************************************/
 int set_prop(MNL_CONFIG_T* prConfig, char* key, char* val)
 {
-	if (!strcmp(key, "init.speed"))
-    {
+    if (!strcmp(key, "init.speed")) {
         prConfig->init_speed = atoi(val);
-	}
-    else if (!strcmp(key, "link.speed"))
-    {
+    } else if (!strcmp(key, "link.speed")) {
         prConfig->link_speed = atoi(val);
-	}
-    else if (!strcmp(key, "dev.dsp"))
-    {
-		if (strlen(val) < sizeof(prConfig->dev_dsp))
+    } else if (!strcmp(key, "dev.dsp")) {
+    if (strlen(val) < sizeof(prConfig->dev_dsp))
             strcpy(prConfig->dev_dsp, val);
-	}
-    else if (!strcmp(key, "dev.gps"))
-    {
-	    if (strlen(val) < sizeof(prConfig->dev_gps))
-	        strcpy(prConfig->dev_gps, val);
-	}
-    else if (!strcmp(key, "bee.path"))
-	{
-	    if (strlen(val) < sizeof(prConfig->bee_path))
+    } else if (!strcmp(key, "dev.gps")) {
+    if (strlen(val) < sizeof(prConfig->dev_gps))
+        strcpy(prConfig->dev_gps, val);
+    } else if (!strcmp(key, "bee.path")) {
+    if (strlen(val) < sizeof(prConfig->bee_path))
             strcpy(prConfig->bee_path, val);
-	}
-    else if (!strcmp(key, "pmtk.serial.dev"))
-    {
-	    if (strlen(val) < sizeof(prConfig->dev_dbg))
+    } else if (!strcmp(key, "pmtk.serial.dev")) {
+    if (strlen(val) < sizeof(prConfig->dev_dbg))
             strcpy(prConfig->dev_dbg, val);
-	}
-    else if (!strcmp(key, "pmtk.conn"))
-    {
-	    if (!strcmp(val, "serial"))
+    } else if (!strcmp(key, "pmtk.conn")) {
+        if (!strcmp(val, "serial"))
             prConfig->pmtk_conn = PMTK_CONNECTION_SERIAL;
         else if (!strcmp(val, "socket"))
             prConfig->pmtk_conn = PMTK_CONNECTION_SOCKET;
-	}
-    else if (!strcmp(key, "pmtk.serial.port"))
-    {
+    }
+    else if (!strcmp(key, "pmtk.serial.port")) {
 	    prConfig->socket_port = atoi(val);
-	}
-    else if (!strcmp(key, "debug.debug_nmea"))
-    {   /*it will be set to enable_dbg_log*/
+    }
+    else if (!strcmp(key, "debug.debug_nmea")) {
+        /* it will be set to enable_dbg_log */
         prConfig->debug_nmea = (atoi(val) > 0) ? (1) : (0);
-    }
-    else if (!strcmp(key, "debug.mnl"))
-    {
+    } else if (!strcmp(key, "debug.mnl")) {
         prConfig->debug_mnl  = strtol(val, NULL, 16);
-    }
-    else if (!strcmp(key, "debug.dbg2file")) // LC20110329
-    {
+    } else if (!strcmp(key, "debug.dbg2file")) {
         prConfig->dbg2file  = atoi(val);
-    }
-    else if (!strcmp(key, "timeout.monitor"))
-    {
+    } else if (!strcmp(key, "timeout.monitor")) {
         prConfig->timeout_monitor = atoi(val);
-    }
-    else if (!strcmp(key, "timeout.init"))
-    {
+    } else if (!strcmp(key, "timeout.init")) {
         prConfig->timeout_init = atoi(val);
-    }
-    else if (!strcmp(key, "timeout.sleep"))
-    {
+    } else if (!strcmp(key, "timeout.sleep")) {
         prConfig->timeout_sleep = atoi(val);
-    }
-    else if (!strcmp(key, "timeout.pwroff"))
-    {
+    } else if (!strcmp(key, "timeout.pwroff")) {
         prConfig->timeout_pwroff = atoi(val);
-    }
-    else if (!strcmp(key, "timeout.wakeup"))
-    {
+    } else if (!strcmp(key, "timeout.wakeup")) {
         prConfig->timeout_wakeup = atoi(val);
-    }
-    else if (!strcmp(key, "timeout.ttff"))
-    {
+    } else if (!strcmp(key, "timeout.ttff")) {
         prConfig->timeout_ttff = atoi(val);
-    }
-    else if (!strcmp(key, "delay.reset_dsp"))
-    {
+    } else if (!strcmp(key, "delay.reset_dsp")) {
         prConfig->delay_reset_dsp = atoi(val);
-    }
-    else if(!strcmp(key, "EPO_enabled"))
-    {
+    } else if (!strcmp(key, "EPO_enabled")) {
         prConfig->EPO_enabled = atoi(val);
-    }
-    else if(!strcmp(key, "BEE_enabled"))
-    {
+        epo_setconfig = 1;
+    } else if (!strcmp(key, "BEE_enabled")) {
         prConfig->BEE_enabled = atoi(val);
-    }
-    else if(!strcmp(key, "SUPL_enabled"))
-    {
+    } else if (!strcmp(key, "SUPL_enabled")) {
         prConfig->SUPL_enabled = atoi(val);
-    }
-    else if(!strcmp(key, "SUPLSI_enabled"))
-    {
+    } else if (!strcmp(key, "SUPLSI_enabled")) {
         prConfig->SUPLSI_enabled = atoi(val);
-    }
-    else if(!strcmp(key, "EPO_priority"))
-    {
+    } else if (!strcmp(key, "EPO_priority")) {
         prConfig->EPO_priority = atoi(val);
-    }
-    else if(!strcmp(key, "BEE_priority"))
-    {
+    } else if (!strcmp(key, "BEE_priority")) {
         prConfig->BEE_priority = atoi(val);
-    }
-    else if(!strcmp(key, "SUPL_priority"))
-    {
+    } else if (!strcmp(key, "SUPL_priority")) {
         prConfig->SUPL_priority = atoi(val);
-    }
-    else if (!strcmp(key, "AVAILIABLE_AGE"))
-    {
+    } else if (!strcmp(key, "AVAILIABLE_AGE")) {
         prConfig->AVAILIABLE_AGE = atoi(val);
-    }
-    else if (!strcmp(key, "RTC_DRIFT"))
-    {
+    } else if (!strcmp(key, "RTC_DRIFT")) {
         prConfig->RTC_DRIFT = atoi(val);
-    }
-    else if (!strcmp(key, "TIME_INTERVAL"))
-    {
+    } else if (!strcmp(key, "TIME_INTERVAL")) {
         prConfig->TIME_INTERVAL = atoi(val);
-    }
-    else if(!strcmp(key, "TEST_MACHINE"))
-    {
-        prConfig->u1AgpsMachine = atoi(val);	
-    }
-    else if (!strcmp(key, "ACC_SNR"))
-    {
+    } else if (!strcmp(key, "TEST_MACHINE")) {
+        prConfig->u1AgpsMachine = atoi(val);
+    } else if (!strcmp(key, "ACC_SNR")) {
         prConfig->ACCURACY_SNR = atoi(val);
-    }
-    else if(!strcmp(key, "GNSS_MODE"))		
-    {
-        prConfig->GNSSOPMode = atoi(val);	
-    }
-    else if(!strcmp(key, "DBGLOG_FILE_MAX"))		
-    {
-        prConfig->dbglog_file_max_size = atoi(val);	
-    }
-	  else if(!strcmp(key, "DBGLOG_FOLDER_MAX"))		
-    {
-        prConfig->dbglog_folder_max_size = atoi(val);	
+    } else if (!strcmp(key, "GNSS_MODE")) {
+        prConfig->GNSSOPMode = atoi(val);
+    } else if (!strcmp(key, "DBGLOG_FILE_MAX")) {
+        prConfig->dbglog_file_max_size = atoi(val);
+    } else if (!strcmp(key, "DBGLOG_FOLDER_MAX")) {
+        prConfig->dbglog_folder_max_size = atoi(val);
     }
     return 0;
 }
@@ -288,28 +228,25 @@ int set_prop(MNL_CONFIG_T* prConfig, char* key, char* val)
 int read_prop(MNL_CONFIG_T* prConfig, const char* name)
 {
     FILE *fp = fopen(name, "rb");
-	char *key, *val;
-    if (!fp){
+    char *key, *val;
+    if (!fp) {
         MNL_MSG("%s: open %s fail!\n",__FUNCTION__,name);
         return -1;
     }
-    while(fgets(propbuf, sizeof(propbuf), fp))
-    {
-        if (get_prop(propbuf, &key, &val))
-        {
-			MNL_MSG("%s: Get Property fails!!\n", __FUNCTION__);
+    while (fgets(propbuf, sizeof(propbuf), fp)) {
+        if (get_prop(propbuf, &key, &val)) {
+            MNL_MSG("%s: Get Property fails!!\n", __FUNCTION__);
             fclose(fp);
-			return -1;
-		}
-		if (!key || !val)
-			continue;
-		//MNL_MSG("%s: Get Property: '%s' => '%s'\n", __FUNCTION__, key, val);
-		if (set_prop(prConfig, key,val))
-        {
-			MNL_ERR("%s: Set Property fails!!\n", __FUNCTION__);
+            return -1;
+        }
+        if (!key || !val)
+            continue;
+        // MNL_MSG("%s: Get Property: '%s' => '%s'\n", __FUNCTION__, key, val);
+        if (set_prop(prConfig, key, val)) {
+            MNL_ERR("%s: Set Property fails!!\n", __FUNCTION__);
             fclose(fp);
-			return -1;
-		}
+            return -1;
+        }
     }
     fclose(fp);
     return 0;
@@ -320,31 +257,30 @@ int mnl_utl_load_property(MNL_CONFIG_T* prConfig)
     int idx;
     int cnt = sizeof(mnl_prop_path)/sizeof(mnl_prop_path[0]);
     int res = 0;
+    epo_setconfig = 0;
     for (idx = 0; idx < cnt; idx++)
     {
         if (!read_prop(prConfig, mnl_prop_path[idx]))
             break;
     }
 
-    //Add for reading property set by YGPS
+    // Add for reading property set by YGPS
     char result[7] = {0};
-    if(property_get(MNL_CONFIG_STATUS, result, NULL)){
+    if (property_get(MNL_CONFIG_STATUS, result, NULL)) {
        	prConfig->dbg2file = result[2] - '0';
       	MNL_MSG("dbg2file: %d\n", prConfig->dbg2file);
        	prConfig->debug_nmea = result[3] - '0';
        	MNL_MSG("debug_nmea:%d \n", prConfig->debug_nmea);
        	prConfig->BEE_enabled = result[4] - '0';
        	MNL_MSG("BEE_enabled: %d", prConfig->BEE_enabled);
-       	//prConfig->test_mode = result[5] - '0';
-       	//MNL_MSG("test_mode: %d", prConfig->test_mode);  
-    }else{
+        // prConfig->test_mode = result[5] - '0';
+        // MNL_MSG("test_mode: %d", prConfig->test_mode);
+    } else {
         MNL_ERR("Config is not set yet, ignore");
     }
-    
-    
 
     MNL_MSG("========================================\n");
-    if (idx < cnt) /*successfully read property from file*/  {
+    if (idx < cnt) /* successfully read property from file */  {
         MNL_MSG("[setting] reading from %s\n", mnl_prop_path[idx]);
         res = 0;
     } else {
@@ -353,12 +289,13 @@ int mnl_utl_load_property(MNL_CONFIG_T* prConfig)
     }
     MNL_MSG("dev_dsp/dev_gps : %s %s\n", prConfig->dev_dsp, prConfig->dev_gps);
     MNL_MSG("init_speed/link_speed: %d %d\n", prConfig->init_speed, prConfig->link_speed);
-    MNL_MSG("pmtk_conn/socket_port/dev_dbg : %d %d %s\n", prConfig->pmtk_conn, prConfig->socket_port, 
-                             prConfig->dev_dbg);
+    MNL_MSG("pmtk_conn/socket_port/dev_dbg : %d %d %s\n",
+        prConfig->pmtk_conn, prConfig->socket_port, prConfig->dev_dbg);
     MNL_MSG("debug_nmea/debug_mnl: %d 0x%04X\n", prConfig->debug_nmea, prConfig->debug_mnl);
     MNL_MSG("nmea2file/dbg2file: %d/%d\n", prConfig->nmea2file, prConfig->dbg2file);
-    MNL_MSG("time-out: %d %d %d %d %d %d\n", prConfig->timeout_init, prConfig->timeout_monitor, prConfig->timeout_wakeup,
-                                    prConfig->timeout_ttff, prConfig->timeout_sleep, prConfig->timeout_pwroff);
+    MNL_MSG("time-out: %d %d %d %d %d %d\n", prConfig->timeout_init,
+        prConfig->timeout_monitor, prConfig->timeout_wakeup, prConfig->timeout_ttff,
+        prConfig->timeout_sleep, prConfig->timeout_pwroff);
     MNL_MSG("EPO_Enabled: %d\n", prConfig->EPO_enabled);
     MNL_MSG("BEE_Enabled: %d\n", prConfig->BEE_enabled);
     MNL_MSG("SUPL_Enabled: %d\n", prConfig->SUPL_enabled);
@@ -368,7 +305,7 @@ int mnl_utl_load_property(MNL_CONFIG_T* prConfig)
     MNL_MSG("SUPL_priority: %d\n", prConfig->SUPL_priority);
     MNL_MSG("AVAILIABLE_AGE: %d", prConfig->AVAILIABLE_AGE);
     MNL_MSG("RTC_DRIFT: %d", prConfig->RTC_DRIFT);
-    MNL_MSG("TIME_INTERVAL: %d", prConfig->TIME_INTERVAL);	
+    MNL_MSG("TIME_INTERVAL: %d", prConfig->TIME_INTERVAL);
     MNL_MSG("========================================\n");
     return res;
 }

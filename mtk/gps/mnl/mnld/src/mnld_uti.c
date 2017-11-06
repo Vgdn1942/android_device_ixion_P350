@@ -56,24 +56,24 @@
 #include "mnl_agps_interface.h"
 #include <private/android_filesystem_config.h>
 
-#define MTK_HAL2MNLD         "/data/gps_mnl/hal2mnld"  //Forward AGPS Info to MNLD, FWK->JNI->HAL->MNLD
-#define MTK_MNLD2HAL         "/data/gps_mnl/mnld2hal"  //Forward AGPS Info to HAL, MNLD->HAL->JNI->FWK
+// Forward AGPS Info to MNLD, FWK->JNI->HAL->MNLD
+#define MTK_HAL2MNLD         "/data/gps_mnl/hal2mnld"
+// Forward AGPS Info to HAL, MNLD->HAL->JNI->FWK
+#define MTK_MNLD2HAL         "/data/gps_mnl/mnld2hal"
 
-//#define MNL_TO_AGPS          "/data/agps_supl/mnl_to_agps" //Forward MNLD(MNL,HAL) Info to AGPSD, HAL/MNL->MNLD->AGPSD
-//#define AGPS_TO_MNL          "/data/agps_supl/agps_to_mnl"  //Forward AGPSD Info to MNLD(MNL,HAL), AGPSD->MNLD->HAL/MNL
 extern int mtk_gps_sys_init();
 ap_nvram_gps_config_struct stGPSReadback;
 
-//#define GPS_PROPERTY "/data/misc/GPS_CHIP.cfg"
+// #define GPS_PROPERTY "/data/misc/GPS_CHIP.cfg"
 /*****************************************************************************/
- //-1 means failure
+ // -1 means failure
 int hal_sock_mnld() {
     int sockfd;
     struct sockaddr_un soc_addr;
     socklen_t addr_len;
 
     sockfd = socket(PF_LOCAL, SOCK_DGRAM, 0);
-    if(sockfd < 0) {
+    if (sockfd < 0) {
         MND_ERR("socket failed reason=[%s]\n", strerror(errno));
         return -1;
     }
@@ -83,19 +83,20 @@ int hal_sock_mnld() {
     addr_len = (offsetof(struct sockaddr_un, sun_path) + strlen(soc_addr.sun_path) + 1);
 
     unlink(soc_addr.sun_path);
-    if(bind(sockfd, (struct sockaddr *)&soc_addr, addr_len) < 0) {
+    if (bind(sockfd, (struct sockaddr *)&soc_addr, addr_len) < 0) {
         MND_ERR("bind failed path=[%s] reason=[%s]\n", MTK_HAL2MNLD, strerror(errno));
         close(sockfd);
         return -1;
     }
-    chmod(MTK_HAL2MNLD, 0660);
-    if(chown(MTK_HAL2MNLD, -1, AID_INET))
-        MND_ERR("chown error: %s", strerror(errno));
+    if (chmod(MTK_HAL2MNLD, 0660) < 0)
+        MND_ERR("chmod error: %s \n", strerror(errno));
+    if (chown(MTK_HAL2MNLD, -1, AID_INET))
+        MND_ERR("chown error: %s \n", strerror(errno));
     return sockfd;
 }
 
 int mnld_sendto_hal(int sockfd, void* dest, char* buf, int size) {
-    //dest: MTK_MNLD2HAL
+    // dest: MTK_MNLD2HAL
     int ret = 0;
     int len = 0;
     struct sockaddr_un soc_addr;
@@ -109,9 +110,9 @@ int mnld_sendto_hal(int sockfd, void* dest, char* buf, int size) {
     MND_MSG("mnld2hal fd: %d\n", sockfd);
     while((len = sendto(sockfd, buf, size, 0,
         (const struct sockaddr *)&soc_addr, (socklen_t)addr_len)) == -1) {
-        if(errno == EINTR) continue;
-        if(errno == EAGAIN) {
-            if(retry-- > 0) {
+        if (errno == EINTR) continue;
+        if (errno == EAGAIN) {
+            if (retry-- > 0) {
                 usleep(100 * 1000);
                 continue;
             }
@@ -124,7 +125,7 @@ int mnld_sendto_hal(int sockfd, void* dest, char* buf, int size) {
     return ret;
 }
 
-int agpsd_sock_mnld(){
+int agpsd_sock_mnld() {
     int agpsd_sock = -1;
     struct sockaddr_un local;
     struct sockaddr_un remote;
@@ -155,7 +156,7 @@ int agpsd_sock_mnld(){
     return agpsd_sock;
 }
 
-int mnld_sock_agpsd(int type, int length, char *data){
+int mnld_sock_agpsd(int type, int length, char *data) {
 
     int ret = 0;
 
@@ -166,7 +167,7 @@ int mnld_sock_agpsd(int type, int length, char *data){
     MND_MSG("MNLD2AGPSD ACK data: %s\n", data);
 
     pMsg = (mtk_agps_msg *)malloc(total_length);
-    if(pMsg)
+    if (pMsg)
     {
 
         pMsg->type = type;
@@ -175,7 +176,7 @@ int mnld_sock_agpsd(int type, int length, char *data){
         pMsg->dstMod = MTK_MOD_SUPL;
         pMsg->length = length;
 
-        if (pMsg->length != 0){
+        if (pMsg->length != 0) {
             memcpy(pMsg->data, data, length);
             MND_MSG("MNLD2AGPSD ACK length:%d, data:%s\n", pMsg->length, pMsg->data);
         }
@@ -183,7 +184,7 @@ int mnld_sock_agpsd(int type, int length, char *data){
             MND_MSG("MNLD2AGPSD ACK no data\r\n");
         }
 
-        if((mnld2agpsd = socket(AF_LOCAL, SOCK_DGRAM, 0)) == -1)
+        if ((mnld2agpsd = socket(AF_LOCAL, SOCK_DGRAM, 0)) == -1)
         {
             MND_ERR("MNLD2AGPSD socket fail\n");
             free(pMsg);
@@ -201,7 +202,7 @@ int mnld_sock_agpsd(int type, int length, char *data){
             ret = -1;
         }
         close(mnld2agpsd);
-        if(pMsg)
+        if (pMsg)
         {
             free(pMsg);
             pMsg = NULL;
@@ -211,39 +212,11 @@ int mnld_sock_agpsd(int type, int length, char *data){
 
  }
 
-#if 0
-void power_on_3332()
-{
-    int err;
-    err = mnl_write_attr(MNL_ATTR_PWRCTL, GPS_PWRCTL_RST_FORCE);
-    if(err != 0)
-    {
-    	MND_ERR("GPS_Open: GPS power-on error: %d\n", err);
-    	return ;
-    }
-    usleep(1000*100);
-    return;
-}
-
-void power_off_3332()
-{
-    int err;
-    err = mnl_write_attr(MNL_ATTR_PWRCTL, GPS_PWRCTL_OFF);
-    if(err != 0)
-    {
-    	MND_ERR("GPS_Open: GPS power-on error: %d\n", err);
-    	return ;
-    }
-    usleep(1000*100);
-    return;
-}
-#endif
-
 int read_NVRAM()
 {
     int ret = 0;
     ret = mtk_gps_sys_init();
-    if(strcmp(stGPSReadback.dsp_dev, "/dev/stpgps") == 0)
+    if (strcmp(stGPSReadback.dsp_dev, "/dev/stpgps") == 0)
     {
         MND_ERR("not 3332 UART port\n");
         return 1;
@@ -254,9 +227,9 @@ int read_NVRAM()
 int init_3332_interface(const int fd)
 {
     struct termios termOptions;
-    //fcntl(fd, F_SETFL, 0);
+    // fcntl(fd, F_SETFL, 0);
 
-    //Get the current options:
+    // Get the current options:
     tcgetattr(fd, &termOptions);
 
     // Set 8bit data, No parity, stop 1 bit (8N1):
@@ -267,19 +240,19 @@ int init_3332_interface(const int fd)
 
     MND_MSG("GPS_Open: c_lflag=%x,c_iflag=%x,c_oflag=%x\n",termOptions.c_lflag,termOptions.c_iflag,
     						termOptions.c_oflag);
-    //termOptions.c_lflag
+    // termOptions.c_lflag
 
     // Raw mode
     termOptions.c_iflag &= ~(INLCR | ICRNL | IXON | IXOFF | IXANY);
     termOptions.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);  /*raw input*/
     termOptions.c_oflag &= ~OPOST;  /*raw output*/
 
-    tcflush(fd,TCIFLUSH);//clear input buffer
-    termOptions.c_cc[VTIME] = 10; /* inter-character timer unused, wait 1s, if no data, return */
-    termOptions.c_cc[VMIN] = 0; /* blocking read until 0 character arrives */
+    tcflush(fd, TCIFLUSH);  // clear input buffer
+    termOptions.c_cc[VTIME] = 10;  /* inter-character timer unused, wait 1s, if no data, return */
+    termOptions.c_cc[VMIN] = 0;  /* blocking read until 0 character arrives */
 
      // Set baudrate to 38400 bps
-    cfsetispeed(&termOptions, B115200);	/*set baudrate to 115200, which is 3332 default bd*/
+    cfsetispeed(&termOptions, B115200);  /*set baudrate to 115200, which is 3332 default bd*/
     cfsetospeed(&termOptions, B115200);
 
     tcsetattr(fd, TCSANOW, &termOptions);
@@ -310,10 +283,10 @@ int hw_test_3332(const int fd)
         byteread = read(fd, buf, sizeof(buf));
         MND_MSG("ack:%02x %02x %02x %02x %02x %02x\n",
         		 buf[0],buf[1], buf[2], buf[3], buf[4], buf[5]);
-        if((byteread == sizeof(ack)) && (memcmp(buf, ack, sizeof(ack)) == 0))
+        if ((byteread == sizeof(ack)) && (memcmp(buf, ack, sizeof(ack)) == 0))
         {
             MND_MSG("it's 3332\n");
-            return 0;	/*0 means 3332,   1 means other GPS chips*/
+            return 0;   /*0 means 3332, 1 means other GPS chips*/
         }
         return 1;
     }
@@ -331,16 +304,15 @@ int hand_shake()
     int nv;
     nv = read_NVRAM();
 
-    if(nv == 1)
+    if (nv == 1)
         return 1;
-    else if(nv == -1)
+    else if (nv == -1)
         return -1;
     else
         MND_MSG("read NVRAM ok\n");
 
     fd = open(stGPSReadback.dsp_dev, O_RDWR | O_NOCTTY);
-    if (fd == -1)
-      {
+    if (fd == -1) {
     	MND_ERR("GPS_Open: Unable to open - %s, %s\n", stGPSReadback.dsp_dev, strerror(errno));
           return -1;
     }
@@ -354,9 +326,9 @@ int hand_shake()
 int confirm_if_3332()
 {
     int ret;
-    //power_on_3332();
+    // power_on_3332();
     ret = hand_shake();
-    //power_off_3332();
+    // power_off_3332();
     return ret;
 }
 extern char chip_id[PROPERTY_VALUE_MAX];
@@ -368,53 +340,47 @@ void chip_detector()
 #if 0
     int fd = -1;
     fd = open(GPS_PROPERTY, O_RDWR|O_CREAT, 0600);
-    if(fd == -1)
-    {
+    if (fd == -1) {
     	MND_ERR("open %s error, %s\n", GPS_PROPERTY, strerror(errno));
     	return;
     }
     int read_len;
     char buf[100] = {0};
     read_len = read(fd, buf, sizeof(buf));
-    if(read_len == -1)
-    {
+    if (read_len == -1) {
         MND_ERR("read %s error, %s\n", GPS_PROPERTY, strerror(errno));
         goto exit_chip_detector;
-    }
-    else if(read_len != 0) /*print chip id then return*/
-    {
+    } else if (read_len != 0) {  /*print chip id then return*/
         MND_MSG("gps is %s\n", buf);
         goto exit_chip_detector;
-    }
-    else
+    } else
     	  MND_MSG("we need to known which GPS chip is in use\n");
 #endif
 
-    while((get_time--!= 0) && ((res = property_get("persist.mtk.wcn.combo.chipid", chip_id, NULL)) < 6))
-    {
+    while ((get_time-- != 0) && ((res = property_get("persist.mtk.wcn.combo.chipid", chip_id, NULL)) < 6)) {
         MND_ERR("get chip id fail, retry");
         usleep(200000);
     }
 
-    //chip id is like "0xXXXX"
-    if (res < 6){
+    // chip id is like "0xXXXX"
+    if (res < 6) {
        MND_ERR("combo_chip_id error: %s\n", chip_id);
        return;
     }
 
     MND_MSG("combo_chip_id is %s\n", chip_id);
-   
-    /*detect if there is 3332, yes set GPS property to 3332, then else read from combo chip to see which GPS chip used*/
-    res = confirm_if_3332();	/*0 means 3332, 1 means not 3332, other value means error*/
-    if(res == 0)
-    {
-		strcpy(chip_id, "0x3332");
-		MND_MSG("we get MT3332\n");
+
+    /* detect if there is 3332, yes set GPS property to 3332,
+    then else read from combo chip to see which GPS chip used */
+    res = confirm_if_3332();    /* 0 means 3332, 1 means not 3332, other value means error */
+    if (res == 0) {
+        strcpy(chip_id, "0x3332");
+        MND_MSG("we get MT3332\n");
     }
 
-    //close(fd);
+    // close(fd);
     MND_MSG("exit chip_detector\n");
-	
+
     return;
 }
 
@@ -467,27 +433,27 @@ int buff_get_binary(void* output, char* buff, int* offset) {
     return len;
 }
 
-//-1 means failure
+// -1 means failure
 int safe_read(int fd, void* buf, int len) {
     int n, retry = 10;
 
-    if(fd < 0 || buf == NULL || len < 0) {
-        MND_ERR("safe_read fd=%d buf=%p len=%d\n", fd, buf, len);
+    if (fd < 0 || buf == NULL || len < 0) {
+        MND_ERR("safe_read fd = %d buf = %p len = %d\n", fd, buf, len);
         return -1;
     }
 
-    if(len == 0) {
+    if (len == 0) {
         return 0;
     }
 
-    if(fcntl(fd, F_SETFL, O_NONBLOCK) == -1) {
-        MND_ERR("safe_read fcntl failure reason=[%s]\n", strerror(errno));
+    if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1) {
+        MND_ERR("safe_read fcntl failure reason = [%s]\n", strerror(errno));
     }
 
     while((n = read(fd, buf, len)) <= 0) {
-        if(errno == EINTR) continue;
-        if(errno == EAGAIN) {
-            if(retry-- > 0) {
+        if (errno == EINTR) continue;
+        if (errno == EAGAIN) {
+            if (retry-- > 0) {
                 usleep(100 * 1000);
                 continue;
             }
@@ -498,9 +464,6 @@ int safe_read(int fd, void* buf, int len) {
     return n;
 
 exit:
-    MND_ERR("safe_read reason=[%s]\n", strerror(errno));
+    MND_ERR("safe_read reason = [%s]\n", strerror(errno));
     return -1;
 }
-
-
-//Confirm MT3332 -- End

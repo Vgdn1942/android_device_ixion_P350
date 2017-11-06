@@ -34,7 +34,7 @@
  */
 
 #include "BGWC.h"
-
+#include <string.h>
 
 static BGWD_T gvariable[1];
 extern int fd;	/*ccci devicd file descriptor*/

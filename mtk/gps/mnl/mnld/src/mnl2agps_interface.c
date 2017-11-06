@@ -58,7 +58,7 @@ static void tag_log(int type, const char* tag, const char *fmt, ...) {
 #define LOGW(...) tag_log(0, "WARNING: [MNL2AGPS]", __VA_ARGS__);
 #define LOGE(...) tag_log(1, "ERR: [MNL2AGPS]", __VA_ARGS__);
 
-//-1 means failure
+// -1 means failure
 static int safe_recvfrom(int sockfd, char* buf, int len) {
     int ret = 0;
     int retry = 10;
@@ -79,7 +79,7 @@ static int safe_recvfrom(int sockfd, char* buf, int len) {
     return ret;
 }
 
-//-1 means failure
+// -1 means failure
 static int set_socket_blocking(int fd, int blocking) {
     if(fd < 0) {
         LOGE("set_socket_blocking  invalid fd=%d\n", fd);
@@ -96,7 +96,7 @@ static int set_socket_blocking(int fd, int blocking) {
     return (fcntl(fd, F_SETFL, flags) == 0) ? 0 : -1;
 }
 
-//-1 means failure
+// -1 means failure
 static int safe_sendto(int sockfd, const char* dest, const char* buf, int size) {
     int len = 0;
     struct sockaddr_un soc_addr;
@@ -123,10 +123,14 @@ static int safe_sendto(int sockfd, const char* dest, const char* buf, int size) 
     return len;
 }
 
-//-1 means failure
+// -1 means failure
 static int send2agps(const char* buff, int len) {
     int ret = 0;
     int sockfd = socket(PF_LOCAL, SOCK_DGRAM, 0);
+    if (sockfd < 0) {
+        LOGE("socket failed reason=[%s]\n", strerror(errno));
+        return -1;
+    }
     if(safe_sendto(sockfd, MNL_TO_AGPS, buff, len) < 0) {
         LOGE("external_snd_cmd safe_sendto failed\n");
         ret = -1;
@@ -141,7 +145,7 @@ static int bind_udp_socket(char* path) {
     socklen_t addr_len;
 
     sockfd = socket(PF_LOCAL, SOCK_DGRAM, 0);
-    if(sockfd < 0) {
+    if (sockfd < 0) {
         LOGE("socket failed reason=[%s]\n", strerror(errno));
         return -1;
     }
@@ -153,27 +157,30 @@ static int bind_udp_socket(char* path) {
     unlink(soc_addr.sun_path);
     if(bind(sockfd, (struct sockaddr *)&soc_addr, addr_len) < 0) {
         LOGE("bind failed path=[%s] reason=[%s]\n", path, strerror(errno));
+        close(sockfd);
         return -1;
     }
 
-    chmod(path, 0660);
+    if (chmod(path, 0660) < 0) {
+        LOGE("chmod err = [%s]\n", strerror(errno));
+    }
 
     return sockfd;
 }
 
 int mnl2agps_mnl_reboot() {
-    LOGD("mnl2agps_mnl_reboot");        
+    LOGD("mnl2agps_mnl_reboot");
     char buff[MNL_AGPS_MAX_BUFF_SIZE] = {0};
     int offset = 0;
 
     put_int(buff, &offset, MNL_AGPS_INTERFACE_VERSION);
     put_int(buff, &offset, MNL_AGPS_TYPE_MNL_REBOOT);
-    
+
     return send2agps(buff, offset);
 }
 
 int mnl2agps_open_gps_done() {
-    LOGD("mnl2agps_open_gps_done");    
+    LOGD("mnl2agps_open_gps_done");
     char buff[MNL_AGPS_MAX_BUFF_SIZE] = {0};
     int offset = 0;
 
@@ -223,7 +230,7 @@ int mnl2agps_gps_cleanup() {
 
     return send2agps(buff, offset);
 }
-//type:AGpsType
+// type:AGpsType
 int mnl2agps_set_server(int type, const char* hostname, int port) {
     LOGD("mnl2agps_set_server, hostname = %s, port = %d\n", hostname, port);
     char buff[MNL_AGPS_MAX_BUFF_SIZE] = {0};
@@ -237,7 +244,7 @@ int mnl2agps_set_server(int type, const char* hostname, int port) {
 
     return send2agps(buff, offset);
 }
-//flags:GpsAidingData
+// flags:GpsAidingData
 int mnl2agps_delete_aiding_data(int flags) {
     LOGD("mnl2agps_delete_aiding_data");
     char buff[MNL_AGPS_MAX_BUFF_SIZE] = {0};
@@ -283,7 +290,7 @@ int mnl2agps_data_conn_open(const char* apn) {
 }
 int mnl2agps_data_conn_open_ip_type(const char* apn, int ip_type) {
     LOGD("mnl2agps_data_conn_open  apn=%s ip_type=%d\n", apn, ip_type);
-    
+
     char buff[MNL_AGPS_MAX_BUFF_SIZE] = {0};
     int offset = 0;
 
@@ -297,7 +304,7 @@ int mnl2agps_data_conn_open_ip_type(const char* apn, int ip_type) {
 
 int mnl2agps_install_certificates(int index, int total, const char* data, int len) {
     LOGD("mnl2agps_install_certificates  (%d/%d) len=%d\n", index, total, len);
-    
+
     char buff[MNL_AGPS_MAX_BUFF_SIZE] = {0};
     int offset = 0;
 
@@ -312,7 +319,7 @@ int mnl2agps_install_certificates(int index, int total, const char* data, int le
 
 int mnl2agps_revoke_certificates(const char* data, int len) {
     LOGD("mnl2agps_revoke_certificates  len=%d item=%d\n", len, len/20);
-    
+
     char buff[MNL_AGPS_MAX_BUFF_SIZE] = {0};
     int offset = 0;
 
@@ -469,10 +476,10 @@ int mnl2agps_handler(int fd, mnl2agpsInterface* mnl_interface) {
         LOGE("agps_ver=%d mnl_ver=%d\n",
             version, MNL_AGPS_INTERFACE_VERSION);
     }
-    
+
     mnl_agps_type type = get_int(buff, &offset);
-    //LOGD("agps2mnl [%s]\n", get_mnl_agps_type_str(type));
-    
+    // LOGD("agps2mnl [%s]\n", get_mnl_agps_type_str(type));
+
     switch(type) {
     case MNL_AGPS_TYPE_AGPS_REBOOT: {
         if(mnl_interface->agps_reboot) {
@@ -536,7 +543,8 @@ int mnl2agps_handler(int fd, mnl2agpsInterface* mnl_interface) {
         int requestor_id_encoding = get_int(buff, &offset);
         int client_name_encoding = get_int(buff, &offset);
         if(mnl_interface->ni_notify2) {
-            mnl_interface->ni_notify2(session_id, type, requestor_id, client_name, requestor_id_encoding, client_name_encoding);
+            mnl_interface->ni_notify2(session_id, type, requestor_id,
+            client_name, requestor_id_encoding, client_name_encoding);
         } else {
             LOGE("ni_notify2 is NULL\n");
         }

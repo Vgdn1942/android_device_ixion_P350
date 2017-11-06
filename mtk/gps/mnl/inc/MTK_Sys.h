@@ -1,38 +1,15 @@
-/*****************************************************************************
-*  Copyright Statement:
-*  --------------------
-*  This software is protected by Copyright and the information contained
-*  herein is confidential. The software may not be copied and the information
-*  contained herein may not be used or disclosed except with the written
-*  permission of MediaTek Inc. (C) 2008
+/***********************************************************************
+*   This software/firmware and related documentation ("MediaTek Software")
+*   are protected under relevant copyright laws. The information contained
+*   herein is confidential and proprietary to MediaTek Inc. and/or its licensors.
 *
-*  BY OPENING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
-*  THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
-*  RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON
-*  AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
-*  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
-*  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
-*  NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
-*  SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
-*  SUPPLIED WITH THE MEDIATEK SOFTWARE, AND BUYER AGREES TO LOOK ONLY TO SUCH
-*  THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. MEDIATEK SHALL ALSO
-*  NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE RELEASES MADE TO BUYER'S
-*  SPECIFICATION OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
+*   Without the prior written permission of MediaTek Inc. and/or its licensors,
+*   any reproduction, modification, use or disclosure of MediaTek Software, and
+*   information contained herein, in whole or in part, shall be strictly prohibited.
 *
-*  BUYER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND CUMULATIVE
-*  LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
-*  AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
-*  OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY BUYER TO
-*  MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+*   MediaTek Inc. (C) [2008]. All rights reserved.
 *
-*  THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE
-*  WITH THE LAWS OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF
-*  LAWS PRINCIPLES.  ANY DISPUTES, CONTROVERSIES OR CLAIMS ARISING THEREOF AND
-*  RELATED THERETO SHALL BE SETTLED BY ARBITRATION IN SAN FRANCISCO, CA, UNDER
-*  THE RULES OF THE INTERNATIONAL CHAMBER OF COMMERCE (ICC).
-*
-*****************************************************************************/
-
+*************************************************************************/
 //*****************************************************************************
 // [File] MTK_Sys.h
 // [Version] v1.0
@@ -170,7 +147,7 @@ void MTK_Sys_Memory_Free (void *pMemory);
 //*****************************************************************************
 // MTK_Sys_File_Open : Open a file
 //
-// PARAMETER : szFileName [IN] - name of the file to be opened 
+// PARAMETER : szFileName [IN] - name of the file to be opened
 //             i4Mode     [IN] - file access mode (read / write / read + write)
 //                               0 -- open file for reading (r)
 //                               1 -- create file for writing,
@@ -225,7 +202,7 @@ MTK_UINT32 MTK_Sys_File_Write (MTK_FILE hFile, void *SrcBuf, MTK_UINT32 u4Length
 
 
 //*****************************************************************************
-// MTK_Sys_File_Seek : Set the position indicator associated with file handle 
+// MTK_Sys_File_Seek : Set the position indicator associated with file handle
 //                     to a new position defined by adding offset to a reference
 //                     position specified by origin
 //
@@ -243,7 +220,7 @@ MTK_INT32 MTK_Sys_File_Seek (MTK_FILE hFile, MTK_UINT32 u4OffSet, MTK_UINT32 u4O
 
 //*****************************************************************************
 // MTK_Sys_Debug_Output : Output debug messages of HotStill library
-//                        Porting layer can help to log on file 
+//                        Porting layer can help to log on file
 //                        or sent by other interfaces
 //
 // PARAMETER : buffer [IN] - data pointer

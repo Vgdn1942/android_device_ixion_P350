@@ -1,38 +1,15 @@
-/*****************************************************************************
-*  Copyright Statement:
-*  --------------------
-*  This software is protected by Copyright and the information contained
-*  herein is confidential. The software may not be copied and the information
-*  contained herein may not be used or disclosed except with the written
-*  permission of MediaTek Inc. (C) 2008
+/***********************************************************************
+*   This software/firmware and related documentation ("MediaTek Software")
+*   are protected under relevant copyright laws. The information contained
+*   herein is confidential and proprietary to MediaTek Inc. and/or its licensors.
 *
-*  BY OPENING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
-*  THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
-*  RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON
-*  AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
-*  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
-*  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
-*  NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
-*  SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
-*  SUPPLIED WITH THE MEDIATEK SOFTWARE, AND BUYER AGREES TO LOOK ONLY TO SUCH
-*  THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. MEDIATEK SHALL ALSO
-*  NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE RELEASES MADE TO BUYER'S
-*  SPECIFICATION OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
+*   Without the prior written permission of MediaTek Inc. and/or its licensors,
+*   any reproduction, modification, use or disclosure of MediaTek Software, and
+*   information contained herein, in whole or in part, shall be strictly prohibited.
 *
-*  BUYER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND CUMULATIVE
-*  LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
-*  AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
-*  OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY BUYER TO
-*  MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+*   MediaTek Inc. (C) [2008]. All rights reserved.
 *
-*  THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE
-*  WITH THE LAWS OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF
-*  LAWS PRINCIPLES.  ANY DISPUTES, CONTROVERSIES OR CLAIMS ARISING THEREOF AND
-*  RELATED THERETO SHALL BE SETTLED BY ARBITRATION IN SAN FRANCISCO, CA, UNDER
-*  THE RULES OF THE INTERNATIONAL CHAMBER OF COMMERCE (ICC).
-*
-*****************************************************************************/
-
+*************************************************************************/
 /*****************************************************************************
  *
  * Filename:
@@ -157,7 +134,7 @@ mtk_gps_rtcm_input (const char* buffer, UINT32 length);
  * RETURNS
  *  success(MTK_GPS_SUCCESS)
  *****************************************************************************/
-INT32 
+INT32
 mtk_gps_nmea_input (const char* buffer, UINT32 length);
 
 /*****************************************************************************
@@ -171,7 +148,7 @@ mtk_gps_nmea_input (const char* buffer, UINT32 length);
  * RETURNS
  *  success(MTK_GPS_SUCCESS)
  *****************************************************************************/
-INT32 
+INT32
 mtk_gps_agps_input (const char* buffer, UINT32 length);
 
 
@@ -267,7 +244,7 @@ mtk_gps_get_bedo_sv_info(MTK_BEDO_SV_INFO* sv_bedo_data);
  * DESCRIPTION
  *  Return SV list (Elev >= 5)
  * PARAMETERS
- *   *UINT32 SV list bit map             
+ *   *UINT32 SV list bit map
  * RETURNS
  *  success(MTK_GPS_SUCCESS); failure (MTK_GPS_ERROR)
  *****************************************************************************/
@@ -312,7 +289,7 @@ mtk_gps_set_param (MTK_GPS_PARAM key, const void* value);
 // The function will keep fix the postion output to the same point if the current
 // estimated 3D speed is less than SpeedThd or the distance of true position and the fix points
 // are large than 20 meter.
-// Parameters : 
+// Parameters :
 //              SpeedThd must be >= 0
 //              The unit of SpeedThd is [meter/second]
 //              if SpeedThd = 0,  The navigation speed threshold function will be disabled.
@@ -321,7 +298,7 @@ mtk_gps_set_param (MTK_GPS_PARAM key, const void* value);
 //
 // float SpeedThd = 0.4;
 // MTK_Set_Navigation_Speed_Threshold(SpeedThd);
-// 
+//
 
 INT32
 mtk_gps_set_navigation_speed_threshold(float SpeedThd);
@@ -422,9 +399,9 @@ mtk_gps_set_ephemeris (UINT8 svid, const char data[72]);
  * DESCRIPTION
  *  Set MNL TCXO mode
  * PARAMETERS
- * 
+ *
 
- *  MTK_TCXO_NORMAL,  //normal mode 
+ *  MTK_TCXO_NORMAL,  //normal mode
  *  MTK_TCXO_PHONE    //phone mode
 
  * RETURNS
@@ -441,7 +418,7 @@ mtk_gps_set_tcxo_mode (MTK_GPS_TCXO_MODE tcxo_mode);
  * DESCRIPTION
  *  Set AIC mode
  * PARAMETERS
- * 
+ *
  * disalbe = 0
  * enable = 1
 
@@ -576,12 +553,12 @@ mtk_gps_clear_almanac (UINT8 svid);
  *  mtk_gps_get_sbas_msg_amount
  * DESCRIPTION
  *  Get the number of SBAS message blocks received in this epoch.
- *  Later on, please use mtk_gps_get_sbas_msg() to get the message 
+ *  Later on, please use mtk_gps_get_sbas_msg() to get the message
  *  content one by one.
  * PARAMETERS
  *  p_msg_amount  [OUT]   The number of SBAS message blocks received in this epoch
  * RETURNS
- *  
+ *
  *  success(MTK_GPS_SUCCESS); failure (MTK_GPS_ERROR)
  *****************************************************************************/
 INT32
@@ -594,7 +571,7 @@ mtk_gps_get_sbas_msg_amount (UINT32* p_msg_amount);
  *  After calling mtk_gps_get_sbas_msg_amount(), we know the
  *  number of SBAS messages received in this epoch.
  *  mtk_gps_get_sbas_msg() gives a way to access each message
- *  data 
+ *  data
  * PARAMETERS
  *  index        [IN]   which message you want to read
  *  pSVID        [OUT]  the PRN of the SBAS satellite
@@ -609,7 +586,7 @@ mtk_gps_get_sbas_msg_amount (UINT32* p_msg_amount);
  *  success(MTK_GPS_SUCCESS); failure (MTK_GPS_ERROR)
  * EXAMPLE
  *   //dump the SBAS message to UART output
- *   int  i, count; 
+ *   int  i, count;
  *   unsigned char PRN, MsgType, ParityError;
  *   char data[27];
  *
@@ -643,7 +620,7 @@ mtk_gps_get_chn_test(float ChnSNR[16], float *ClkDrift);
 
 /****************************************************************************
 * FUNCTION
-*mtk_gps_D2_Set_Enable  
+*mtk_gps_D2_Set_Enable
 *DESCRIPTION
 * Bediou D2 data Enable/Disable functions
 *PARAMETERS
@@ -734,7 +711,7 @@ mtk_gps_set_gnss_jammer_test(INT32 action, UINT16 mode, UINT16 arg);
 INT32
 mtk_gps_get_phase_test(INT32 *result);
 
- 
+
 //*************************************************************************************
 // mtk_gps_get_sat_accurate_snr  :  Get the accurate SNR of all satellites
 //
@@ -744,7 +721,7 @@ mtk_gps_get_phase_test(INT32 *result);
 //    mtk_gps_get_sat_accurate_snr(SNR);
 //    //Get SNR of SV 17
 //    MTK_UART_OutputData("SV17: SNR = %lf", SNR[16]);
-//    
+//
 // =====> SV17: SNR = 38.1
 
 void mtk_gps_get_sat_accurate_snr(float SNR[32]);
@@ -759,7 +736,7 @@ void mtk_gps_get_sat_accurate_snr(float SNR[32]);
 //    mtk_gps_get_glon_sat_accurate_snr(SNR);
 //    //Get SNR of SV 1
 //    MTK_UART_OutputData("GLON,SV1: SNR = %lf", SNR[0]);
-//    
+//
 // =====>GLON,SV1: SNR = 38.1
 
 void mtk_gps_get_glon_sat_accurate_snr ( float ASNR[24] );
@@ -774,7 +751,7 @@ void mtk_gps_get_glon_sat_accurate_snr ( float ASNR[24] );
 //    mtk_gps_get_bd_sat_accurate_snr(SNR);
 //    //Get SNR of SV 17
 //    MTK_UART_OutputData("BD,SV17: SNR = %lf", SNR[16]);
-//    
+//
 // =====>BD,SV17: SNR = 38.1
 
 void mtk_gps_get_bd_sat_accurate_snr(float SNR[30]);
@@ -842,7 +819,7 @@ mtk_gps_get_agps_req_mod (MTK_GPS_MODULE *pReqMod);
  * PARAMETERS
  *  INT32RtcDiff      [IN]  System RTC time changed: old rtc time - new rtc time
  * RETURNS
- *  
+ *
  *****************************************************************************/
 void
 mtk_gps_time_change_notify(INT32 INT32RtcDiff);
@@ -903,8 +880,8 @@ mtk_gps_sys_debug_config(MTK_GPS_DBG_TYPE DbgType, MTK_GPS_DBG_LEVEL DbgLevel);
  * RETURNS
  *   success(MTK_GPS_SUCCESS)
  *****************************************************************************/
- 
-INT32 
+
+INT32
 mtk_gps_sys_gps_mnl_callback (MTK_GPS_NOTIFICATION_TYPE msg);
 
 /*****************************************************************************
@@ -988,7 +965,7 @@ mtk_gps_sys_storage_close (void);
  * FUNCTION
  *  mtk_gps_sys_storage_delete
  * DESCRIPTION
- *  Delete a non-volatile file  
+ *  Delete a non-volatile file
  * RETURNS
  *  void
  *****************************************************************************/
@@ -999,7 +976,7 @@ mtk_gps_sys_storage_delete (void);
  * FUNCTION
  *  mtk_gps_sys_storage_read
  * DESCRIPTION
- *  Read a non-volatite file 
+ *  Read a non-volatite file
  *  - blocking read until reaching 'length' or EOF
  * PARAMETERS
  *  buffer      [OUT]
@@ -1101,46 +1078,46 @@ mtk_gps_sys_event_set(MTK_GPS_EVENT_ENUM event_idx);
 *  mtk_gps_sys_event_wait
 * DESCRIPTION
 *  event wait for android
-*  
+*
 * PARAMETERS
 *  event_idx         [IN] MTK_GPS_EVENT_ENUM
 * RETURNS
 *  success(MTK_GPS_SUCCESS)
 *****************************************************************************/
 INT32
-mtk_gps_sys_event_wait(MTK_GPS_EVENT_ENUM event_idx); 
+mtk_gps_sys_event_wait(MTK_GPS_EVENT_ENUM event_idx);
 
 /*****************************************************************************
  * FUNCTION
  *  mtk_gps_sys_uart_init
  * DESCRIPTION
- *  Initiialize UART 
+ *  Initiialize UART
  * PARAMETERS
  *  portname      [IN]
  *  baudrate      [IN]
  *  txbufsize      [IN]
  *  rxbufsize      [IN]
  * RETURNS
- *  Result of Handler 
+ *  Result of Handler
  *****************************************************************************/
 INT32
-mtk_gps_sys_uart_init( char* portname, UINT32 baudrate, UINT32 txbufsize,  
+mtk_gps_sys_uart_init( char* portname, UINT32 baudrate, UINT32 txbufsize,
                       UINT32 rxbufsize);
 
 /*****************************************************************************
  * FUNCTION
  *  mtk_gps_sys_uart_read
  * DESCRIPTION
- *  Initiialize UART 
+ *  Initiialize UART
  * PARAMETERS
  *  UARTHandle      [IN]
  *  buffer      [IN]
  *  bufsize      [IN]
  *  length      [IN]
  * RETURNS
- *  Result of Handler 
+ *  Result of Handler
  *****************************************************************************/
-INT32 
+INT32
 mtk_gps_sys_uart_read( INT32 UARTHandle, char* buffer, UINT32 bufsize,
                    INT32* length);
 
@@ -1148,14 +1125,14 @@ mtk_gps_sys_uart_read( INT32 UARTHandle, char* buffer, UINT32 bufsize,
  * FUNCTION
  *  mtk_gps_sys_uart_write
  * DESCRIPTION
- *  Initiialize UART 
+ *  Initiialize UART
  * PARAMETERS
  *  UARTHandle      [IN]
  *  buffer      [IN]
  *  bufsize      [IN]
  *  length      [IN]
  * RETURNS
- *  Result of Handler 
+ *  Result of Handler
  *****************************************************************************/
 INT32  mtk_gps_sys_uart_write( INT32 UARTHandle, const char* buffer, UINT32 bufsize,
        INT32* wrotenlength);
@@ -1164,13 +1141,13 @@ INT32  mtk_gps_sys_uart_write( INT32 UARTHandle, const char* buffer, UINT32 bufs
  * FUNCTION
  *  mtk_gps_sys_uart_uninit
  * DESCRIPTION
- *  Initiialize UART 
+ *  Initiialize UART
  * PARAMETERS
  *  UARTHandle      [IN]
  * RETURNS
  *  void
  *****************************************************************************/
-void 
+void
 mtk_gps_sys_uart_uninit(INT32 UARTHandle);
 
 /*****************************************************************************
@@ -1180,8 +1157,8 @@ mtk_gps_sys_uart_uninit(INT32 UARTHandle);
  *  Set baud rate at host side from GPS lib
  *  (The function body needs to be implemented)
  * PARAMETERS
- *  baudrate         [IN] UART baudrate 
- *  hw_fc            [IN] UART hardware flow control 
+ *  baudrate         [IN] UART baudrate
+ *  hw_fc            [IN] UART hardware flow control
  *                        0: without hardware flow contorl (defualt)
  *                        1: with hardware flow contorl
  * RETURNS
@@ -1248,7 +1225,7 @@ mtk_gps_sys_nmea_output_to_app(const char * buffer, UINT32 length);
  * RETURNS
  *  success(MTK_GPS_SUCCESS)
  *****************************************************************************/
-INT32 
+INT32
 mtk_gps_sys_start_result_handler(MTK_GPS_START_RESULT result);
 
 
@@ -1294,7 +1271,7 @@ mtk_gps_sys_set_spi_mode(UINT8 enable_int, UINT8 enable_burst);
  * RETURNS
  *  success(MTK_GPS_SUCCESS)
  *****************************************************************************/
-INT32 
+INT32
 mtk_gps_sys_dsp_boot_begin_handler(void);
 
 /*****************************************************************************
@@ -1308,7 +1285,7 @@ mtk_gps_sys_dsp_boot_begin_handler(void);
  * RETURNS
  *  success(MTK_GPS_SUCCESS)
  *****************************************************************************/
-INT32 
+INT32
 mtk_gps_sys_dsp_boot_end_handler(void);
 
 
@@ -1333,7 +1310,7 @@ INT32 mtk_gps_sys_frame_sync_enable_sleep_mode(unsigned char mode);
  *  accept a frame sync measurement response
  * PARAMETERS
  *  eResult     [IN] success to issue a frame sync meas request
- *  dfFrameTime [IN] frame time of the issued frame pulse (seconds) 
+ *  dfFrameTime [IN] frame time of the issued frame pulse (seconds)
  * RETURNS
  *  void
  *****************************************************************************/
@@ -1351,7 +1328,7 @@ mtk_gps_frame_sync_meas_resp(MTK_GPS_FS_RESULT eResult, double dfFrameTime);
  *  success(MTK_GPS_SUCCESS)
  *  fail(MTK_GPS_ERROR)
  *****************************************************************************/
-INT32 
+INT32
 mtk_gps_sys_frame_sync_meas_req_by_network(void);
 
 /*****************************************************************************
@@ -1365,7 +1342,7 @@ mtk_gps_sys_frame_sync_meas_req_by_network(void);
  *  success(MTK_GPS_SUCCESS)
  *  fail(MTK_GPS_ERROR)
  *****************************************************************************/
-INT32 
+INT32
 mtk_gps_sys_frame_sync_meas_req(MTK_GPS_FS_WORK_MODE mode);
 
 /*****************************************************************************
@@ -1404,6 +1381,7 @@ mtk_gps_sys_create_mutex(MTK_GPS_MUTEX_ENUM mutex_idx);
  * RETURNS
  *  void
  *****************************************************************************/
+
 void
 mtk_gps_sys_take_mutex(MTK_GPS_MUTEX_ENUM mutex_idx);
 
@@ -1417,6 +1395,7 @@ mtk_gps_sys_take_mutex(MTK_GPS_MUTEX_ENUM mutex_idx);
  * RETURNS
  *  void
  *****************************************************************************/
+
 void
 mtk_gps_sys_give_mutex(MTK_GPS_MUTEX_ENUM mutex_idx);
 
@@ -1464,7 +1443,7 @@ INT32 mtk_gps_sys_spi_poll(void);
  * FUNCTION
  *  mtk_gps_sys_uart_poll
  * DESCRIPTION
- *  GPS RX polling function 
+ *  GPS RX polling function
  * PARAMETERS
  *  void
  * RETURNS
@@ -1476,7 +1455,7 @@ INT32 mtk_gps_sys_uart_poll(void);
  * FUNCTION
  *  mtk_gps_get_rtc_info
  * DESCRIPTION
- *  
+ *
  * PARAMETERS
  *  dfrtcD        [OUT]  RTC clock drift (unit : ppm).
  *  dfage         [OUT]  RTC drift age : current gps time - gps time of latest rtc drift calculated. (unit : sec)
@@ -1492,7 +1471,7 @@ mtk_gps_get_rtc_info(double *dfrtcD, double *dfage);
  * DESCRIPTION
  *
  * PARAMETERS
- *  u4Bitmap    [INPUT] 
+ *  u4Bitmap    [INPUT]
  *
  * RETURNS
  *  success(MTK_GPS_SUCCESS); failure (MTK_GPS_ERROR)
@@ -1506,7 +1485,7 @@ INT32 mtk_gps_delete_nv_data(UINT32 assist_data_bit_map);
  * DESCRIPTION
  *
  * PARAMETERS
- *  u4Bitmap    [INPUT] 
+ *  u4Bitmap    [INPUT]
  *
  * RETURNS
  *  success(MTK_GPS_SUCCESS); failure (MTK_GPS_ERROR)
@@ -1518,7 +1497,7 @@ mtk_gps_tsx_xvt(UINT8 enable);
 /*****************************************************************************
  * mtk_gps_set_wifi_location_aiding :
  *   set Wifi location information to MNL
- * Parameters : 
+ * Parameters :
  *  latitude :Wifi latitude      unit: [degree]
  *  longitude:Wifi longitude     unit: [degree]
  *  posvar   :position accuracy  unit: [m]
@@ -1529,7 +1508,7 @@ INT32 mtk_gps_set_wifi_location_aiding(MTK_GPS_REF_LOCATION *RefLocation, double
 /*****************************************************************************
  * mtk_gps_inject_ntp_time :
  *   inject ntp time into MNL
- * Parameters : 
+ * Parameters :
  *  time : ntp time      unit: [degree]
  *  timeRef: the system time tick when sync NTP time to network    unit: mini-second
  *  Uncertainty: ntp time uncertainty error: [mini]
@@ -1540,9 +1519,9 @@ INT32 mtk_gps_inject_ntp_time(MTK_GPS_NTP_T* ntp);
 /*****************************************************************************
  * mtk_gps_inject_nlp_time :
  *   inject nlp time into MNL
- * Parameters : 
- *  latitude : nlp latitude       
- *  longitude:  nlp longitude       
+ * Parameters :
+ *  latitude : nlp latitude
+ *  longitude:  nlp longitude
  *  accuracy: nlp location uncertainty : [m]
  * success(MTK_GPS_SUCCESS); failure (MTK_GPS_ERROR)
  *****************************************************************************/
@@ -1551,14 +1530,14 @@ INT32 mtk_gps_inject_nlp_time(MTK_GPS_NLP_T* nlp);
 /*****************************************************************************
  * mtk_gps_measurement :
  *   get gps measurement
- * Parameters : 
+ * Parameters :
  * flag:                  A set of flags indicating the validity of the fields in this data structure
  * PRN:                 Pseudo-random number in the range of [1, 32]
  * TimeOffsetInNs: Time offset at which the measurement was taken in nanoseconds.
                             The reference receiver's time is specified by GpsData::clock::time_ns and should be
-                            interpreted in the same way as indicated by GpsClock::type.                                                   
+                            interpreted in the same way as indicated by GpsClock::type.
                             The sign of time_offset_ns is given by the following equation:
-                            measurement time = GpsClock::time_ns + time_offset_ns                                                   
+                            measurement time = GpsClock::time_ns + time_offset_ns
                             It provides an individual time-stamp for the measurement, and allows sub-nanosecond accuracy.
  * state:                Per satellite sync state. It represents the current sync state for the associated satellite.
                              Based on the sync state, the 'received GPS tow' field should be interpreted accordingly.
@@ -1572,7 +1551,7 @@ INT32 mtk_gps_inject_nlp_time(MTK_GPS_NLP_T* nlp);
                                  TOW decoded         : [ 0 1week ]   : GPS_MEASUREMENT_STATE_TOW_DECODED is set
  * ReGpsTowUnInNs: 1-Sigma uncertainty of the Received GPS Time-of-Week in nanoseconds
  * Cn0InDbHz:                Carrier-to-noise density in dB-Hz, in the range [0, 63].
-                                     It contains the measured C/N0 value for the signal at the antenna input.   
+                                     It contains the measured C/N0 value for the signal at the antenna input.
  * PRRateInMeterPreSec: Pseudorange rate at the timestamp in m/s.
                                      The value also includes the effects of the receiver clock frequency and satellite clock
                                      frequency errors.
@@ -1588,24 +1567,24 @@ INT32 mtk_gps_inject_nlp_time(MTK_GPS_NLP_T* nlp);
                                 The value contains the 'pseudorange uncertainty' in it.
  * PRUnInMeters:       1-Sigma uncertainty of the pseudorange in meters.
                                The value contains the 'pseudorange' and 'clock' uncertainty in it.
-                               The uncertainty is represented as an absolute (single sided) value.        
+                               The uncertainty is represented as an absolute (single sided) value.
  * CPInChips:           A fraction of the current C/A code cycle, in the range [0.0, 1023.0]
                               This value contains the time (in Chip units) since the last C/A code cycle (GPS Msec epoch).
                               The reference frequency is given by the field 'carrier_frequency_hz'.
                               The value contains the 'code-phase uncertainty' in it.
  * CPUnInChips:       1-Sigma uncertainty of the code-phase, in a fraction of chips.
-                              The uncertainty is represented as an absolute (single sided) value.    
+                              The uncertainty is represented as an absolute (single sided) value.
  * CFInhZ:               Carrier frequency at which codes and messages are modulated, it can be L1 or L2.
-                              If the field is not set, the carrier frequency is assumed to be L1.               
+                              If the field is not set, the carrier frequency is assumed to be L1.
  * CarrierCycle:       The number of full carrier cycles between the satellite and the receiver.
                               The reference frequency is given by the field 'carrier_frequency_hz'.
  * CarrierPhase:      The RF phase detected by the receiver, in the range [0.0, 1.0].
-                              This is usually the fractional part of the complete carrier phase measurement.                         
+                              This is usually the fractional part of the complete carrier phase measurement.
                               The reference frequency is given by the field 'carrier_frequency_hz'.
                               The value contains the 'carrier-phase uncertainty' in it.
- * CarrierPhaseUn:   1-Sigma uncertainty of the carrier-phase.       
- * LossOfLock:               An enumeration that indicates the 'loss of lock' state of the event.   
- * BitNumber:                The number of GPS bits transmitted since Sat-Sun midnight (GPS week).          
+ * CarrierPhaseUn:   1-Sigma uncertainty of the carrier-phase.
+ * LossOfLock:               An enumeration that indicates the 'loss of lock' state of the event.
+ * BitNumber:                The number of GPS bits transmitted since Sat-Sun midnight (GPS week).
  * TimeFromLastBitInMs: The elapsed time since the last received bit in milliseconds, in the range [0, 20]
  * DopperShiftInHz:        Doppler shift in Hz.
                                     A positive value indicates that the SV is moving toward the receiver.
@@ -1615,23 +1594,23 @@ INT32 mtk_gps_inject_nlp_time(MTK_GPS_NLP_T* nlp);
  * MultipathIndicater:     An enumeration that indicates the 'multipath' state of the event.
  * SnrInDb:                  Signal-to-noise ratio in dB.
  * ElInDeg:                   Elevation in degrees, the valid range is [-90, 90].
-                                   The value contains the 'elevation uncertainty' in it.            
+                                   The value contains the 'elevation uncertainty' in it.
  * ElUnInDeg:               1-Sigma uncertainty of the elevation in degrees, the valid range is [0, 90].
                                    The uncertainty is represented as the absolute (single sided) value.
  * AzInDeg:                  Azimuth in degrees, in the range [0, 360).
-                                  The value contains the 'azimuth uncertainty' in it.          
+                                  The value contains the 'azimuth uncertainty' in it.
  * AzUnInDeg:             1-Sigma uncertainty of the azimuth in degrees, the valid range is [0, 180].
                                  The uncertainty is represented as an absolute (single sided) value.
  * UsedInFix:              Whether the GPS represented by the measurement was used for computing the most recent fix.
  *****************************************************************************/
-void 
+void
 mtk_gps_get_measurement(MTK_GPS_MEASUREMENT GpsMeasurement[32], INT8 Ch_Proc_Ord_PRN[32]);
 
 /*****************************************************************************
  * mtk_gps_clock :
  *   get clock parameter
- * Parameters : 
- * flag:            A set of flags indicating the validity of the fields in this data structure.         
+ * Parameters :
+ * flag:            A set of flags indicating the validity of the fields in this data structure.
  * leapsecond: Leap second data.
                       The sign of the value is defined by the following equation:
                       utc_time_ns = time_ns + (full_bias_ns + bias_ns) - leap_second * 1,000,000,000
@@ -1639,16 +1618,16 @@ mtk_gps_get_measurement(MTK_GPS_MEASUREMENT GpsMeasurement[32], INT8 Ch_Proc_Ord
  * TimeInNs:    The GPS receiver internal clock value. This can be either the local hardware clock value
                       (GPS_CLOCK_TYPE_LOCAL_HW_TIME), or the current GPS time derived inside GPS receiver
                       (GPS_CLOCK_TYPE_GPS_TIME). The field 'type' defines the time reported.
-                      
+
                       For local hardware clock, this value is expected to be monotonically increasing during
                       the reporting session. The real GPS time can be derived by compensating the 'full bias'
                       (when it is available) from this value.
-                      
+
                       For GPS time, this value is expected to be the best estimation of current GPS time that GPS
                       receiver can achieve. Set the 'time uncertainty' appropriately when GPS time is specified.
-                      
+
                       Sub-nanosecond accuracy can be provided by means of the 'bias' field.
-                      The value contains the 'time uncertainty' in it.              
+                      The value contains the 'time uncertainty' in it.
  * TimeUncertaintyInNs: 1-Sigma uncertainty associated with the clock's time in nanoseconds.
                                     The uncertainty is represented as an absolute (single sided) value.
                                     This value should be set if GPS_CLOCK_TYPE_GPS_TIME is set.
@@ -1657,19 +1636,19 @@ mtk_gps_get_measurement(MTK_GPS_MEASUREMENT GpsMeasurement[32], INT8 Ch_Proc_Ord
                                     This value is used if and only if GPS_CLOCK_TYPE_LOCAL_HW_TIME is set, and GPS receiver
                                     has solved the clock for GPS time.
                                     The caller is responsible for using the 'bias uncertainty' field for quality check.
-                                    
+
                                     The sign of the value is defined by the following equation:
                                     true time (GPS time) = time_ns + (full_bias_ns + bias_ns)
-                                    
+
                                     This value contains the 'bias uncertainty' in it.
  * BiasInNs:                  Sub-nanosecond bias.
-                                    The value contains the 'bias uncertainty' in it.  
+                                    The value contains the 'bias uncertainty' in it.
  * BiasUncertaintyInNs:   1-Sigma uncertainty associated with the clock's bias in nanoseconds.
-                                    The uncertainty is represented as an absolute (single sided) value.       
+                                    The uncertainty is represented as an absolute (single sided) value.
  * DriftInNsPerSec:        The clock's drift in nanoseconds (per second).
                                     A positive value means that the frequency is higher than the nominal frequency.
 
-                                    The value contains the 'drift uncertainty' in it.                   
+                                    The value contains the 'drift uncertainty' in it.
  * DriftUncertaintyInNsPerSec:  1-Sigma uncertainty associated with the clock's drift in nanoseconds (per second).
                                               The uncertainty is represented as an absolute (single sided) value.
  *
@@ -1681,7 +1660,7 @@ mtk_gps_get_clock(MTK_GPS_CLOCK *GpsClock);
 /*****************************************************************************
  * mtk_gps_navigation_event :
  *   get navigation event
- * Parameters : 
+ * Parameters :
  * type:                The type of message contained in the structure.
  * prn:                  Pseudo-random number in the range of [1, 32]
  * meaasgeID:      Message identifier.
@@ -1694,7 +1673,7 @@ mtk_gps_get_clock(MTK_GPS_CLOCK *GpsClock);
                             i.e. for L1 C/A the submessage id corresponds to the sub-frame id of the navigation message.
  * data[]:              The data of the reported GPS message.
                             The bytes (or words) specified using big endian format (MSB first).
-                           
+
                             For L1 C/A, each subframe contains 10 30-bit GPS words. Each GPS word (30 bits) should be
                             fitted into the last 30 bits in a 4-byte word (skip B31 and B32), with MSB first.
  *
@@ -1702,6 +1681,8 @@ mtk_gps_get_clock(MTK_GPS_CLOCK *GpsClock);
  *****************************************************************************/
 INT32
 mtk_gps_get_navigation_event(MTK_GPS_NAVIGATION_EVENT *NavEvent, UINT8 SVID);
+
+
 /*****************************************************************************
  * FUNCTION
  *  mtk_gps_set_debug_type
@@ -1709,7 +1690,7 @@ mtk_gps_get_navigation_event(MTK_GPS_NAVIGATION_EVENT *NavEvent, UINT8 SVID);
  *  Set the GPS debug type in running time
  * PARAMETERS
  *  debug_type         [IN]   the debug type needs to be changed
- *  
+ *
  * RETURNS
  *  success(MTK_GPS_SUCCESS); failure (MTK_GPS_ERROR)
  *****************************************************************************/
@@ -1723,7 +1704,7 @@ mtk_gps_set_debug_type(const UINT8 debug_type);
  *  Get the GPS debug type in running time
  * PARAMETERS
  *  debug_type         [out]   current debug type
- *  
+ *
  * RETURNS
  *  success(MTK_GPS_SUCCESS); failure (MTK_GPS_ERROR)
  *****************************************************************************/

@@ -1,49 +1,15 @@
-/* Copyright Statement:
- *
- * This software/firmware and related documentation ("MediaTek Software") are
- * protected under relevant copyright laws. The information contained herein
- * is confidential and proprietary to MediaTek Inc. and/or its licensors.
- * Without the prior written permission of MediaTek inc. and/or its licensors,
- * any reproduction, modification, use or disclosure of MediaTek Software,
- * and information contained herein, in whole or in part, shall be strictly prohibited.
- *
- * MediaTek Inc. (C) 2010. All rights reserved.
- *
- * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
- * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
- * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
- * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
- * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
- * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
- * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
- * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
- * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
- * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
- * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
- * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
- * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
- * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
- * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
- * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
- *
- * The following software/firmware and/or related documentation ("MediaTek Software")
- * have been modified by MediaTek Inc. All revisions are subject to any receiver's
- * applicable license agreements with MediaTek Inc.
- */
-
-/******************************************************************************
-*[File]           MTK_SDK_Bee.h
-*[Version]        v0.1
-*[Revision Date]  2008-01-25
-*[Author]         WG yau, wg.yau@mediatek.com, 26967, 2008-01-25
-*[Description]
-*  This program is BEE Related Function for the GPS SDK
-*[Copyright]
-*    Copyright (C) 2005 MediaTek Incorporation. All Rights Reserved.
-******************************************************************************/
-
+/***********************************************************************
+*   This software/firmware and related documentation ("MediaTek Software")
+*   are protected under relevant copyright laws. The information contained
+*   herein is confidential and proprietary to MediaTek Inc. and/or its licensors.
+*
+*   Without the prior written permission of MediaTek Inc. and/or its licensors,
+*   any reproduction, modification, use or disclosure of MediaTek Software, and
+*   information contained herein, in whole or in part, shall be strictly prohibited.
+*
+*   MediaTek Inc. (C) [2008]. All rights reserved.
+*
+*************************************************************************/
 #ifndef MTK_SDK_BEE_H
 #define MTK_SDK_BEE_H
 
@@ -56,8 +22,8 @@
 //
 // Description  :  MTK_Bee_Feed_Eph ( unsigned char Svid , unsigned int au4Word[24] )
 //                 Svid : GPS satellite PRN (1~32)
-//                 au4Word --  24 words ephemeris data 
-//                
+//                 au4Word --  24 words ephemeris data
+//
 // Returns: zero(fail), nonzero(pass)
 //
 // Example :
@@ -65,7 +31,7 @@
 //    unsigned int Ephdata[24];
 //    iRes = MTK_Bee_Feed_Eph ( SvId, Ephdata);
 //
-//    =====> Ephdata is ephemeris data and need to transfer to BEE HOST 
+//    =====> Ephdata is ephemeris data and need to transfer to BEE HOST
 //           If iRes > 0 --> Data is valid and can be transfered to BEE HOST
 
 int MTK_Bee_Feed_Eph ( unsigned char Svid , unsigned int au4Word[24] );
@@ -74,30 +40,30 @@ int MTK_Bee_Feed_Eph ( unsigned char Svid , unsigned int au4Word[24] );
 // MTK_Bee_Receive_Bee_Data  :  Receive the Bee data from HOST
 //
 // Description  :  MTK_Bee_Receive_Bee_Data ( char *BeeData )
-//                 BeeData --  BEE data from HOST for aiding. 
+//                 BeeData --  BEE data from HOST for aiding.
 //                             BEE data buf mest be greater than 96 bytes.
-//                
+//
 // Returns: zero(fail), nonzero(pass)
 //
 // Example :
 //    char Beedatabuf[96];   // must be >= 96 bytes
 //    iRes = MTK_Bee_Receive_Bee_Data ( Beedatabuf );
 //
-//    =====> Beedatabuf is BEE data and need to feed to GPS receiver 
+//    =====> Beedatabuf is BEE data and need to feed to GPS receiver
 //           If iRes > 0 --> Bee data aiding is valid.
 
 int MTK_Bee_Receive_Bee_Data ( char *BeeData );
- 
+
 //*****************************************************************************************************
 // MTK_Bee_Request_All  :  Send request BEE data command to HOST.
 //
 // Description  :  MTK_Bee_Request_All ( void )
-//                 Send a Nmea command to HOST for request the BEE data. 
-//                
+//                 Send a Nmea command to HOST for request the BEE data.
+//
 // Example :
 //    MTK_Bee_Request_All();
 //
-//    =====> $PMTKRQTBEE*17 
+//    =====> $PMTKRQTBEE*17
 
 void MTK_Bee_Request_All ( void );
 
@@ -116,8 +82,8 @@ void MTK_Bee_Request_All ( void );
 //    MTK_Bee_Get_Eph_Info(Eph);
 //    MTK_UART_OutputData("SDK: Eph = %d", Eph[16]);
 //
-// =====> SDK: Eph = 1  ---> SV17 has BRDC Ephemeris. 
-// =====> SDK: Eph = 2  ---> SV17 has 1st day BEE Ephemeris. 
+// =====> SDK: Eph = 1  ---> SV17 has BRDC Ephemeris.
+// =====> SDK: Eph = 2  ---> SV17 has 1st day BEE Ephemeris.
 
 void MTK_Bee_Get_Eph_Info (unsigned char Eph[32]);
 
@@ -136,17 +102,17 @@ void MTK_Bee_Get_Eph_Info (unsigned char Eph[32]);
 //    {
 //       EPhMask = 1;
 //       for (i = 0; i < 32; i++)
-//       {         
+//       {
 //          if ( (NewEph & EPhMask) != 0 )
-//          {                
-//                MTK_UART_OutputData("SV%d: NewEph = %d", i+1, NewEph);                
+//          {
+//                MTK_UART_OutputData("SV%d: NewEph = %d", i+1, NewEph);
 //          }
 //          EPhMask = EPhMask << 1;
-//       }                   
+//       }
 //    }
-// =====> SDK: NewEph = 1   ---> Has New Ephemeris. 
-// =====> SV3: NewEph = 1   ---> SV3 has New Ephemeris. 
-// =====> SV17: NewEph = 1  ---> SV17 has New Ephemeris. 
+// =====> SDK: NewEph = 1   ---> Has New Ephemeris.
+// =====> SV3: NewEph = 1   ---> SV3 has New Ephemeris.
+// =====> SV17: NewEph = 1  ---> SV17 has New Ephemeris.
 
 void MTK_Bee_Get_New_Eph_Info (unsigned int *NewEph);
 
@@ -161,8 +127,8 @@ void MTK_Bee_Get_New_Eph_Info (unsigned int *NewEph);
 //    MTK_Bee_Req_Info(BeeReq);
 //    MTK_UART_OutputData("SDK: BeeReq = %d", BeeReq[16]);
 //
-// =====> SDK: BeeReq = 1  ---> SV17 need to request BEE Ephemeris. 
-// =====> SDK: BeeReq = 0  ---> SV17 no need to request BEE Ephemeris. 
+// =====> SDK: BeeReq = 1  ---> SV17 need to request BEE Ephemeris.
+// =====> SDK: BeeReq = 0  ---> SV17 no need to request BEE Ephemeris.
 
 void MTK_Bee_Req_Info (unsigned char BeeReq[32]);
 
@@ -177,8 +143,8 @@ void MTK_Bee_Req_Info (unsigned char BeeReq[32]);
 //    MTK_Bee_Age(BeeAge);
 //    MTK_UART_OutputData("SDK: BeeAge = %d", BeeAge[16]);
 //
-// =====> SDK: BeeReq = 300  ---> SV17 BEE Ephemeris has been used 300 sec. 
-// =====> SDK: BeeReq = -1   ---> SV17 BEE Ephemeris is not valid. 
+// =====> SDK: BeeReq = 300  ---> SV17 BEE Ephemeris has been used 300 sec.
+// =====> SDK: BeeReq = -1   ---> SV17 BEE Ephemeris is not valid.
 
 void MTK_Bee_Age ( short BeeAge[32]);
 
@@ -237,7 +203,7 @@ int MTK_Bee_Send_New_Eph (unsigned int *NewEphSv);
 //        for ( i = 0; i < 24; i++ )
 //        {
 //            sprintf(( buf + i*7 ), ",%06X", EphData[i]);
-//        } 
+//        }
 //        MTK_NMEA_OutputData("PMTKDTEPH,%02X%s", SvId, buf);
 //    }
 
@@ -317,7 +283,7 @@ void MTK_Bee_Request_Data (unsigned char BeeReq[32]);
 // MTK_Bee_Receive_Host_Info  :  Receive a list of satellites which Host has their BEE data
 //
 // Description : MTK_Bee_Receive_Host_Info ( int NumSv, unsigned char HostBeeInfo[32] )
-//               NumSv       -- Number of satellites in 
+//               NumSv       -- Number of satellites in
 //               HostBeeInfo -- Array with 32 unsigned char
 //               0  ---> Host does not have BEE data for this satellite
 //               1  ---> Host has BEE data for this satellite
@@ -357,13 +323,13 @@ void MTK_Bee_Receive_End_Data (void);
 //*****************************************************************************************************
 // MTK_Bee_Disable_BEE  :  Disable ALL BEE data
 //
-// Description  :  If no need using BEE data for generate fix, then 
+// Description  :  If no need using BEE data for generate fix, then
 //                 using MTK_Bee_Disable_BEE() to disable BEE data.
-//                
+//
 // Returns : NONE
 //
 // Example :
-//      Receive some special command( DISABLE_BEE ), then Disable BEE data    
+//      Receive some special command( DISABLE_BEE ), then Disable BEE data
 //      UART_RECEIVE()
 //      {
 //        ......
@@ -378,13 +344,13 @@ void MTK_Bee_Disable_BEE ( void );
 //*****************************************************************************************************
 // MTK_Bee_Enable_BEE  :  Enable ALL BEE data
 //
-// Description  :  If needed using BEE data for generate fix, then 
+// Description  :  If needed using BEE data for generate fix, then
 //                 using MTK_Bee_Enable_BEE() to enable BEE data.
-//                
+//
 // Returns : NONE
 //
 // Example :
-//      Receive some special command( ENABLE_BEE ), then Enable BEE data    
+//      Receive some special command( ENABLE_BEE ), then Enable BEE data
 //      UART_RECEIVE()
 //      {
 //        ......
@@ -407,7 +373,7 @@ void MTK_Bee_Enable_BEE ( void );
 // Returns : NONE
 //
 // Example :
-//      Receive some special command( SET_BEE ), then Set enable / disable BEE data    
+//      Receive some special command( SET_BEE ), then Set enable / disable BEE data
 //      UART_RECEIVE()
 //      {
 //        ......
@@ -429,13 +395,13 @@ void MTK_Bee_Set_BEE ( unsigned char EnableBEE[32] );
 //*****************************************************************************************************
 // MTK_Bee_Disable_BRDC  :  Disable ALL BRDC data
 //
-// Description  :  If no need using BRDC data for generate fix, then 
+// Description  :  If no need using BRDC data for generate fix, then
 //                 using MTK_Bee_Disable_BRDC() to disable BRDC data.
-//                
+//
 // Returns : NONE
 //
 // Example :
-//      Receive some special command( DISABLE_BRDC ), then Disable BRDC data    
+//      Receive some special command( DISABLE_BRDC ), then Disable BRDC data
 //      UART_RECEIVE()
 //      {
 //        ......
@@ -450,13 +416,13 @@ void MTK_Bee_Disable_BRDC ( void );
 //*****************************************************************************************************
 // MTK_Bee_Enable_BRDC  :  Enable ALL BRDC data
 //
-// Description  :  If needed using BRDC data for generate fix, then 
+// Description  :  If needed using BRDC data for generate fix, then
 //                 using MTK_Bee_Enable_BRDC() to enable BRDC data.
-//                
+//
 // Returns : NONE
 //
 // Example :
-//      Receive some special command( ENABLE_BRDC ), then Enable BRDC data    
+//      Receive some special command( ENABLE_BRDC ), then Enable BRDC data
 //      UART_RECEIVE()
 //      {
 //        ......
@@ -470,7 +436,7 @@ void MTK_Bee_Enable_BRDC ( void );
 
 //*****************************************************************************************************
 // MTK_Bee_Set_BRDC  :  Set enable / disable BRDC data for individual satellite
-//                
+//
 // Description : MTK_Bee_Set_BRDC ( unsigned char EnableBRDC[32] )
 //               EnableBRDC -- Array with 32 unsigned char
 //               0  ---> Disable use of BRDC data in the fix for this satellite
@@ -479,7 +445,7 @@ void MTK_Bee_Enable_BRDC ( void );
 // Returns : NONE
 //
 // Example :
-//      Receive some special command( SET_BRDC ), then Set enable / disable BRDC data    
+//      Receive some special command( SET_BRDC ), then Set enable / disable BRDC data
 //      UART_RECEIVE()
 //      {
 //        ......
@@ -506,11 +472,11 @@ void MTK_Bee_Set_BRDC ( unsigned char EnableBRDC[32] );
 //               QueryBRDC -- Array with 32 unsigned char
 //               0  ---> BRDC ephemeris is disable use in the fix for this satellite
 //               1  ---> BRDC ephemeris is enable  use in the fix for this satellite
-//                
+//
 // Returns : NONE
 //
 // Example :
-//      Receive some special command( QUERY_BRDC ), then Query BRDC ephemeris    
+//      Receive some special command( QUERY_BRDC ), then Query BRDC ephemeris
 //      UART_RECEIVE()
 //      {
 //        ......
@@ -535,11 +501,11 @@ void MTK_Bee_Query_BRDC_Status ( unsigned char QueryBRDC[32] );
 //               QueryBRDC -- Array with 32 unsigned char
 //               0  ---> BEE data is disable use in the fix for this satellite
 //               1  ---> BEE data is enable  use in the fix for this satellite
-//                
+//
 // Returns : NONE
 //
 // Example :
-//      Receive some special command( QUERY_BEE ), then Query BEE data    
+//      Receive some special command( QUERY_BEE ), then Query BEE data
 //      UART_RECEIVE()
 //      {
 //        ......

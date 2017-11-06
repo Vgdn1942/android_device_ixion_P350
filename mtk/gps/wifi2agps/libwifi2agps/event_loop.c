@@ -2,6 +2,7 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <string.h>
 
 static struct socket_data *wait_context;
 static struct socket_data *wait_context_no_timeout;

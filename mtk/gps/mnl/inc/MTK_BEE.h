@@ -1,73 +1,15 @@
-/* Copyright Statement:
- *
- * This software/firmware and related documentation ("MediaTek Software") are
- * protected under relevant copyright laws. The information contained herein
- * is confidential and proprietary to MediaTek Inc. and/or its licensors.
- * Without the prior written permission of MediaTek inc. and/or its licensors,
- * any reproduction, modification, use or disclosure of MediaTek Software,
- * and information contained herein, in whole or in part, shall be strictly prohibited.
- */
-/* MediaTek Inc. (C) 2010. All rights reserved.
- *
- * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
- * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
- * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
- * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
- * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
- * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
- * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
- * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
- * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
- * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
- * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
- * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
- * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
- * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
- * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
- * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
- *
- * The following software/firmware and/or related documentation ("MediaTek Software")
- * have been modified by MediaTek Inc. All revisions are subject to any receiver's
- * applicable license agreements with MediaTek Inc.
- */
-
-/******************************************************************************
-*  Copyright Statement:
-*  --------------------
-*  This software is protected by Copyright and the information contained
-*  herein is confidential. The software may not be copied and the information
-*  contained herein may not be used or disclosed except with the written
-*  permission of MediaTek Inc. (C) 2008
+/***********************************************************************
+*   This software/firmware and related documentation ("MediaTek Software")
+*   are protected under relevant copyright laws. The information contained
+*   herein is confidential and proprietary to MediaTek Inc. and/or its licensors.
 *
-*  BY OPENING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
-*  THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
-*  RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON
-*  AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
-*  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
-*  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
-*  NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
-*  SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
-*  SUPPLIED WITH THE MEDIATEK SOFTWARE, AND BUYER AGREES TO LOOK ONLY TO SUCH
-*  THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. MEDIATEK SHALL ALSO
-*  NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE RELEASES MADE TO BUYER'S
-*  SPECIFICATION OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
+*   Without the prior written permission of MediaTek Inc. and/or its licensors,
+*   any reproduction, modification, use or disclosure of MediaTek Software, and
+*   information contained herein, in whole or in part, shall be strictly prohibited.
 *
-*  BUYER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND CUMULATIVE
-*  LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
-*  AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
-*  OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY BUYER TO
-*  MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+*   MediaTek Inc. (C) [2008]. All rights reserved.
 *
-*  THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE
-*  WITH THE LAWS OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF
-*  LAWS PRINCIPLES.  ANY DISPUTES, CONTROVERSIES OR CLAIMS ARISING THEREOF AND
-*  RELATED THERETO SHALL BE SETTLED BY ARBITRATION IN SAN FRANCISCO, CA, UNDER
-*  THE RULES OF THE INTERNATIONAL CHAMBER OF COMMERCE (ICC).
-*
-******************************************************************************/
-
+*************************************************************************/
 //*****************************************************************************
 // [File] MTK_BEE.h : Defines the entry point for BEE library
 // [Version] v1.0
@@ -113,17 +55,17 @@ MTK_BEE_VOID MTK_BEE_Uninit (void);
 //*****************************************************************************
 // MTK_BEE_Set_File_Path : Set File Path for BEE kernel file
 //
-// PARAMETER : szFilePath [IN] - (1) Input file path for ARC.BIN, BEE.BIN and 
-//                                   BEET000A. 
+// PARAMETER : szFilePath [IN] - (1) Input file path for ARC.BIN, BEE.BIN and
+//                                   BEET000A.
 //                               (2) Maximal path length is 256 bytes.
 //                               (3) MUST BE null-terminated string.
 //                               (4) MUST BE called before MTK_BEE_Init().
 //                               (5) MUST BE ended with a directory separator
 //                                   character. (ex: '\\')
 //                               (6) If this function has not been called,
-//                                   then no file path is set. 
+//                                   then no file path is set.
 // EXAMPLE :
-//    MTK_BEE_Set_File_path("C:\\BEE\\"); 
+//    MTK_BEE_Set_File_path("C:\\BEE\\");
 //    MTK_BEE_Init();
 //    ===> Input File path before MTK_BEE_Init() is called.
 //
@@ -167,8 +109,8 @@ MTK_BEE_VOID MTK_BEE_Proc_Eph (unsigned char u1SvId, unsigned int au4Word[24]);
 // RETURN : Number of satellites with enough ephemeris for BEE generation
 //          Ex : 5 -> 5 satellites have enough ephemeris
 //
-// NOTE : i2WeekNo and i4Tow SHOULD BE set to the correct current time ( > 0), 
-//        If i2WeekNo = 0 and i4Tow = 0 this function will not do optimization !!! 
+// NOTE : i2WeekNo and i4Tow SHOULD BE set to the correct current time ( > 0),
+//        If i2WeekNo = 0 and i4Tow = 0 this function will not do optimization !!!
 //
 // EXAMPLE :
 //    short i2WeekNo;
@@ -201,9 +143,9 @@ MTK_BEE_VOID MTK_BEE_Gen_All (void);
 // RETURN : 1 -> BEE data is already FULL generated
 //          0 -> BEE data is not FULL generated
 //
-// NOTE : i2WeekNo and i4Tow MUST BE set to the correct current time ( > 0), 
+// NOTE : i2WeekNo and i4Tow MUST BE set to the correct current time ( > 0),
 //        otherwise this function may have wrong generated data !!!
-//        If i2WeekNo = 0 and i4Tow = 0 this function will not do optimization !!! 
+//        If i2WeekNo = 0 and i4Tow = 0 this function will not do optimization !!!
 
 MTK_BEE_INT MTK_BEE_Gen_Auto (short i2WeekNo, int i4Tow);
 
@@ -215,17 +157,17 @@ MTK_BEE_INT MTK_BEE_Gen_Auto (short i2WeekNo, int i4Tow);
 //             i2WeekNo    [IN] - week number (count from Jan. 6, 1980)
 //             i4Tow       [IN] - time of week
 //             u1GenLength [IN] - generate length ( MUST > 0 )
-//                                =1 -> Generate 1 Day  Data 
-//                                =2 -> Generate 2 Days Data 
-//                                =3 -> Generate 3 Days Data 
-//                                >3 -> Generate 3 Days Data 
+//                                =1 -> Generate 1 Day  Data
+//                                =2 -> Generate 2 Days Data
+//                                =3 -> Generate 3 Days Data
+//                                >3 -> Generate 3 Days Data
 //
 // RETURN : 0 -> No data has been generated / No BEE data
 //          1 -> 1 day  data is already generated
 //          2 -> 2 days data is already generated
 //          3 -> 3 days data is already generated
 //
-// NOTE : If i2WeekNo and i4Tow is set to the current time ( > 0), then this function will delete expired BEE data 
+// NOTE : If i2WeekNo and i4Tow is set to the current time ( > 0), then this function will delete expired BEE data
 //        (ex. 3 days ago data) based on this current time. Therefore, return value will be 0.
 //        Set i2WeekNo = 0 and i4Tow = 0 to bypass this time checking.
 //
@@ -236,7 +178,7 @@ MTK_BEE_INT MTK_BEE_Gen_Auto (short i2WeekNo, int i4Tow);
 //    u1GenState = MTK_BEE_Gen_Data(u1SvId, 0, 0, 3);
 //    ===> Generate 3 days BEE data of SV 1, bypass time checking.
 //         If u1GenState = 3, means already has 3 days BEE data, not necessary to generate data within this period,
-//         unless receive new ephemeris.              
+//         unless receive new ephemeris.
 //    (2)
 //    u1GenState = MTK_BEE_Gen_Data(u1SvId, 0, 0, 1);
 //    ===> Generate 1 day BEE data of SV 1, bypass time checking.
@@ -347,7 +289,7 @@ MTK_BEE_INT MTK_BEE_Set_Eph_Update (unsigned char UpdateEph[32]);
 //*****************************************************************************
 // MTK_BEE_Hot_Still_Test : Perform hot still test
 //
-// PARAMETER : u4Test_Mode [IN] - 
+// PARAMETER : u4Test_Mode [IN] -
 //                 bit0 : use old force model parameters
 //
 // RETURN : void
@@ -367,7 +309,7 @@ MTK_BEE_VOID MTK_BEE_Test (unsigned char u1SvId);
 //*****************************************************************************
 // MTK_BEE_Shutdown : force HotStill run into shutdown mode. (shutdown all jobs after curretn prediction done)
 //
-// PARAMETER : fgEnableShutdown [IN] - 
+// PARAMETER : fgEnableShutdown [IN] -
 //                 0 : disable shutdown to resume original state
 //                 1 : enable shutdown
 // RETURN : void
@@ -376,7 +318,7 @@ MTK_BEE_VOID MTK_BEE_Shutdown(unsigned char fgEnableShutdown);
 //*****************************************************************************
 // MTK_BEE_Get_Version_Info : Get BEE and HotStill related information
 //
-// PARAMETER : Version        [OUT] - Library version  
+// PARAMETER : Version        [OUT] - Library version
 //                      Lib_Date      [OUT] - Library release dat information
 //
 // RETURN : void

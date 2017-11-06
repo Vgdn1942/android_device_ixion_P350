@@ -44,7 +44,7 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH) \
                     $(LOCAL_PATH)/../../kernel-headers
 
 LOCAL_SRC_FILES := BGWC.c \
-                   BGW_CCCI.c
+				BGW_CCCI.c
 
 LOCAL_MODULE := BGW
 LOCAL_SHARED_LIBRARIES += libcutils libc libm

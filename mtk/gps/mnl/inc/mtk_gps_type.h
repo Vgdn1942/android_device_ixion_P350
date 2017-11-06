@@ -1,38 +1,15 @@
-/*****************************************************************************
-*  Copyright Statement:
-*  --------------------
-*  This software is protected by Copyright and the information contained
-*  herein is confidential. The software may not be copied and the information
-*  contained herein may not be used or disclosed except with the written
-*  permission of MediaTek Inc. (C) 2008
+/***********************************************************************
+*   This software/firmware and related documentation ("MediaTek Software")
+*   are protected under relevant copyright laws. The information contained
+*   herein is confidential and proprietary to MediaTek Inc. and/or its licensors.
 *
-*  BY OPENING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
-*  THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
-*  RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON
-*  AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
-*  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
-*  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
-*  NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
-*  SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
-*  SUPPLIED WITH THE MEDIATEK SOFTWARE, AND BUYER AGREES TO LOOK ONLY TO SUCH
-*  THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. MEDIATEK SHALL ALSO
-*  NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE RELEASES MADE TO BUYER'S
-*  SPECIFICATION OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
+*   Without the prior written permission of MediaTek Inc. and/or its licensors,
+*   any reproduction, modification, use or disclosure of MediaTek Software, and
+*   information contained herein, in whole or in part, shall be strictly prohibited.
 *
-*  BUYER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND CUMULATIVE
-*  LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
-*  AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
-*  OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY BUYER TO
-*  MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+*   MediaTek Inc. (C) [2008]. All rights reserved.
 *
-*  THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE
-*  WITH THE LAWS OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF
-*  LAWS PRINCIPLES.  ANY DISPUTES, CONTROVERSIES OR CLAIMS ARISING THEREOF AND
-*  RELATED THERETO SHALL BE SETTLED BY ARBITRATION IN SAN FRANCISCO, CA, UNDER
-*  THE RULES OF THE INTERNATIONAL CHAMBER OF COMMERCE (ICC).
-*
-*****************************************************************************/
-
+*************************************************************************/
 /*****************************************************************************
  *
  * Filename:
@@ -59,7 +36,7 @@
 #define MTK_GLON_SV_MAX_NUM     24  // Glonass SV number, should be >= MGLONID
 #define MTK_BEDO_SV_MAX_NUM     37  // Beidou SV number, should be >= MBEDOID
 #define MTK_GPS_ENABLE_DEBUG_MSG (0x01)
-
+#define MTK_GPS_NMEA_SOCKET_DISABLE (0xFFFFF)
 // GPS Measurement
 
 #define GPS_MEASUREMENT_HAS_SNR                                            (1<<0) // A valid 'snr' is stored in the data structure. */
@@ -100,7 +77,7 @@
 #define GPS_ADR_STATE_RESET                     (1<<1)
 #define GPS_ADR_STATE_CYCLE_SLIP                (1<<2)
 
-// Gps Clock 
+// Gps Clock
 #define GPS_CLOCK_HAS_LEAP_SECOND             (1<<0)  // A valid 'leap second' is stored in the data structure.
 #define GPS_CLOCK_HAS_TIME_UNCERTAINTY   (1<<1)  // A valid 'time uncertainty' is stored in the data structure.
 #define GPS_CLOCK_HAS_FULL_BIAS                  (1<<2)  // A valid 'full bias' is stored in the data structure.
@@ -114,12 +91,14 @@
 #define GPS_CLOCK_TYPE_GPS_TIME                  2
 
 // Gps NavigationMessage
-#define GPS_NAVIGATION_MESSAGE_TYPE_UNKNOWN    0 
+#define GPS_NAVIGATION_MESSAGE_TYPE_UNKNOWN    0
 #define GPS_NAVIGATION_MESSAGE_TYPE_L1CA            1 // L1 C/A message contained in the structure.
 #define GPS_NAVIGATION_MESSAGE_TYPE_L2CNAV        2 // L2-CNAV message contained in the structure.
-#define GPS_NAVIGATION_MESSAGE_TYPE_L5CNAV        3 // L5-CNAV message contained in the structure. 
+#define GPS_NAVIGATION_MESSAGE_TYPE_L5CNAV        3 // L5-CNAV message contained in the structure.
 #define GPS_NAVIGATION_MESSAGE_TYPE_CNAV2          4 // CNAV-2 message contained in the structure.
+
 #define GPS_DEBUG_LOG_FILE_NAME_MAX_LEN    128 //The max lenght of debug log file name, include the path name
+
 #define ASSIST_REQ_BIT_NTP  0x01    // NTP request bitmap
 #define ASSIST_REQ_BIT_NLP  0x02    // NLP request bitmap
 
@@ -142,7 +121,7 @@ typedef signed long long       INT64;
 
 #if ( defined(__ARMCC_VERSION) && (__ARMCC_VERSION < 200000 ))
 // for ADS1.x
-#elif ( defined(__ARMCC_VERSION) && (__ARMCC_VERSION < 400000 ) ) 
+#elif ( defined(__ARMCC_VERSION) && (__ARMCC_VERSION < 400000 ) )
 // for RVCT2.x or RVCT3.x
 #else
 #pragma pack(4)
@@ -156,25 +135,25 @@ typedef enum
     HOST_USER_CONFIG_SYS_1 = 1, // user configuration in system operation
     HOST_USER_CONFIG_SYS_2 = 2, // user configuration in GPS operation
     HOST_USER_CONFIG_SYS_3 = 3,  // user configuration in Anti-Jamming Debug
-    HOST_USER_CONFIG_SYS_4 = 4,  //  user configuration for aiding data to NVRAM  
-    HOST_USER_CONFIG_SYS_5 = 5,  //  user configuration for aiding almanac data to NVRAM 
-    HOST_USER_CONFIG_SYS_6 = 6,  //  user configuration for aiding eph data to NVRAM 
-    HOST_USER_CONFIG_SYS_7 = 7,  //  user configuration for aiding position data to NVRAM    
-    HOST_USER_CONFIG_SYS_8 = 8,  //  user configuration for aiding time data to NVRAM       
-    HOST_USER_CONFIG_SYS_9 = 9,  //  user configuration for clean ehp data from NVRAM     
-    HOST_USER_CONFIG_SYS_10 = 10,  //  user configuration for clean alman data from NVRAM     
-    HOST_USER_CONFIG_SYS_11 = 11,  //  user configuration for chn test     
-    HOST_USER_CONFIG_SYS_12 = 12,  //  user configuration for jammer test     
-    HOST_USER_CONFIG_SYS_13 = 13,  //  user configuration for phase test    
-    HOST_USER_CONFIG_SYS_14 = 14,  //  user configuration for phase test    
-    HOST_USER_CONFIG_SYS_15 = 15,  //  user configuration for time_change_notify    
-    HOST_USER_CONFIG_SYS_16 = 16,  //  user configuration for time_update_notify     
-    HOST_USER_CONFIG_SYS_17 = 17,  //  user configuration for debug_config 
+    HOST_USER_CONFIG_SYS_4 = 4,  //  user configuration for aiding data to NVRAM
+    HOST_USER_CONFIG_SYS_5 = 5,  //  user configuration for aiding almanac data to NVRAM
+    HOST_USER_CONFIG_SYS_6 = 6,  //  user configuration for aiding eph data to NVRAM
+    HOST_USER_CONFIG_SYS_7 = 7,  //  user configuration for aiding position data to NVRAM
+    HOST_USER_CONFIG_SYS_8 = 8,  //  user configuration for aiding time data to NVRAM
+    HOST_USER_CONFIG_SYS_9 = 9,  //  user configuration for clean ehp data from NVRAM
+    HOST_USER_CONFIG_SYS_10 = 10,  //  user configuration for clean alman data from NVRAM
+    HOST_USER_CONFIG_SYS_11 = 11,  //  user configuration for chn test
+    HOST_USER_CONFIG_SYS_12 = 12,  //  user configuration for jammer test
+    HOST_USER_CONFIG_SYS_13 = 13,  //  user configuration for phase test
+    HOST_USER_CONFIG_SYS_14 = 14,  //  user configuration for phase test
+    HOST_USER_CONFIG_SYS_15 = 15,  //  user configuration for time_change_notify
+    HOST_USER_CONFIG_SYS_16 = 16,  //  user configuration for time_update_notify
+    HOST_USER_CONFIG_SYS_17 = 17,  //  user configuration for debug_config
     HOST_USER_CONFIG_SYS_18 = 18,  //  user configuration for update NVfile immedate
     HOST_USER_CONFIG_SYS_19 = 19,  //  user configuration for setting tcxo mode
       HOST_USER_CONFIG_SYS_20 = 20,  //  user configuration for TSX XVT
-    HOST_USER_CONFIG_SYS_21 = 21,  //  user configuration for GNSS jammer test     
-    HOST_USER_CONFIG_SYS_END  //  user configuration for aiding almanac data to NVRAM 
+    HOST_USER_CONFIG_SYS_21 = 21,  //  user configuration for GNSS jammer test
+    HOST_USER_CONFIG_SYS_END  //  user configuration for aiding almanac data to NVRAM
 }MTK_GPS_USER_SYSTEM_CONFIG;
 
 #define USER_SYS_1_ENABLE_DEBUG ( 1 << 0)
@@ -274,7 +253,7 @@ typedef enum
     MTK_MOD_AGENT,
     MTK_MOD_BEE_GEN,
     MTK_MOD_DISPATCHER,
-    MTK_MOD_RTCM,    
+    MTK_MOD_RTCM,
     MTK_MOD_EPO_FILE_UPDATER,
     MTK_MOD_END_LIST
 } MTK_GPS_MODULE;
@@ -288,7 +267,7 @@ typedef enum
     MTK_AGPS_MSG_SUPL_PMTK,
     MTK_AGPS_MSG_PROFILE,
     MTK_AGPS_MSG_SUPL_TERMINATE,  //dispatcher send terminate to indicate SUPL stop
-    MTK_AGPS_MSG_REQ_NI,          //request AGPS aiding from dispatcher    
+    MTK_AGPS_MSG_REQ_NI,          //request AGPS aiding from dispatcher
     MTK_AGPS_MSG_REQ,             //request AGPS aiding from mnl
     MTK_AGPS_MSG_AGT_BEE_REQ,     //AGENT request next mode(BEE)
     MTK_AGPS_MSG_AGT_SUPL_REQ,    //AGENT request next mode(SUPL)
@@ -309,10 +288,11 @@ typedef enum
     MTK_AGPS_CB_BITMAP_UPDATE,      //this message is used for NTP NTP request to MNLD->HAL GPS->locationservice
     MTK_AGPS_CB_END_LIST
 } MTK_GPS_AGPS_CB_MSG_TYPE;
+
 typedef struct
 {
   UINT32 ntp[2];           //ntp: mini-second, indicate the time tick(mini-second) from Jan.1.1970
-  UINT32 timeReference[2]; //indicate the timestamp of ntp sync with network 
+  UINT32 timeReference[2]; //indicate the timestamp of ntp sync with network
   INT32 uncertainty;
 }MTK_GPS_NTP_T;
 
@@ -325,6 +305,7 @@ typedef struct
   UINT8  type;            // indicate location type: 0: NLP, 1: fixed location
   UINT8  started ;         // 0 MNL not run / 1 MNL run
 }MTK_GPS_NLP_T;
+
 
 // AGPS feature on/off
 typedef enum
@@ -345,7 +326,7 @@ typedef struct
   UINT8 fgGpsAosp_Ver;
 } MTK_AGPS_USER_PROFILE;
 
-typedef struct 
+typedef struct
 {
   UINT16    type;           /* message ID */
   UINT16    length;         /* length of 'data' */
@@ -434,13 +415,13 @@ typedef struct
 
 typedef enum
 {
-  MTK_TCXO_NORMAL,  //normal mode 
+  MTK_TCXO_NORMAL,  //normal mode
   MTK_TCXO_PHONE    //bad mode
 } MTK_GPS_TCXO_MODE;
 
 typedef enum
 {
-  MTK_AIC_OFF,  //AIC off 
+  MTK_AIC_OFF,  //AIC off
   MTK_AIC_ON    //AIC on
 } MTK_GPS_AIC_MODE;
 
@@ -508,7 +489,7 @@ typedef struct
   UINT8     qzsdgps[MTK_QZS_SV_MAX_PRN];     /* nonzero: DGPS correction ready */
   UINT8     qzscodelock[MTK_QZS_SV_MAX_PRN]; /* nonzero: code lock */
   UINT8     qzsfreqlock[MTK_QZS_SV_MAX_PRN]; /* nonzero: frequency lock */
-  UINT8     qzscarrlock[MTK_QZS_SV_MAX_PRN]; /* nonzero: carrier lock */  
+  UINT8     qzscarrlock[MTK_QZS_SV_MAX_PRN]; /* nonzero: carrier lock */
 } MTK_GPS_SV_INFO;
 
 typedef struct
@@ -542,7 +523,7 @@ typedef struct
     UINT8     codelock[MTK_BEDO_SV_MAX_NUM]; /* nonzero: code lock */
     UINT8     freqlock[MTK_BEDO_SV_MAX_NUM]; /* nonzero: frequency lock */
     UINT8     carrlock[MTK_BEDO_SV_MAX_NUM]; /* nonzero: carrier lock */
-} MTK_BEDO_SV_INFO; 
+} MTK_BEDO_SV_INFO;
 
 typedef INT32 (*MTK_GPS_CALLBACK)(MTK_GPS_NOTIFICATION_TYPE msg);
 
@@ -798,10 +779,10 @@ typedef enum
   MTK_PARAM_CMD_STOP,
   MTK_PARAM_CMD_SLEEP,
   MTK_PARAM_CMD_WAKEUP,
-  MTK_PARAM_CMD_BLOCK,  
+  MTK_PARAM_CMD_BLOCK,
   MTK_PARAM_BEE_CONFIG,
   MTK_PARAM_BRDC_CONFIG,
-  MTK_PARAM_FRAME_SYNC_RESP,  
+  MTK_PARAM_FRAME_SYNC_RESP,
   MTK_PARAM_CMD_CONFIG_EPO_DATA,
   MTK_PARAM_CMD_CONFIG_EPO_TIME,
   MTK_PARAM_CMD_CONFIG_EPO_POS,
@@ -809,7 +790,7 @@ typedef enum
   MTK_MSG_EPO_REQ,
   MTK_MSG_EPO_RESP,
   MTK_MSG_BEE_REQ,
-  MTK_MSG_BEE_RESP,  
+  MTK_MSG_BEE_RESP,
   MTK_MSG_REQ_ASSIST,
   MTK_MSG_AGENT_BEE_REQ,
   MTK_MSG_AGENT_SUPL_REQ,
@@ -817,8 +798,8 @@ typedef enum
   MTK_MSG_AGPS_MSG_REQ_NI,
   MTK_MSG_AGPS_MSG_SUPL_PMTK,
   MTK_MSG_AGPS_MSG_SUPL_TERMINATE,
-  MTK_MSG_AGPS_MSG_PROFILE,  
-  MTK_MSG_AGPS_MSG_RESET_SM,  
+  MTK_MSG_AGPS_MSG_PROFILE,
+  MTK_MSG_AGPS_MSG_RESET_SM,
   MTK_MSG_VTIMER_IND,
   MTK_MSG_AL_CFG,
   MTK_MSG_AL_DEE_CFG,
@@ -834,7 +815,8 @@ typedef enum
   MTK_MSG_RAW_MEAS,
   MTK_MSG_REPLACE_LLH,
   MTK_MSG_QUARTER_EPO_REQ,
-  MTK_MSG_EPO_FILE_UPDATE_DONE
+  MTK_MSG_EPO_FILE_UPDATE_DONE,
+  MTK_PARAM_CMD_AUTO_DESENSE
 } MTK_GPS_PARAM;
 
 /*------- values -------*/
@@ -870,6 +852,56 @@ typedef struct
   UINT8     threshold;
   UINT16    targetCount;
 } MTK_GPS_PARAM_TESTMODE;
+
+#if 1
+//Auto Desense
+
+#define AUTODSN_TEST_CNT_MAX 50
+
+
+typedef enum
+{
+    MTK_GNSS_AUTODSN_STOP = 0,
+    MTK_GNSS_AUTODSN_CW_MODE = 1,
+    MTK_GNSS_AUTODSN_SIGNAL_MODE,
+    MTK_GNSS_AUTODSN_NORMAL_MODE,
+    MTK_GNSS_AUTODSN_MODE_MAX
+}MTK_GNSS_AUTODSN_MODE;
+
+#if 0
+typedef enum
+{
+    MTK_GNSS_AUTODSN_TI_SUSPEND = 1,
+    MTK_GNSS_AUTODSN_TI_LCM_ONOFF,
+    MTK_GNSS_AUTODSN_TI_LCM_UPDATE,
+    MTK_GNSS_AUTODSN_TI_BACKLIGHT,
+    MTK_GNSS_AUTODSN_TI_WIFI_TX,
+    MTK_GNSS_AUTODSN_TI_WIFI_RX,
+    MTK_GNSS_AUTODSN_TI_MAX = 120
+}MTK_GNSS_AUTODSN_TEST_ITEM;
+#endif
+
+typedef struct
+{
+  MTK_GNSS_AUTODSN_MODE test_mode;
+  UINT8     test_item;
+  UINT8     item_state;
+  UINT8     test_count;
+  UINT8     sv_count;
+  UINT8     SVid_GPS;
+  UINT8     SVid_GLO1;    // SVid_GLO1    :  201 ~214 to represent GLONASS Frequency ID
+  UINT8     SVid_GLO2;    // SVid_GLO2    :  for example, GLONASS FreqID = -7 ==> SVid_GLO1 = -7 +208 = 201;
+  UINT8     SVid_GLO3;    // SVid_GLO3    :  for example, GLONASS FreqID = 6 ==> SVid_GLO1 = 6 +208 = 214;
+  UINT8     SVid_BD;
+} MTK_GNSS_PARAM_AUTODSN_MODE;
+
+typedef struct{
+UINT16 sv_id;
+float snr;
+INT8 ele;
+UINT16 azm;
+}MTK_GNSS_BASIC_INFO;
+#endif
 
 /* MTK_PARAM_CMD_RESTART : trigger restart of GPS main thread and dsp code */
 typedef struct
@@ -958,12 +990,6 @@ typedef struct
     MTK_GPS_DBG_LEVEL DbgLevel;
 }MTK_PARAM_DEBUG_CONFIG;
 
-
-
-//mtk_gps_debug_config(mtk_gps_dbg_type DbgType, mtk_gps_dbg_level DbgLevel)
-
-
-/* MTK_PARAM_SYSTEM_CONFIG : configuration of system parameters */
 typedef struct
 {
    MTK_GPS_NLP_T  NLP;         // indicate location type: 0: NLP, 1: fixed location
@@ -979,22 +1005,22 @@ typedef struct
 {
   MTK_GPS_USER_SYSTEM_CONFIG system_config_type;   /* system config type */
   UINT32 system_config_value;              /* set/get system config  value*/
-  MTK_AIDING_PARAM_EPHEMERIS param_eph; 
+  MTK_AIDING_PARAM_EPHEMERIS param_eph;
   MTK_AIDING_PARAM_ALMANAC  param_almanac;
   MTK_AIDING_PARAM_POSITION param_position;
   MTK_AIDING_PARAM_TIME     param_time;
   MTK_PARAM_TIME_UPDATE_NOTIFY param_time_update_notify;
   MTK_PARAM_DEBUG_CONFIG param_debug_config;
-    // 
+    //
   MTK_PARAM_CHN_TEST       param_chn_test;
   MTK_PARAM_JAMMER_TEST  param_jam_test;
   MTK_PARAM_PHASE_TEST   param_pha_test;
   MTK_PARAM_PER_TEST     param_per_test;
-  MTK_GPS_TCXO_MODE      param_tcxo_mode; 
+  MTK_GPS_TCXO_MODE      param_tcxo_mode;
   //
   INT32 i4RtcDiff;
   UINT8 TSX_XVT;
-  
+
 } MTK_GPS_PARAM_SYSTEM_CONFIG;
 
 /* MTK_PARAM_SYSTEM_STATUS : status of system parameters */
@@ -1067,27 +1093,27 @@ typedef struct
   UINT8      u1SatID;              /* 1~32 */
 } MTK_GPS_PARAM_EPO_DATA_CFG;
 
-typedef struct 
+typedef struct
 {
   UINT16      u2YEAR ;             /* > 2000 */
   UINT8       u1MONTH;             /* 1~12 */
   UINT8       u1DAY;               /* 1~31*/
   UINT8       u1HOUR;              /* 0~23*/
-  UINT8       u1MIN;               /* 0~59*/ 
-  UINT8       u1SEC;               /* 0~59*/ 
+  UINT8       u1MIN;               /* 0~59*/
+  UINT8       u1SEC;               /* 0~59*/
 } MTK_GPS_PARAM_EPO_TIME_CFG;
 
-typedef struct 
+typedef struct
 {
   double      dfLAT;              /* > -90 and <90 (degree)*/
   double      dfLON;              /* > -180 and <180 (degree)*/
-  double      dfALT;              /* (m) */ 
+  double      dfALT;              /* (m) */
   UINT16      u2YEAR;               /* > 2000 */
   UINT8       u1MONTH;             /* 1~12 */
   UINT8       u1DAY;               /* 1~31*/
   UINT8       u1HOUR;              /* 0~23*/
-  UINT8       u1MIN;               /* 0~59*/ 
-  UINT8       u1SEC;               /* 0~59*/ 
+  UINT8       u1MIN;               /* 0~59*/
+  UINT8       u1SEC;               /* 0~59*/
 } MTK_GPS_PARAM_EPO_POS_CFG;
 
 typedef struct
@@ -1104,14 +1130,14 @@ typedef struct
 typedef struct
 {
   UINT32     u4EpoStage;              /* The invalid/valid Epo Stage in bit map format(0/1)*/
-} MTK_GPS_PARAM_EPO_STAGE_CFG; 
+} MTK_GPS_PARAM_EPO_STAGE_CFG;
 
 typedef enum
 {
   MTK_GPS_FS_RESULT_INIT = 0,           /* FS request initial value  */
   MTK_GPS_FS_RESULT_ERR,                /* FS request error and clear naram's data  */
   MTK_GPS_FS_RESULT_ERR_NOT_CLR,        /* FS request error but don't clear nvram's data */
-  MTK_GPS_FS_RESULT_OK                  /* FS request success */  
+  MTK_GPS_FS_RESULT_OK                  /* FS request success */
 } MTK_GPS_FS_RESULT;
 
 typedef enum
@@ -1123,7 +1149,7 @@ typedef enum
 /* MTK_PARAM_FRAME_SYNC_RESP : receive a result of a frame sync meas request */
 typedef struct
 {
-  MTK_GPS_FS_RESULT eResult;            /* frame sync measurement request result */  
+  MTK_GPS_FS_RESULT eResult;            /* frame sync measurement request result */
   double            dfFrameTime;        /* frame time of the issued frame pulse */
 } MTK_GPS_PARAM_FRAME_SYNC_RESP;
 
@@ -1203,27 +1229,27 @@ typedef struct
 } MTK_GPS_PMTK_DATA_T;
 
 
-typedef struct 
+typedef struct
 {
   UINT16 type;
-  UINT16 mcc; 
-  UINT16 mnc;  
-  UINT16 lac; 
+  UINT16 mcc;
+  UINT16 mnc;
+  UINT16 lac;
   UINT16 cid;
 } MTK_GPS_REF_LOCATION_CELLID;
 
 typedef struct
-{  
+{
   UINT8 mac[6];
 } MTK_GPS_REF_LOCATION_MAC;
 
 /** Represents ref locations */
-typedef struct 
+typedef struct
 {
   UINT16 type; // 0 : Cell ID; 1: MAC
-  union 
+  union
   {
-     MTK_GPS_REF_LOCATION_CELLID   cellID; 
+     MTK_GPS_REF_LOCATION_CELLID   cellID;
      MTK_GPS_REF_LOCATION_MAC      mac;
   }u;
 } MTK_GPS_REF_LOCATION;
@@ -1246,7 +1272,7 @@ typedef enum
 } MTK_GPS_PPS_MODE;
 
 // ******************   Important Notice *************************//
-// In oder to make sure the GNSS configuration works correctly, 
+// In oder to make sure the GNSS configuration works correctly,
 // Please delete "mtk_gps.dat" after change the MTK_GNSS_CONFIGURATION setting.
 typedef enum
 {
@@ -1264,8 +1290,8 @@ typedef enum
 //   2. don't output PMTK010 to AGPSD
 typedef enum
 {
-    MTK_GPS_NORMAL_MODE = 0, // used for legacy AGPS 
-    MTK_GPS_AOSP_MODE = 1,   // used in AOSP AGPS 
+    MTK_GPS_NORMAL_MODE = 0, // used for legacy AGPS
+    MTK_GPS_AOSP_MODE = 1,   // used in AOSP AGPS
 }MTK_GPS_VERSION_MODE;
 
 /* factory default configuration for mtk_gps_init() */
@@ -1281,9 +1307,9 @@ typedef struct
   UINT8     u1ClockType;    // FLASH_SIG_USE_16368_TCXO         0     // 16.368M integer, the most stable
                             // FLASH_SIG_USE_16369M_TCXO    1    // 16.369M integer, generated freq has bias
                             // FLASH_SIG_USE_26M_FRAC_TCXO  2    // not used
-                            // FLASH_SIG_USE_26M_INT_TCXO   3    // 26M integer, generated freq has bias, 
+                            // FLASH_SIG_USE_26M_INT_TCXO   3    // 26M integer, generated freq has bias,
                             // FLASH_SIG_USE_WIDERANGE_XTAL 0xFE // wide range crystal.
-                            // FLASH_SIG_USE_WIDERANGE      0xFF // wide range, more power consumption, no freq bias 
+                            // FLASH_SIG_USE_WIDERANGE      0xFF // wide range, more power consumption, no freq bias
   UINT16    hw_Clock_Drift;    /* TCXO clock drift in ppb (500=0.5ppm; 2500=2.5ppm) */
   UINT32    hw_Clock_Freq;     /* TCXO frequency in Hz */
   UINT32    if_link_spd;    /* interface link speed (bps of UART) */
@@ -1293,20 +1319,24 @@ typedef struct
 
   UINT32    reservedx;
   void*     reservedy;
-  MTK_GNSS_CONFIGURATION  GNSSOPMode;      // In oder to make sure the GNSS configuration works correctly, 
+  MTK_GNSS_CONFIGURATION  GNSSOPMode;      // In oder to make sure the GNSS configuration works correctly,
                                            // Please delete "mtk_gps.dat" after change the MTK_GNSS_CONFIGURATION setting.
   UINT32 C0;
   UINT32 C1;
   UINT32 initU;
   UINT32 lastU;
   MTK_GPS_VERSION_MODE mtk_gps_version_mode; //AOSP or not
+  UINT8  first_fix_pos_acc;                  // First Fix Position Accuracy
+                                             //0: Fast TTFF; Low Accuracy of First Fix
+                                             //1: Fair TTFF;  Fair Accuracy of First Fix
+                                             //2: Slow TTFF;High Accuracy of First Fix
 } MTK_GPS_INIT_CFG;
 
 
 typedef struct
 {
   UINT32       nmea_link_spd; //NMEA Baydrate
-  UINT8        DebugType;       
+  UINT8        DebugType;
                   // 1: Enable Agent debug
                    // 0: Disable Agent debug
   char         nv_file_name[30]; // NV ram file name
@@ -1317,12 +1347,13 @@ typedef struct
   UINT8        bee_path_name[30];  // HS patch name
   UINT8        epo_file_name[30]; // epo working file
   UINT8        epo_update_file_name[30]; // epo updated file
-  INT32        gps_test_mode; // GPS TEST MODE, 1: Enable TSET MODE, 0 : Normal MODE 
+  INT32        gps_test_mode; // GPS TEST MODE, 1: Enable TSET MODE, 0 : Normal MODE
   UINT8        u1AgpsMachine; // 0: for field test or Spirent ULTS (Default value in MNL), 1: R&S CRTU
   int          dsp_fd;
   UINT8        reserved;
   UINT32       log_file_max_size; //The max size limitation of one debug log file, 1MB(1024*1024)~48MB(48*1024*1024), default is 20MB
   UINT32       log_folder_max_size; //The max size limitation of the debug log folder, log_file_max_size*12~512MB(512*1024*1024), default is 240MB
+  UINT32    socket_port;//The socket port number. 0xFFFFF: close socket
 } MTK_GPS_DRIVER_CFG;
 
 /** GPS measurement support **/
@@ -1342,7 +1373,7 @@ typedef struct
    double AcDRInMeters;                    // Ac:Accumulated, DR:Delta Range
    double AcDRUnInMeters;                // Ac:Accumulated, DR:Delta Range, Un:Uncertainty
    double PRInMeters;                        // PR: Pseuderange
-   double PRUnInMeters; 
+   double PRUnInMeters;
    double CPInChips;                          // CP: Code Phase
    double CPUnInChips;                      // CP: Code Phase
    float CFInhZ;                                  // CP: Carrier Frequency
@@ -1369,7 +1400,7 @@ typedef struct
    UINT16 flag;
    INT16 leapsecond;
    UINT8 type;
-   INT64 TimeInNs; 
+   INT64 TimeInNs;
    double TimeUncertaintyInNs;
    INT64 FullBiasInNs;
    double BiasInNs;
@@ -1382,14 +1413,15 @@ typedef struct
 {
    UINT32 size;
    INT8 type;
-   UINT8 prn;  
+   UINT8 prn;
    INT16 messageID;
    INT16 submessageID;
    UINT32 length;
-   UINT8 data[40]; // 10 word         
+   UINT8 data[40]; // 10 word
 } MTK_GPS_NAVIGATION_EVENT;
+
 // MTK_GPS_INIT_CFG.opmode defines
-#define	MTK_INITCFG_OPMODE_2D_FIRSTFIX  (1 << 2)
+#define MTK_INITCFG_OPMODE_2D_FIRSTFIX  (1 << 2)
 
 // Task synchronization related type
 typedef enum
@@ -1400,11 +1432,11 @@ typedef enum
   MTK_MUTEX_DEBUG,
   MTK_MUTEX_MSG_Q,
   MTK_MUTEX_AGPS_MSG_CNT,
-  MTK_MUTEX_AGPS_MSG_Q,  
+  MTK_MUTEX_AGPS_MSG_Q,
   //#ifdef SUPPORT_MULTI_INTERFACE
   //#endif
-  //MTK_MUTEX_STAGE1,  
-  MTK_MUTEX_AARDVARK_I2C_DATA,  
+  //MTK_MUTEX_STAGE1,
+  MTK_MUTEX_AARDVARK_I2C_DATA,
   MTK_MUTEX_AARDVARK_I2C,
   MTK_MUTEX_AARDVARK_SPI,
   MTK_MUTEX_FILE,
@@ -1486,11 +1518,11 @@ typedef enum
     MT6572_E1 = 0 + (0x40),
     MT6572_EN,
     MT6582_E1 = 0 + (0x50),
-    MT6582_EN ,       
+    MT6582_EN ,
     MT6592_E1 = 0 + (0x60),
-    MT6592_EN , 
+    MT6592_EN ,
     MT6571_E1 = 0 + (0x70),
-    MT6571_EN,            
+    MT6571_EN,
     MT6630_E1 = 0 + (0x80),
     MT6630_E2,
     MT6630_EN,
@@ -1503,7 +1535,11 @@ typedef enum
     MT6753_E1 = 0 + (0xC0),
     MT6753_EN,
     MT6580_E1 = 0 + (0xD0),
-    MT6580_EN    
+    MT6580_EN,
+    MT6755_E1 = 0 + (0xE0),
+    MT6755_EN,
+    MT6797_E1 = 0 + (0xF0),
+    MT6797_EN
 }eMTK_GPS_CHIP_TYPE;
 
 //#define MTK_GPS_THIP_KEY          (0xFFFF6620) //
@@ -1512,15 +1548,18 @@ typedef enum
 #define MTK_GPS_CHIP_KEY_MT3332   (0xFFFF3332)
 #define MTK_GPS_CHIP_KEY_MT3336   (0xFFFF3336)
 #define MTK_GPS_CHIP_KEY_MT6572   (0xFFFF6572)
-#define MTK_GPS_CHIP_KEY_MT6582   (0xFFFF6582)
+#define MTK_GPS_CHIP_KEY_MT6582   (0xFFFF6582)  // GPS only
 #define MTK_GPS_CHIP_KEY_MT6592   (0xFFFF6592)
 #define MTK_GPS_CHIP_KEY_MT6571   (0xFFFF6571)
-#define MTK_GPS_CHIP_KEY_MT6630   (0xFFFF6630)
+#define MTK_GPS_CHIP_KEY_MT6630   (0xFFFF6630)  // GGB
 #define MTK_GPS_CHIP_KEY_MT6752   (0xFFFF6752)
-#define MTK_GPS_CHIP_KEY_MT6735   (0xFFFF6735) // Denali 1
-#define MTK_GPS_CHIP_KEY_MT6735M  (0xFFFE6735) // Denali 2 (GPS only)
-#define MTK_GPS_CHIP_KEY_MT6753   (0xFFFF6753) // Denali 3 
+#define MTK_GPS_CHIP_KEY_MT6735   (0xFFFF6735)  // GG
+#define MTK_GPS_CHIP_KEY_MT6735M   (0xFFFE6735) // Denali 2 (GPS only)
+#define MTK_GPS_CHIP_KEY_MT6753   (0xFFFF6753)
 #define MTK_GPS_CHIP_KEY_MT6580   (0xFFFF6580)  // GPS only
+#define MTK_GPS_CHIP_KEY_MT6755   (0xFFFF6755)
+#define MTK_GPS_CHIP_KEY_MT6797   (0xFFFF6797)
+
 
 /* Return value for most APIs */
 #define MTK_GPS_SUCCESS                 (0)
@@ -1543,10 +1582,10 @@ typedef enum
 #define GPS_DELETE_RTI              0x0400
 #define GPS_DELETE_CLK              0x0800
 #define GPS_DELETE_CELLDB_INFO      0x8000
-#define GPS_DELETE_ALL              0xFFFF  
+#define GPS_DELETE_ALL              0xFFFF
 
 
-//start for AGPS_SUPPORT_GNSS 
+//start for AGPS_SUPPORT_GNSS
 #define GNSS_MAX_REF_TIME_SAT_ELEMENT                    16  /* 64 for LPP, 16 for RRC, 12 for RRLP. Use 16 to reduce structure size */
 #define GNSS_MAX_REF_CELL_FTA_ELEMENT                    16  /* 16 for LPP, 1 for RRC/RRLP */
 
@@ -1610,7 +1649,7 @@ typedef enum
 #define SBAS_ID_BITMAP_NONE   0x00
 #define SBAS_ID_BITMAP_WASS   0x80  /* waas  (0) */
 #define SBAS_ID_BITMAP_EGNOS  0x40  /* egnos (1) */
-#define SBAS_ID_BITMAP_MSAS   0x20  /* msas	 (2) */
+#define SBAS_ID_BITMAP_MSAS   0x20  /* msas  (2) */
 #define SBAS_ID_BITMAP_GAGAN  0x10  /* gagan (3) */
 
 /* GNSS Signal IDs Bitmap, use one-byte representation
@@ -1793,7 +1832,7 @@ typedef enum
     GNSS_COMMON_ASSIST_LOC   = 1,
     GNSS_COMMON_ASSIST_ION   = 2,
     GNSS_COMMON_ASSIST_EOP   = 3,
-    
+
 } MTK_GNSS_COMMON_ASSIST_ENUM;
 
 
@@ -1871,7 +1910,7 @@ typedef enum
 //end for AGPS_SUPPORT_GNSS
 #if ( defined(__ARMCC_VERSION) && (__ARMCC_VERSION < 200000 ))
 // for ADS1.x
-#elif ( defined(__ARMCC_VERSION) && (__ARMCC_VERSION < 400000 ) ) 
+#elif ( defined(__ARMCC_VERSION) && (__ARMCC_VERSION < 400000 ) )
 // for RVCT2.x or RVCT3.x
 #else
 #pragma pack()

@@ -36,8 +36,8 @@
 #define _MTK_GPS_C_
 #include <sys/ioctl.h>
 #include <sys/time.h>
-//#include <linux/mtgpio.h>
-//for EPO file
+// #include <linux/mtgpio.h>
+// for EPO file
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <stdio.h>
@@ -45,7 +45,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <cutils/properties.h>
-//for read NVRAM
+// for read NVRAM
 #include "libnvram.h"
 #include "CFG_GPS_File.h"
 #include "CFG_GPS_Default.h"
@@ -76,12 +76,11 @@ extern FILE *dbglog_fp;
 extern MTK_GPS_BOOL enable_dbg_log;
 
 extern int deltat_read_clear(long *diff_sec);   // newT - oldT
-//for read NVRAM
+// for read NVRAM
 extern MNL_CONFIG_T mnl_config;
 extern ap_nvram_gps_config_struct stGPSReadback;
 extern int gps_nvram_valid;
 char nvram_init_val[PROPERTY_VALUE_MAX];
-
 
 /*=============================================================================
 *
@@ -114,89 +113,76 @@ char nvram_init_val[PROPERTY_VALUE_MAX];
  *****************************************************************************/
 int mtk_gps_sys_init()
 {
-    //int gps_nvram_fd = 0;
+    // int gps_nvram_fd = 0;
     F_ID gps_nvram_fd;
     int file_lid = AP_CFG_CUSTOM_FILE_GPS_LID;
     int rec_size;
     int rec_num;
     int i;
     int read_nvram_ready_retry = 0;
-    /*create message queue*/
+    /* create message queue */
 #if defined(LIB_MQUEUE)
     mnl_agps_mq_attr.mq_maxmsg = 72;
     mnl_agps_mq_attr.mq_msgsize = sizeof(MTK_GPS_AGPS_AGENT_MSG);
     mnl_agps_mq_attr.mq_flags   = 0;
     mnl_agps_mq_fd = mq_open (MNL_AGPS_MQ_NAME, O_CREAT|O_RDWR|O_EXCL, PMODE, &mnl_agps_mq_attr);
 
-    if (mnl_agps_mq_fd == -1)
-    {
-        MNL_MSG("Fail to create mnl_agps_msg_queue, errno=%s\n",strerror(errno));
-        if (errno == EEXIST) 
-        {
+    if (mnl_agps_mq_fd == -1) {
+        MNL_MSG("Fail to create mnl_agps_msg_queue, errno=%s\n", strerror(errno));
+        if (errno == EEXIST) {
             MNL_MSG("mnl_agps_msg_queue already exists, unlink it now ...\n");
             mq_unlink(MNL_AGPS_MQ_NAME);
         }
         return MTK_GPS_ERROR;
-    } 
+    }
 #else
 #endif
 #ifdef MTK_GPS_NVRAM
     MNL_MSG("Start to read nvram");
-    while(read_nvram_ready_retry < MAX_RETRY_COUNT)
-    {  
+    while (read_nvram_ready_retry < MAX_RETRY_COUNT) {
         read_nvram_ready_retry++;
         property_get("service.nvram_init",nvram_init_val,NULL);
-        if(strcmp(nvram_init_val,"Ready") == 0 || strcmp(nvram_init_val,"Pre_Ready") == 0)
-        {
-        	MNL_MSG("nvram_init_val Ready");
+        if (strcmp(nvram_init_val, "Ready") == 0 || strcmp(nvram_init_val, "Pre_Ready") == 0) {
+            MNL_MSG("nvram_init_val Ready");
             break;
-        } 
-        else 
-        { 
-        	MNL_MSG("nvram_init_val not Ready,sleep 500ms");
+        } else {
+            MNL_MSG("nvram_init_val not Ready,sleep 500ms");
             usleep(500*1000);
         }
-    }    
+    }
     MNL_MSG("Get nvram restore ready retry cc=%d\n", read_nvram_ready_retry);
-    if(read_nvram_ready_retry >= MAX_RETRY_COUNT)
-    {
+    if (read_nvram_ready_retry >= MAX_RETRY_COUNT) {
         MNL_MSG("Get nvram restore ready faild, return\n");
-        return MTK_GPS_ERROR;         
+        return MTK_GPS_ERROR;
     }
 
-            memset(&stGPSReadback, 0, sizeof(stGPSReadback));
-            //gps_nvram_fd.iFileDesc = NVM_GetFileDesc(file_lid, &rec_size, &rec_num, ISREAD);
-            
-            gps_nvram_fd = NVM_GetFileDesc(file_lid, &rec_size, &rec_num, ISREAD);
-            if(gps_nvram_fd.iFileDesc != 0)
-            {
-                read(gps_nvram_fd.iFileDesc, &stGPSReadback , rec_size*rec_num);
-                NVM_CloseFileDesc(gps_nvram_fd);
-    
-                if(strlen(stGPSReadback.dsp_dev) != 0)
-                {
-                    gps_nvram_valid = 1;
-                    //strncpy(mnl_config.dev_dsp, stGPSReadback.dsp_dev, sizeof(mnl_config.dev_dsp));
-    
-                    MNL_MSG("GPS NVRam (%d * %d) : \n", rec_size, rec_num);
-                    MNL_MSG("dsp_dev(/dev/stpgps) : %s\n", stGPSReadback.dsp_dev);
-                    //MNL_MSG("gps_if_type : %d\n", stGPSReadback.gps_if_type);
-                    MNL_MSG("gps_tcxo_hz : %d\n", stGPSReadback.gps_tcxo_hz);
-                    MNL_MSG("gps_tcxo_ppb : %d\n", stGPSReadback.gps_tcxo_ppb);
-                    MNL_MSG("gps_tcxo_type : %d\n", stGPSReadback.gps_tcxo_type);
-                    MNL_MSG("gps_lna_mode : %d\n", stGPSReadback.gps_lna_mode);
-                    //MNL_MSG("gps_sbas_mode : %d\n", stGPSReadback.gps_sbas_mode);
-                }
-                else
-                {
-                    MNL_MSG("GPS NVRam mnl_config.dev_dsp == NULL \n");
-                }
-            }
-            else
-            {
-                MNL_MSG("GPS NVRam gps_nvram_fd == NULL \n");
-            }
-            #endif
+    memset(&stGPSReadback, 0, sizeof(stGPSReadback));
+
+    gps_nvram_fd = NVM_GetFileDesc(file_lid, &rec_size, &rec_num, ISREAD);
+    if (gps_nvram_fd.iFileDesc >= 0) {
+        read(gps_nvram_fd.iFileDesc, &stGPSReadback , rec_size*rec_num);
+        NVM_CloseFileDesc(gps_nvram_fd);
+
+        if (strlen(stGPSReadback.dsp_dev) != 0) {
+            gps_nvram_valid = 1;
+            // strncpy(mnl_config.dev_dsp, stGPSReadback.dsp_dev, sizeof(mnl_config.dev_dsp));
+
+            MNL_MSG("GPS NVRam (%d * %d) : \n", rec_size, rec_num);
+            MNL_MSG("dsp_dev(/dev/stpgps) : %s\n", stGPSReadback.dsp_dev);
+            // MNL_MSG("gps_if_type : %d\n", stGPSReadback.gps_if_type);
+            MNL_MSG("gps_tcxo_hz : %d\n", stGPSReadback.gps_tcxo_hz);
+            MNL_MSG("gps_tcxo_ppb : %d\n", stGPSReadback.gps_tcxo_ppb);
+            MNL_MSG("gps_tcxo_type : %d\n", stGPSReadback.gps_tcxo_type);
+            MNL_MSG("gps_lna_mode : %d\n", stGPSReadback.gps_lna_mode);
+            // MNL_MSG("gps_sbas_mode : %d\n", stGPSReadback.gps_sbas_mode);
+        } else {
+            MNL_MSG("GPS NVRam mnl_config.dev_dsp == NULL \n");
+        }
+    }
+    else {
+           MNL_MSG("GPS NVRam gps_nvram_fd == NULL \n");
+    }
+    #endif
     return MTK_GPS_SUCCESS;
 }
 /*****************************************************************************
@@ -209,14 +195,13 @@ int mtk_gps_sys_init()
  * RETURNS
  *
  *****************************************************************************/
-int mtk_gps_sys_uninit()
-{
+int mtk_gps_sys_uninit() {
 #if defined(LIB_MQUEUE)
     mq_close(mnl_mq_fd);         /* Close message queue in parent */
     mq_unlink(MNL_MQ_NAME);      /* Unlink message queue */
     mq_close(mnl_agps_mq_fd);    /* Close message queue in parent */
-    mq_unlink(MNL_AGPS_MQ_NAME); /* Unlink message queue */
-#else    
+    mq_unlink(MNL_AGPS_MQ_NAME);  /* Unlink message queue */
+#else
 #endif
 
     return MTK_GPS_SUCCESS;
@@ -233,79 +218,14 @@ int mtk_gps_sys_uninit()
  * RETURNS
  *  success(MTK_GPS_SUCCESS)
  *****************************************************************************/
-INT32 
-mtk_gps_sys_nmea_output_to_app(const char* buffer, UINT32 length)
-{
-    if (enable_dbg_log == MTK_GPS_TRUE) //Need to use prop to control debug on/of
-    {
-        MNL_MSG("%s", buffer );
+INT32
+mtk_gps_sys_nmea_output_to_app(const char* buffer, UINT32 length) {
+    if (enable_dbg_log == MTK_GPS_TRUE) {
+        // Need to use prop to control debug on/of
+        MNL_MSG("%s", buffer);
     }
     return MTK_GPS_SUCCESS;
 }
-
-#if  0 // No-support
-/*****************************************************************************
- * FUNCTION
- *  mtk_gps_sys_start_result_handler
- * DESCRIPTION
- *  Handler routine for the result of restart command
- *  (The function body needs to be implemented)
- * PARAMETERS
- *  result         [IN]  the result of restart
- * RETURNS
- *  success(MTK_GPS_SUCCESS)
- *****************************************************************************/
-INT32
-mtk_gps_sys_start_result_handler(MTK_GPS_START_RESULT result)
-{
-    if ((INT32) MTK_GPS_ERROR == (INT32)result)
-    {
-    // To do, handle restart result if needed by the host.
-    }
-    return MTK_GPS_SUCCESS;
-}
-
-/*****************************************************************************
- * FUNCTION
- *  mtk_gps_sys_spi_poll
- * DESCRIPTION
- *  Polling data input routine for SPI during dsp boot up stage.
- *  If use UART interface, this function can do nothing at all.
- *  (The function body needs to be implemented)
- * PARAMETERS
- *  void
- * RETURNS
- *  success(MTK_GPS_SUCCESS)
- *****************************************************************************/
-INT32
-mtk_gps_sys_spi_poll(void)
-{
-    // spi interface will need this function to read the SPI input data
-    return MTK_GPS_SUCCESS;
-}
-
-/*****************************************************************************
- * FUNCTION
- *  mtk_gps_sys_set_spi_mode
- * DESCRIPTION
- *  Set SPI interrupt/polling and support burst or not.
- *  If use UART interface, this function can do nothing at all.
- *  (The function body needs to be implemented)
- * PARAMETERS
- *  enable_int         [IN]  1 for enter interrupt mode , 0 for entering polling mode
- *  enable_burst       [IN]  1 for enable burst transfer, 0 for disable burst transfer
- * RETURNS
- *  success(MTK_GPS_SUCCESS)
- *****************************************************************************/
-INT32
-mtk_gps_sys_set_spi_mode(UINT8 enable_int, UINT8 enable_burst)
-{
-    // spi interface will need this function to handle mode and transfer in driver if needed.
-    return MTK_GPS_SUCCESS;
-}
-
-#endif
-
 
 /*****************************************************************************
  * FUNCTION
@@ -316,9 +236,8 @@ mtk_gps_sys_set_spi_mode(UINT8 enable_int, UINT8 enable_burst)
  *  success(MTK_GPS_SUCCESS)
  *****************************************************************************/
 INT32
-mtk_gps_sys_epo_open (void)
-{
-    return MTK_GPS_ERROR; //0
+mtk_gps_sys_epo_open(void) {
+    return MTK_GPS_ERROR;  // 0
 }
 
 /*****************************************************************************
@@ -330,8 +249,7 @@ mtk_gps_sys_epo_open (void)
  *  void
  *****************************************************************************/
 void
-mtk_gps_sys_epo_close (void)
-{
+mtk_gps_sys_epo_close(void) {
     return;
 }
 
@@ -351,9 +269,8 @@ mtk_gps_sys_epo_close (void)
  *****************************************************************************/
 INT32
 mtk_gps_sys_epo_read (void* buffer, UINT32 offset, UINT32 length,
-                      UINT32* p_nRead)
-{
-    return MTK_GPS_ERROR; //0
+                      UINT32* p_nRead) {
+    return MTK_GPS_ERROR;  // 0
 }
 
 /*****************************************************************************
@@ -367,35 +284,31 @@ mtk_gps_sys_epo_read (void* buffer, UINT32 offset, UINT32 length,
  *  void
  *****************************************************************************/
 void
-mtk_gps_sys_pmtk_cmd_cb(UINT16 UINT16CmdNum)
-{
+mtk_gps_sys_pmtk_cmd_cb(UINT16 UINT16CmdNum) {
     ;
 }
 unsigned char
-calc_nmea_checksum1 (const char* sentence)
-{
-	unsigned char checksum = 0;
+calc_nmea_checksum1(const char* sentence) {
+    unsigned char checksum = 0;
 
-	while (*sentence)
-	{
-		checksum ^= (unsigned char)*sentence++;
-	}
+    while (*sentence) {
+        checksum ^= (unsigned char)*sentence++;
+    }
 
-	return  checksum;
+    return  checksum;
 }
-    
-INT32 mtk_gps_sys_frame_sync_meas_req(MTK_GPS_FS_WORK_MODE mode)
-{
+
+INT32 mtk_gps_sys_frame_sync_meas_req(MTK_GPS_FS_WORK_MODE mode) {
     char szBuf_cipher[64];
     char sztmp[64];
     char outbuf[64];
-    
+
     memset(outbuf,0,sizeof(outbuf));
     memset(sztmp,0,sizeof(sztmp));
     memset(szBuf_cipher,0,sizeof(szBuf_cipher));
     sprintf(sztmp,"PMTK%d,1,%d",PMTK_FS_REQ_MEAS,mode);
     sprintf(outbuf,"$%s*%02X\r\n",sztmp,calc_nmea_checksum1(sztmp));
-    
+
    // #ifdef ENABLE_SUPL_PMTK_ENCRYPTION
     SUPL_encrypt((unsigned char *)outbuf, (unsigned char *)szBuf_cipher, strlen(outbuf));
    // #else
@@ -403,47 +316,21 @@ INT32 mtk_gps_sys_frame_sync_meas_req(MTK_GPS_FS_WORK_MODE mode)
    // #endif
     mtk_gps_sys_agps_disaptcher_callback(MTK_AGPS_CB_SUPL_PMTK, strlen(szBuf_cipher), szBuf_cipher);
 
-
-    
     return MTK_GPS_SUCCESS;
 }
 
-
-INT32 mtk_gps_sys_frame_sync_enable_sleep_mode(unsigned char mode)
-{
+INT32 mtk_gps_sys_frame_sync_enable_sleep_mode(unsigned char mode) {
     char szBuf_cipher[64];
-    char sztmp[64]; 
+    char sztmp[64];
     char outbuf[64];
-    
+
     memset(outbuf,0,sizeof(outbuf));
     memset(sztmp,0,sizeof(sztmp));
     memset(szBuf_cipher,0,sizeof(szBuf_cipher));
     sprintf(sztmp,"PMTK%d,%d",PMTK_FS_SLEEPMODE,mode);
     sprintf(outbuf,"$%s*%02X\r\n",sztmp,calc_nmea_checksum1(sztmp));
- 
-  
-   //#ifdef ENABLE_SUPL_PMTK_ENCRYPTION
-    SUPL_encrypt((unsigned char *)outbuf, (unsigned char *)szBuf_cipher, strlen(outbuf));
-   // #else
-   // memcpy(szBuf_cipher, outbuf, strlen(outbuf));
-   // #endif
-    mtk_gps_sys_agps_disaptcher_callback(MTK_AGPS_CB_SUPL_PMTK, strlen(szBuf_cipher), szBuf_cipher);
 
-   
-    return MTK_GPS_SUCCESS;
-}
-INT32 mtk_gps_sys_frame_sync_meas_req_by_network(void)
-{
-    char szBuf_cipher[64];
-    char sztmp[64]; 
-    char outbuf[64];
-    
-    memset(outbuf,0,sizeof(outbuf));
-    memset(sztmp,0,sizeof(sztmp));
-    memset(szBuf_cipher,0,sizeof(szBuf_cipher));
-    sprintf(sztmp,"PMTK%d,0,0",PMTK_FS_REQ_MEAS);
-    sprintf(outbuf,"$%s*%02X\r\n",sztmp,calc_nmea_checksum1(sztmp));
-    
+
    // #ifdef ENABLE_SUPL_PMTK_ENCRYPTION
     SUPL_encrypt((unsigned char *)outbuf, (unsigned char *)szBuf_cipher, strlen(outbuf));
    // #else
@@ -451,7 +338,25 @@ INT32 mtk_gps_sys_frame_sync_meas_req_by_network(void)
    // #endif
     mtk_gps_sys_agps_disaptcher_callback(MTK_AGPS_CB_SUPL_PMTK, strlen(szBuf_cipher), szBuf_cipher);
 
+    return MTK_GPS_SUCCESS;
+}
+INT32 mtk_gps_sys_frame_sync_meas_req_by_network(void) {
+    char szBuf_cipher[64];
+    char sztmp[64];
+    char outbuf[64];
 
-    
+    memset(outbuf,0,sizeof(outbuf));
+    memset(sztmp,0,sizeof(sztmp));
+    memset(szBuf_cipher,0,sizeof(szBuf_cipher));
+    sprintf(sztmp,"PMTK%d,0,0",PMTK_FS_REQ_MEAS);
+    sprintf(outbuf,"$%s*%02X\r\n",sztmp,calc_nmea_checksum1(sztmp));
+
+   // #ifdef ENABLE_SUPL_PMTK_ENCRYPTION
+    SUPL_encrypt((unsigned char *)outbuf, (unsigned char *)szBuf_cipher, strlen(outbuf));
+   // #else
+   // memcpy(szBuf_cipher, outbuf, strlen(outbuf));
+   // #endif
+    mtk_gps_sys_agps_disaptcher_callback(MTK_AGPS_CB_SUPL_PMTK, strlen(szBuf_cipher), szBuf_cipher);
+
     return MTK_GPS_SUCCESS;
 }

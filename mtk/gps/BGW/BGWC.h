@@ -36,6 +36,10 @@
  #ifndef __BGWC_H__
  #define __BGWC_H__
 
+#ifdef MTK_LOG_ENABLE
+#undef MTK_LOG_ENABLE
+#endif
+#define MTK_LOG_ENABLE 1
 #include <stdlib.h>
 #include <sys/epoll.h>
 #include <sys/socket.h>

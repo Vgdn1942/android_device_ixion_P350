@@ -108,15 +108,15 @@
  * [DUMA00007771] Moving modem side customization to AP
  *
  *
- * Apr 29 2009 mthexing6580_weg_l306
+ * Apr 29 2009 mtvz6580_weg_a_m306
  * [DUMA00116080] revise the customization of nvram
  * revise nvram customization
  *
- * Mar 21 2009 mthexing6580_weg_l306
+ * Mar 21 2009 mtvz6580_weg_a_m306
  * [DUMA00112158] fix the code convention.
  * modify code convention
  *
- * Mar 9 2009 mthexing6580_weg_l306
+ * Mar 9 2009 mtvz6580_weg_a_m306
  * [DUMA00111088] nvram customization
  * nvram customization
  *

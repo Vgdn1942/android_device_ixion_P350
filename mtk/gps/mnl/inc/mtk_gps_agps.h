@@ -1,47 +1,15 @@
-/*****************************************************************************
-*  Copyright Statement:
-*  --------------------
-*  This software is protected by Copyright and the information contained
-*  herein is confidential. The software may not be copied and the information
-*  contained herein may not be used or disclosed except with the written
-*  permission of MediaTek Inc. (C) 2008
+/***********************************************************************
+*   This software/firmware and related documentation ("MediaTek Software")
+*   are protected under relevant copyright laws. The information contained
+*   herein is confidential and proprietary to MediaTek Inc. and/or its licensors.
 *
-*  BY OPENING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
-*  THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
-*  RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON
-*  AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
-*  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
-*  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
-*  NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
-*  SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
-*  SUPPLIED WITH THE MEDIATEK SOFTWARE, AND BUYER AGREES TO LOOK ONLY TO SUCH
-*  THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. MEDIATEK SHALL ALSO
-*  NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE RELEASES MADE TO BUYER'S
-*  SPECIFICATION OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
+*   Without the prior written permission of MediaTek Inc. and/or its licensors,
+*   any reproduction, modification, use or disclosure of MediaTek Software, and
+*   information contained herein, in whole or in part, shall be strictly prohibited.
 *
-*  BUYER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND CUMULATIVE
-*  LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
-*  AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
-*  OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY BUYER TO
-*  MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+*   MediaTek Inc. (C) [2008]. All rights reserved.
 *
-*  THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE
-*  WITH THE LAWS OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF
-*  LAWS PRINCIPLES.  ANY DISPUTES, CONTROVERSIES OR CLAIMS ARISING THEREOF AND
-*  RELATED THERETO SHALL BE SETTLED BY ARBITRATION IN SAN FRANCISCO, CA, UNDER
-*  THE RULES OF THE INTERNATIONAL CHAMBER OF COMMERCE (ICC).
-*
-*****************************************************************************/
-
-/******************************************************************************
-*[File] Mtk_gps_agps.h
-*[Version] v1.0
-*[Revision Date] 2008-05-06
-*[Author] Stanley Huang, Stanley_Huang@mtk.com.tw, 21372
-*[Description]
-*[Copyright]
-*    Copyright (C) 2008 MediaTek Incorporation. All Rights Reserved.
-******************************************************************************/
+*************************************************************************/
 #ifndef MTK_GPS_AGPS_H
 #define MTK_GPS_AGPS_H
 
@@ -53,9 +21,9 @@
 #include "mtk_gps_type.h"
 
 
-#if ( defined(__ARMCC_VERSION) && (__ARMCC_VERSION < 200000 ) ) 
+#if ( defined(__ARMCC_VERSION) && (__ARMCC_VERSION < 200000 ) )
 // for ADS1.x
-#elif ( defined(__ARMCC_VERSION) && (__ARMCC_VERSION < 400000 ) ) 
+#elif ( defined(__ARMCC_VERSION) && (__ARMCC_VERSION < 400000 ) )
 // for RVCT2.x or RVCT3.x
 #else
 #pragma pack(4)
@@ -72,8 +40,8 @@ typedef struct
 typedef struct
 {
 #ifdef AGPS_SUPPORT_QOPMS
-  float u1Delay;  // Response time in unit of sec. 
-                  // change  from interge sec to mini-sec. so the Required response time will be more accurate 
+  float u1Delay;  // Response time in unit of sec.
+                  // change  from interge sec to mini-sec. so the Required response time will be more accurate
                   // for example
                   //old : $PMTK293,16,0,0,51*<Check Sum>
                   //new: $PMTK293,15.296,0,0,51*<Check Sum>
@@ -140,8 +108,8 @@ typedef struct
 
 typedef struct
 {
-   double dUtc_hms;  // UTC: hhmmss.sss 
-   double dUtc_ymd;  //  UTC: yyyymmdd  
+   double dUtc_hms;  // UTC: hhmmss.sss
+   double dUtc_ymd;  //  UTC: yyyymmdd
    UINT8 u1FixType;  // the type of measurements performed by the MS [0: 2D or 1: 3D]
    double dfLat;     // latitude (degree)
    double dfLon;     // longitude (degree)
@@ -221,7 +189,7 @@ typedef struct
   INT8 i1RRC;    // [-4.064 - 4.064], Units 0.032m
 } MTK_GPS_RTCM_SV_CORR_T;
 
-typedef struct 
+typedef struct
 {
   UINT32 u4Tow;     // the baseline time for the corrections are valid [0 - 604799]
   UINT8 u1Status;  // the status of the differential corrections [0 - 7]
@@ -239,7 +207,7 @@ typedef struct
     UINT8 u1Reserved;  // [0 - 3]
 } MTK_GPS_TOW_SV_T;
 
-typedef struct 
+typedef struct
 {
   UINT16 u2WN;      // GPS week number (weeks)
   UINT32 u4Tow;     // GPS time of week  of the TLM message applied [0 - 604799]
@@ -339,9 +307,9 @@ typedef struct
 {
 
     UINT8 u1FixType;
-    UINT8 u1FixQuality;    
+    UINT8 u1FixQuality;
     UINT8 u1SelectType;
-    double dfWRTSeaLevel;    
+    double dfWRTSeaLevel;
     float dfPDOP;
     float dfHDOP;
     float dfVDOP;
@@ -356,8 +324,8 @@ typedef struct
     float u1SVInViewSNR[MTK_GPS_SV_MAX_NUM];
 
 } MTK_GPS_AGPS_DT_LOC_EXTRA_T;
-#if defined(AGPS_SUPPORT_GNSS) 
-//start for AGPS_SUPPORT_GNSS 
+#if defined(AGPS_SUPPORT_GNSS)
+//start for AGPS_SUPPORT_GNSS
 /* for AGPS with GNSS supported GNSS assist bitmap   */
 
 #define BITMAP_GPS     0
@@ -393,7 +361,7 @@ typedef struct
    MTK_GPS_BOOL fgReqLoc;  //commonAssistDataReq: GNSS reference location request flag
    MTK_GPS_BOOL fgReqIon;  //commonAssistDataReq: GNSS reference Inospheris request flag
    MTK_GPS_BOOL fgReqEop;  //commonAssistDataReq: GNSS reference EarthOrentationParameters request flag
-   UINT16       u2BitMap[GNSS_ID_MAX_NUM];  //GenerateAssistDataReq:  u2BitMap                         
+   UINT16       u2BitMap[GNSS_ID_MAX_NUM];  //GenerateAssistDataReq:  u2BitMap
                         //  bit0 0x0001  // Time mode Request
                         //  bit1 0x0002  // Differential Corrections Request
                         //  bit2 0x0004  // Navigation Model(Ephemeris) Request
@@ -411,14 +379,14 @@ typedef struct
    UINT8  u1GnssTimeID;    /* gnss system time ID:eque to GNSS-ID(,0-GPS,1-SBAS, 2-QZSS,3-Galileo,4-GLONASS, 5~16 reserved) */
    INT16 i2DayNo;         /* [0-32767] gnssDayNumber do not report DayNo to server */
    UINT32 u4Todms;        /* [0-3599999] in seconds */
-   UINT16 u2GnssIDsInUse;   //in-use GNSSID bitmap : 
+   UINT16 u2GnssIDsInUse;   //in-use GNSSID bitmap :
                            //bit 0:gps
                            //bit 1:sbas
                            //bit 2:qzss
                            //bit 3:galileo
                            //bit 4:glonass
                            //bit 5~15:reserved
-   
+
    UINT8 u1FixType;  // the type of measurements performed by the MS [0: 2D or 1: 3D]
    double dfLat;         // latitude (degree)
    double dfLon;         // longitude (degree)
@@ -440,27 +408,27 @@ typedef struct
 
 typedef struct
 {
-  
+
    UINT16 u1PRN_num;               //
-   MTK_GNSS_ID_ENUM eGnssID;       //in-use GNSSID  : 
+   MTK_GNSS_ID_ENUM eGnssID;       //in-use GNSSID  :
                            //bit 0:gps
                            //bit 1:sbas
                            //bit 2:qzss
                            //bit 3:galileo
                            //bit 4:glonass
                            //bit 5~15:reserved
-   UINT8 u2SignalID;       //in-use signal ID  : 
+   UINT8 u2SignalID;       //in-use signal ID  :
                            //now for GPS only support GNSS_SGN_ID_VALUE_GPS_L1C_A
                            //now for GLONASS only support GNSS_SGN_ID_VALUE_GLONASS_G1
                            //now for QZSS only support GNSS_SGN_ID_VALUE_QZSS_L1C_A
 
-   UINT8  u1SNR;         //[0..63] SNR 
+   UINT8  u1SNR;         //[0..63] SNR
    INT16  i2Dopp;        // [-32768..32767]
    UINT32 u4CodePh;      //[0..2097151] ms 21-bits with 2^-21 resolution
    UINT8  u1CodePhInt;   //[0~127] ms
-   UINT8  u1Mul_Path_Ind;  //[0~3] refer to RRLP table A.9 
-   
-   UINT8  u1CarryQualInd; //[0~3] 
+   UINT8  u1Mul_Path_Ind;  //[0~3] refer to RRLP table A.9
+
+   UINT8  u1CarryQualInd; //[0~3]
    UINT32 u1Adr;          //[0..33554431] 25-bits with 2^-10 resolution
    UINT8  u1Range_RMS_Man ;         //Pseudorange RMS Error mantissa
    UINT8  u1Range_RMS_Exp;         //Pseudorange RMS Error Exponent
@@ -488,23 +456,23 @@ typedef struct
    UINT32 u4TodUnc ;         /* [0-127] with resolution of 250ns optional */
    UINT8  u1NumValidMeas;
    UINT8  u1NumValidGnss;
-   UINT16 u2GnssIDsInUse;     //in-use GNSSID bitmap 
-   MTK_AGNSS_SIGNALIDS_T  u1SignalIDsInUse;   //in-use GNSSID bitmap : 
+   UINT16 u2GnssIDsInUse;     //in-use GNSSID bitmap
+   MTK_AGNSS_SIGNALIDS_T  u1SignalIDsInUse;   //in-use GNSSID bitmap :
    UINT8  u1CodePhAmb;     // [0~127 ]the codephase ambiguity in interge ms default set to 0¡£ optional
    MTK_GPS_AGNSS_PRM_SV_DATA_T SV_Data[AGNSS_RRLP_MAX_PRM];  // Satellite Pseudorange Measurement Data
-   
+
 } MTK_AGNSS_DT_MEAS_T;     // RRLP Pseudorange Data MTK_AGNSS_DT_REQ_ASSIST_T
 //MTK_GPS_AGPS_DT_GPS_MEAS_T
 
- 
+
 /*=== GNSS Common Assistance Data ===*/
 typedef struct
 {
     UINT8    u1GnssTimeID;    /* gnss system time ID:eque to GNSS-ID(,0-GPS,1-SBAS, 2-QZSS,3-Galileo,4-GLONASS, 5~16 reserved) */
     /**
-     * This field specifies the sequential number of days from the origin of the GNSS System Time as follows: 
+     * This field specifies the sequential number of days from the origin of the GNSS System Time as follows:
      * GPS, QZSS, SBAS  Days from January 6th 1980 00:00:00 UTC(USNO)
-     * Galileo ¡V             TBD; 
+     * Galileo ¡V             TBD;
      * GLONASS ¡V         Days from January 1st 1996
      */
     UINT16   u2DN;           /* [0-32767] gnssDayNumber  */
@@ -525,8 +493,8 @@ typedef struct
 {
     UINT8 u1DataID;              /*bit[0..1] : "11"generated by QZSS. aplicable within the area of QZSS */
                                  /*               "00"generated by GPS,GLONASS.  aplicable worldwild   */
-    MTK_GPS_ASSIST_KLB_T rdata;  /*these field is simillar to GPS Klobuchar struct */                   
-    
+    MTK_GPS_ASSIST_KLB_T rdata;  /*these field is simillar to GPS Klobuchar struct */
+
 }MTK_GNSS_ASSIST_KLB_T;
 
 //gnss NeQuick model
@@ -550,8 +518,8 @@ typedef struct
                               /*bit2 -> indicate fgStormFlag[2]  aviliable or not*/
                               /*bit3 -> indicate fgStormFlag[3]  aviliable or not*/
                               /*bit4 -> indicate fgStormFlag[4]  aviliable or not*/
-    MTK_GPS_BOOL fgStormFlag[5];              
-    
+    MTK_GPS_BOOL fgStormFlag[5];
+
 }MTK_GNSS_ASSIST_NQK_T;
 
 typedef struct
@@ -559,11 +527,11 @@ typedef struct
     UINT8 u1InoModel;            /*[0~7] 0: INO Klobuchar Model -used for GPS,GLONASS,QZSS */
                                  /*         1: NeQuick Model          - used for Galileo */
   union
-  {                     
+  {
     MTK_GNSS_ASSIST_KLB_T rAKlb;  /*Klobuchar Model  */
-    MTK_GNSS_ASSIST_NQK_T rANqk;  /*NeQuick    Model  */       
+    MTK_GNSS_ASSIST_NQK_T rANqk;  /*NeQuick    Model  */
  }data;
-    
+
 }MTK_GNSS_ASSIST_ION_T;
 
 /* end for gnss ionospheric model */
@@ -602,14 +570,14 @@ typedef struct
     INT16         i2Ta1;         /* [-4096..4095] for LPP, [-8388608 .. 8388607] for RRC/RRLP, the drift coefficient, scale factor 2^(-51) seconds/second */
     INT8          i1Ta2;         /* [-64..63], the drift rate correction coefficient, scale factor 2^(-68) seconds/second^2 */
     MTK_GNSS_TO_ID_ENUM   eGnssToId; /* GPS, Galileo, QZSS, GLOANSS */
-    /* optional field */ 
+    /* optional field */
     UINT16        u2WeekNo;    /* [0..8191], the reference week */
     INT8          i1DeltaT;    /* [-128..127], the integer number of seconds of GNSS-GNSS time offset */
 } MTK_GNSS_ASSIST_TMOD_T;
 
 
 typedef MTK_GPS_ASSIST_EPH_T MTK_ASSIST_GPS_EPH_T;
-//aGLONASS EPH 
+//aGLONASS EPH
 typedef struct
 {
   UINT8 u1SvId;  // GLONASS SV PRN number 1~24
@@ -619,7 +587,7 @@ typedef struct
 typedef struct
 {
     MTK_GNSS_ID_ENUM  eGnssID;
- 
+
     union
     {
        MTK_GPS_ASSIST_EPH_T  rAGpsEph;  /* for GPS eph  */
@@ -629,7 +597,7 @@ typedef struct
     } data;
 } MTK_GNSS_ASSIST_EPH_T;
 
-//aGLONASS ALM 
+//aGLONASS ALM
 typedef struct
 {
   UINT8 u1SvId;//GLONASS SV PRN:1~24
@@ -640,7 +608,7 @@ typedef struct
 typedef struct
 {
     MTK_GNSS_ID_ENUM  eGnssID;
- 
+
     union
     {
        MTK_GPS_ASSIST_ALM_T  rAGpsAlm;  /* for GPS alm  */
@@ -669,12 +637,12 @@ typedef struct
 
 /* start for gnss acquisition assistance */
 typedef struct
-{    
+{
     MTK_GNSS_ID_ENUM  eGnssID;
-    UINT16  u2SvId;         //,GPS:1~32 GLO:65~96 
+    UINT16  u2SvId;         //,GPS:1~32 GLO:65~96
     UINT8   u1SigID;        /* GNSS type, map to GNSS_SGN_ID_VALUE_* */
     UINT8   u1Conf;         /* [0..100]  only for LPP */
-    double  dfTod;          /* [0-86399.999] in seconds */        
+    double  dfTod;          /* [0-86399.999] in seconds */
     INT16   i2Dopp0;        /* [-2048..2047], Doppler (0th order term) value for velocity, scale factor 0.5 m/s in th range from -1024 m/s to +1023.5 m/s */
     UINT8   i1Dopp1;        /* [0..63], i1DoppRate, Doppler (1th order term) value for acceleration, scale factor 1/210 m/s^2 in the range from -0.2 m/s^2 to +0.1 m/s^2 */
     UINT8   u1DoppSR;       /* [0..4], defined values: 2.5 m/s, 5 m/s, 10 m/s, 20 m/s, 40 m/s encoded as integer range 0-4 by 2^(-n)*40 m/s, n=0-4 */
@@ -703,10 +671,10 @@ typedef struct
    MTK_GPS_BOOL AzElIncl;
    MTK_GPS_BOOL UseEph;
    unsigned char NumSV;
-   UINT16  SV[24];         //,GPS:1~32 GLO:65~96 
+   UINT16  SV[24];         //,GPS:1~32 GLO:65~96
    UINT8   u1SigID[24];        /* GNSS type, map to GNSS_SGN_ID_VALUE_* */
    UINT8   u1Conf[24];         /* [0..100]  only for LPP */
-   double  dfTod[24];          /* [0-86399.999] in seconds */        
+   double  dfTod[24];          /* [0-86399.999] in seconds */
    INT16   Dopp[24];        /* [-2048..2047], Doppler (0th order term) value for velocity, scale factor 0.5 m/s in th range from -1024 m/s to +1023.5 m/s */
    UINT8   DoppRate[24];        /* [0..63], i1DoppRate, Doppler (1th order term) value for acceleration, scale factor 1/210 m/s^2 in the range from -0.2 m/s^2 to +0.1 m/s^2 */
    UINT8   DoppSR[24];       /* [0..4], defined values: 2.5 m/s, 5 m/s, 10 m/s, 20 m/s, 40 m/s encoded as integer range 0-4 by 2^(-n)*40 m/s, n=0-4 */
@@ -720,7 +688,7 @@ typedef struct
    MTK_GPS_BOOL fgCodePh1023[24];    /* only use if codePhase is 1022, codePhase value is 1023*2^(-10) = (1-2^(-10)) ms */
    /* if support dopplerUncertaintyExtR10, should ignore dopplerUncertainty field */
    MTK_GNSS_ACQ_DOPP_UNCERT_EXT_ENUM u1DopExtEnum[24]; /* enumerated value map to 60 m/s, 80 m/s, 100 m/s, 120 ms, and No Information */
-    
+
 } s_NA_GLO_AcqAss;
 
 /* start for gnss acquisition assistance */
@@ -730,10 +698,10 @@ typedef struct
     MTK_GPS_BOOL AzElIncl;
     MTK_GPS_BOOL UseEph;
     unsigned char NumSV;
-    UINT16  SV[24];         //,GPS:1~32 GLO:65~96 
+    UINT16  SV[24];         //,GPS:1~32 GLO:65~96
     UINT8   u1SigID[24];        /* GNSS type, map to GNSS_SGN_ID_VALUE_* */
     UINT8   u1Conf[24];         /* [0..100]  only for LPP */
-    double  dfTod[24];          /* [0-86399.999] in seconds */        
+    double  dfTod[24];          /* [0-86399.999] in seconds */
     INT16   Dopp[24];        /* [-2048..2047], Doppler (0th order term) value for velocity, scale factor 0.5 m/s in th range from -1024 m/s to +1023.5 m/s */
     UINT8   DoppRate[24];        /* [0..63], i1DoppRate, Doppler (1th order term) value for acceleration, scale factor 1/210 m/s^2 in the range from -0.2 m/s^2 to +0.1 m/s^2 */
     UINT8   DoppSR[24];       /* [0..4], defined values: 2.5 m/s, 5 m/s, 10 m/s, 20 m/s, 40 m/s encoded as integer range 0-4 by 2^(-n)*40 m/s, n=0-4 */
@@ -759,18 +727,18 @@ typedef struct
     MTK_GPS_BOOL AzElIncl;
     MTK_GPS_BOOL UseEph;
     double dfGNSSTOD;
-    UINT8   CodeSR[24];  
+    UINT8   CodeSR[24];
     unsigned char NumSV;
-    UINT16  SV[24];         //,GPS:1~32 GLO:65~96 
+    UINT16  SV[24];         //,GPS:1~32 GLO:65~96
     UINT8   u1SigID;        /* GNSS type, map to GNSS_SGN_ID_VALUE_* */
     UINT8   u1Conf;         /* [0..100]  only for LPP */
-    double  dfTod;          /* [0-86399.999] in seconds */        
+    double  dfTod;          /* [0-86399.999] in seconds */
     INT16   Dopp[24];        /* [-2048..2047], Doppler (0th order term) value for velocity, scale factor 0.5 m/s in th range from -1024 m/s to +1023.5 m/s */
     UINT8   DoppRate[24];        /* [0..63], i1DoppRate, Doppler (1th order term) value for acceleration, scale factor 1/210 m/s^2 in the range from -0.2 m/s^2 to +0.1 m/s^2 */
     UINT8   DoppSR[24];       /* [0..4], defined values: 2.5 m/s, 5 m/s, 10 m/s, 20 m/s, 40 m/s encoded as integer range 0-4 by 2^(-n)*40 m/s, n=0-4 */
     UINT16  CodePh[24];    /* [0..1022], scale factor 2^(-10) ms in the range from 0 to (1-2^(-10)) ms */
     UINT8   CodePhInt[24]; /* [0..127], integer codephase, scale factor 1ms */
-    UINT8   CodePhSR[24];  /* [0..31], map to value-to-searchwindow table (ms) */  
+    UINT8   CodePhSR[24];  /* [0..31], map to value-to-searchwindow table (ms) */
     UINT16  Azim[24];         /* [0..511], azimuth angle a, x-degrees of satellite x<=a<x+0.703125, scale factor 0.703125 degrees */
     UINT8   Elev[24];         /* [0..127], elevation angle e, y-degrees of satellite y>=e<y+0.703125, scale factr 0.703125 degrees */
     /* optional field */
@@ -784,28 +752,28 @@ typedef struct
 {
    UINT32 Code_whole;
    UINT32 Code_fract;
-  
+
    UINT16 PRN_num;               //
    INT8 i1ChannelID;
-   MTK_GNSS_ID_ENUM eGnssID;       //in-use GNSSID  : 
+   MTK_GNSS_ID_ENUM eGnssID;       //in-use GNSSID  :
                            //bit 0:gps
                            //bit 1:sbas
                            //bit 2:qzss
                            //bit 3:galileo
                            //bit 4:glonass
                            //bit 5~15:reserved
-   UINT8 u2SignalID;       //in-use signal ID  : 
+   UINT8 u2SignalID;       //in-use signal ID  :
                            //now for GPS only support GNSS_SGN_ID_VALUE_GPS_L1C_A
                            //now for GLONASS only support GNSS_SGN_ID_VALUE_GLONASS_G1
                            //now for QZSS only support GNSS_SGN_ID_VALUE_QZSS_L1C_A
 
-   UINT8  SNR;         //[0..63] SNR 
+   UINT8  SNR;         //[0..63] SNR
    INT16  Dopp;        // [-32768..32767]
    UINT32 u4CodePh;      //[0..2097151] ms 21-bits with 2^-21 resolution
    UINT8  u1CodePhInt;   //[0~127] ms
-   UINT8  Mul_Path_Ind;  //[0~3] refer to RRLP table A.9 
-   
-   UINT8  u1CarryQualInd; //[0~3] 
+   UINT8  Mul_Path_Ind;  //[0~3] refer to RRLP table A.9
+
+   UINT8  u1CarryQualInd; //[0~3]
    UINT32 u1Adr;          //[0..33554431] 25-bits with 2^-10 resolution
    UINT8  Range_RMS_Man ;         //Pseudorange RMS Error mantissa
    UINT8  Range_RMS_Exp;         //Pseudorange RMS Error Exponent
@@ -824,8 +792,8 @@ typedef struct
    UINT32 u4TodUnc ;         /* [0-127] with resolution of 250ns optional */
    UINT8  u1NumValidMeas;
    UINT8  u1NumValidGnss;
-   UINT16 u2GnssIDsInUse;     //in-use GNSSID bitmap 
-   MTK_AGNSS_SIGNALIDS_T  u1SignalIDsInUse;   //in-use GNSSID bitmap : 
+   UINT16 u2GnssIDsInUse;     //in-use GNSSID bitmap
+   MTK_AGNSS_SIGNALIDS_T  u1SignalIDsInUse;   //in-use GNSSID bitmap :
    UINT8  u1CodePhAmb;     // [0~127 ]the codephase ambiguity in interge ms default set to 0¡£ optional
    MTK_IS801_SV_DATA_T SV_Data[AGNSS_RRLP_MAX_PRM];  // Satellite Pseudorange Measurement Data
 
@@ -836,14 +804,14 @@ typedef struct
 /*
 typedef struct
 {
-    INT32  i4UtcA1;         //[-8388608..8388607], scale factor 2^(-50) seconds/second 
-    INT32  i4UtcA0;         // [-2147483648..2147483647], scale factor 2^(-30) seconds 
-    UINT8  u1UtcTot;        // [0..255], scale factor 2^12 seconds 
-    UINT8  u1UtcWNt;        // [0..255], scale factor 1 week 
-    INT8   i1UtcDeltaTls;   //[-128..127], scale factor 1 second 
-    UINT8  u1UtcWNlsf;      // [0..255], scale factor 1 week 
-    INT8   i1UtcDN;         // [-128..127], scale factor 1 day 
-    INT8   i1UtcDeltaTlsf;  // [-128..127], scale factor 1 second 
+    INT32  i4UtcA1;         //[-8388608..8388607], scale factor 2^(-50) seconds/second
+    INT32  i4UtcA0;         // [-2147483648..2147483647], scale factor 2^(-30) seconds
+    UINT8  u1UtcTot;        // [0..255], scale factor 2^12 seconds
+    UINT8  u1UtcWNt;        // [0..255], scale factor 1 week
+    INT8   i1UtcDeltaTls;   //[-128..127], scale factor 1 second
+    UINT8  u1UtcWNlsf;      // [0..255], scale factor 1 week
+    INT8   i1UtcDN;         // [-128..127], scale factor 1 day
+    INT8   i1UtcDeltaTlsf;  // [-128..127], scale factor 1 second
 } MTK_GPS_ASSIST_UCP_T;
 */
 
@@ -890,7 +858,7 @@ typedef struct
 typedef struct
 {
     MTK_GNSS_UTC_TYPE_ENUM  u1UtcMd;
- 
+
     union
     {
        MTK_GPS_ASSIST_UCP_T   utcModel1;  /* for GPS */
@@ -923,7 +891,7 @@ typedef struct
     UINT8    u1SigAvai;      /* 8 bits field, indicate the ranging signals supported by the satellite indicated by svID */
     /* optional field */
     INT8    i1ChannelId;     /* indicate the GLONASS carrier frequency number of the satellite identified by svID */
-                            /* for GLONASS[-7..13]. if there are no this parameter, this para is set "256": 0xff 
+                            /* for GLONASS[-7..13]. if there are no this parameter, this para is set "256": 0xff
                                                       for GPS there is no part for this para in PMTK765.So need to handle this para besides GLONASS  */
 } MTK_GNSS_ASSIST_AUX_ELE_T;
 
@@ -940,19 +908,19 @@ typedef struct
 
 typedef struct
 {
-    MTK_GNSS_ID_ENUM eGnssID;        
-    UINT8            u1SigBitmap;          
+    MTK_GNSS_ID_ENUM eGnssID;
+    UINT8            u1SigBitmap;
 } MTK_GNSS_SIGNAL_T;
 
 typedef struct
 {
-    MTK_GPS_BOOL       fgADR;        
-    MTK_GPS_BOOL       fgFta;       
-    MTK_GPS_BOOL       fgDgnss;          
-    UINT8              u1GnssNum;        
-    MTK_GNSS_SIGNAL_T  GnssSigIDs[GNSS_ID_MAX_NUM];  
+    MTK_GPS_BOOL       fgADR;
+    MTK_GPS_BOOL       fgFta;
+    MTK_GPS_BOOL       fgDgnss;
+    UINT8              u1GnssNum;
+    MTK_GNSS_SIGNAL_T  GnssSigIDs[GNSS_ID_MAX_NUM];
 
-    //WCS     
+    //WCS
     MTK_GPS_AGNSS_PRM_SV_DATA_T SV_Data[AGNSS_RRLP_MAX_PRM];
     //WCS
 } MTK_AGNSS_DT_CAPBILITY_T;
@@ -961,9 +929,9 @@ typedef struct
 
     UINT8    u1GnssTimeID;    /* gnss system time ID:eque to GNSS-ID(,0-GPS,1-SBAS, 2-QZSS,3-Galileo,4-GLONASS, 5~16 reserved) */
     /**
-     * This field specifies the sequential number of days from the origin of the GNSS System Time as follows: 
+     * This field specifies the sequential number of days from the origin of the GNSS System Time as follows:
      * GPS, QZSS, SBAS  Days from January 6th 1980 00:00:00 UTC(USNO)
-     * Galileo ¡V             TBD; 
+     * Galileo ¡V             TBD;
      * GLONASS ¡V         Days from January 1st 1996
      */
     UINT16   u2DN;           /* [0-32767] gnssDayNumber  */
@@ -974,12 +942,14 @@ typedef struct
 } MTK_GNSS_ASSIST_FTA_T, MTK_GNSS_AGPS_DT_FTIME_T;    // Fine Time Assistance
 #endif
 //end for AGPS_SUPPORT_GNSS
-
-
-
 typedef struct
 {
-    UINT16 u2Cmd;  // PMTK command ID: 
+    UINT8    u1Type;                 /* 1: co-clock clock drift ;2:.... */
+    UINT32   u4ClkErrRange;          /* ppb need to convert to ppm */
+}MTK_GPS_ASSIST_FREQ_T;
+typedef struct
+{
+    UINT16 u2Cmd;  // PMTK command ID:
                        // please get the data arguements in the following corresponding data structure.
     union
     {
@@ -992,41 +962,41 @@ typedef struct
         MTK_GPS_AGPS_DT_FTIME_T rFTime;          // PMTK734
         MTK_GPS_AGPS_DT_FTIME_ERR_T rFTimeErr;   // PMTK735
         MTK_GPS_AGPS_DT_LOC_EXTRA_T rLocExtra;     // PMTK742/743/744
-#if defined(AGPS_SUPPORT_GNSS) 
+#if defined(AGPS_SUPPORT_GNSS)
         MTK_AGNSS_DT_REQ_ASSIST_T  rGnssReqAssist; // PMTK760
         MTK_AGNSS_DT_LOC_EST_T     rGnssLoc;       // PMTK761
         MTK_AGNSS_DT_MEAS_T        rGnssPRM;       // PMTK763
         MTK_AGNSS_DT_CAPBILITY_T   rGnssCap;       // PMTK764
-#endif        
+#endif
     } uData;
 } MTK_GPS_AGPS_RESPONSE_T;
 
 
 
-#if defined(AGPS_SUPPORT_GNSS) 
+#if defined(AGPS_SUPPORT_GNSS)
 typedef struct
 {
-    UINT8 u1Arg1;  // version of Query location parameters: 1:GNSS format  0:GPS format  
+    UINT8 u1Arg1;  // version of Query location parameters: 1:GNSS format  0:GPS format
 } MTK_GNSS_CMD_LOC_T;
 
 typedef struct
 {
-    UINT8 u1Arg1;  // version of Query measurement parameters: 1:GNSS format  0:GPS format  
+    UINT8 u1Arg1;  // version of Query measurement parameters: 1:GNSS format  0:GPS format
 } MTK_GNSS_CMD_MEAS_T;
 
 typedef struct
 {
-    UINT8 u1Arg1;  // 1: Query parameters using GNSS format  0:GPS format  
+    UINT8 u1Arg1;  // 1: Query parameters using GNSS format  0:GPS format
 } MTK_GNSS_CMD_BITMAP_T;
 
 typedef struct
 {
-    UINT8 u1Arg1;  // 1: Query parameters using GNSS format  0:GPS format  
+    UINT8 u1Arg1;  // 1: Query parameters using GNSS format  0:GPS format
 } MTK_GNSS_CMD_CAPB_T;
-#endif     
+#endif
 typedef struct
 {
-  UINT16    u2Cmd;  // PMTK command ID: if the PMTK command has data arguments, 
+  UINT16    u2Cmd;  // PMTK command ID: if the PMTK command has data arguments,
                         // please assign the data in the following  corresponding data structure.
   union
   {
@@ -1046,12 +1016,12 @@ typedef struct
     MTK_GPS_ASSIST_DGP_T rARtcm;            // PMTK720
     MTK_GPS_ASSIST_TOW_T rATow;             // PMTK725
     MTK_GPS_AGPS_CMD_MA_LOC_T rAMA_Loc;     // PMTK739
-#if defined(AGPS_SUPPORT_GNSS) 
+#if defined(AGPS_SUPPORT_GNSS)
     MTK_GNSS_CMD_LOC_T  rLoc;             // PMTK485,1*   PMTK485,0*
     MTK_GNSS_CMD_MEAS_T rMeas;            // PMTK486,1*   PMTK486,0*
     MTK_GNSS_CMD_BITMAP_T rBitMap;        // PMTK487,1*   PMTK487,0*
     MTK_GNSS_CMD_CAPB_T  rCapb;                 // PMTK493,1* PMTK493,0*
-    
+
     MTK_GNSS_ASSIST_TIM_T  rAGnssTim;           // PMTK752
     MTK_GNSS_ASSIST_TMOD_T rAGnssTmod;          // PMTK753
     MTK_GNSS_ASSIST_ION_T rAGnssIon;            // PMTK754
@@ -1066,13 +1036,14 @@ typedef struct
     MTK_GNSS_ASSIST_LOC_T rAGnssLoc;            // PMTK712
     MTK_GNSS_ASSIST_FTA_T rAGnssFta;            // PMTK766
 #endif
+    MTK_GPS_ASSIST_FREQ_T rAGPSFreq;            // PMTK680
   } uData;
 } MTK_GPS_AGPS_CMD_DATA_T;
 
 
-#if ( defined(__ARMCC_VERSION) && (__ARMCC_VERSION < 200000 ) ) 
+#if ( defined(__ARMCC_VERSION) && (__ARMCC_VERSION < 200000 ) )
 // for ADS1.x
-#elif ( defined(__ARMCC_VERSION) && (__ARMCC_VERSION < 400000 ) ) 
+#elif ( defined(__ARMCC_VERSION) && (__ARMCC_VERSION < 400000 ) )
 // for RVCT2.x or RVCT3.x
 #else
 #pragma pack()

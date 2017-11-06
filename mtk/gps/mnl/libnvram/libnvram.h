@@ -78,21 +78,18 @@ extern "C"
 
 #define NVRAM_JOURNAL_MAGIC 0x5a5a7b7b
 #define NVRAM_MISC_JOURNAL_MAGIC 0x4D52564E
-#define MAX_FUNCTION_NAME_LENGTH  48 
-//#define LOG_BLOCK_NUMBER   8 
+#define MAX_FUNCTION_NAME_LENGTH  48
+//#define LOG_BLOCK_NUMBER   8
 //#define RESERVE_BLOCK_NUMBER    8
-#define MAX_LOG_LENGTH  (NVRAM_JOURNAL_HANDLE_SIZE - 5 * sizeof(unsigned int) - sizeof(time_t) - MAX_FUNCTION_NAME_LENGTH)   
+#define MAX_LOG_LENGTH  (NVRAM_JOURNAL_HANDLE_SIZE - 5 * sizeof(unsigned int) - sizeof(time_t) - MAX_FUNCTION_NAME_LENGTH)
 #define DEFAULT_LOG_LEVEL 1
 #define NVRAM_JOURNAL_SUPER_PAGE  0
 #define NVRAM_JOURNAL_LOG_PAGE  1
-#define LOG_DEVICE "/dev/nvram"
-#define LOG_DEVICE_GPT "/dev/block/platform/mtk-msdc.0/by-name/nvram"
-#define MISC_DEVICE "/dev/misc"
-#define MISC_DEVICE_GPT "/dev/block/platform/mtk-msdc.0/by-name/misc"
-#define NVRAM_BACKUP_DEVICE "/dev/nvram"
-#define NVRAM_BACKUP_DEVICE_GPT  "/dev/block/platform/mtk-msdc.0/by-name/nvram"
-#define NVRAM_PROINFO_DEVICE "/dev/pro_info"
-#define NVRAM_PROINFO_DEVICE_GPT "/dev/block/platform/mtk-msdc.0/by-name/proinfo"
+#define NVRAM_MNT_POINT "/nvram"
+#define MISC_MNT_POINT "/misc"
+#define PROINFO_MNT_POINT "/proinfo"
+#define NVDATA_MNT_POINT "/nvdata"
+
 typedef struct {
 	char 	cFileVer[FILEVERLENGTH];
 	char 	cFileName[FILENAMELENGTH];
@@ -112,9 +109,8 @@ typedef enum{
 	VerAdd,
 }VerInfoUpdateFlag;
 
-
 #pragma pack(4)
-typedef struct nvram_journal_handle { 
+typedef struct nvram_journal_handle {
     unsigned int h_magic;
     unsigned int h_type;
     unsigned int h_sequence;
@@ -145,7 +141,7 @@ typedef struct nvram_journal_handle {
 bool NVM_GetBackupFileNum(unsigned int * iAPBackupFileNum, unsigned short *iMDBackupFileNum);
 
 bool NVM_AddBackupNum(unsigned int iModifiedFileNum,int iSrc);
-	
+
 bool NVM_AddBackupFileNum(unsigned int iLid);
 
 /********************************************************************************
@@ -172,7 +168,7 @@ int NVM_Init(void);
 //FUNCTION:
 //		NVM_CheckVerFile
 //DESCRIPTION:
-//		this function is called to check the exist of versiono file information 
+//		this function is called to check the exist of versiono file information
 //      in FAT 2 partition or default version.
 //
 //PARAMETERS:
@@ -255,7 +251,7 @@ bool NVM_CheckFileID(int file_lid, int rec_id);
 //		NVM_CheckFileInfo
 //DESCRIPTION:
 //		this function is called to check file information, including the file lid
-// 		and record id.if the file version is not right, it wll be reset to default 
+// 		and record id.if the file version is not right, it wll be reset to default
 //		value.
 //
 //PARAMETERS:
@@ -277,7 +273,7 @@ bool NVM_CheckFileInfo(int file_lid, int rec_id);
 //FUNCTION:
 //		NVM_ReadFileVerInfo
 //DESCRIPTION:
-//		this function is called to read the version information of nvram file. 
+//		this function is called to read the version information of nvram file.
 //		if the file version is not right, it wll be reset to default value
 //
 //PARAMETERS:
@@ -338,7 +334,7 @@ bool NVM_ResetFileToDefault(int file_lid);
 //FUNCTION:
 //		NVM_GetFileHandle
 //DESCRIPTION:
-//		this function is called to the handle of nvram file and the information 
+//		this function is called to the handle of nvram file and the information
 //      of record size and number.
 //
 //PARAMETERS:
@@ -431,13 +427,13 @@ bool NVM_IncSequenceNum(unsigned int sequence);
 bool NVM_InSpecialLidList(int file_lid, int *index);
 bool NVM_CheckFile(const char * filepath);
 
-#define NVRAM_HISTORY_LOG(n, log)   NVM_HistoryLog(n, __func__, __LINE__, log) 
+#define NVRAM_HISTORY_LOG(n, log)   NVM_HistoryLog(n, __func__, __LINE__, log)
 
 
 bool NVM_MiscIncSeqNum(unsigned int sequence);
 unsigned int NVM_MiscGetSeqNum(void);
 bool NVM_MiscLog(unsigned int level, const char *func, unsigned int line, const char *log);
-#define NVRAM_MISC_LOG(n, log)   NVM_MiscLog(n, __func__, __LINE__, log) 
+#define NVRAM_MISC_LOG(n, log)   NVM_MiscLog(n, __func__, __LINE__, log)
 
 bool NVM_GetDeviceInfo(const char *path, struct mtd_info_user *device_info);
 extern int init_nvram_platform_callback();
@@ -446,10 +442,9 @@ extern int nvram_platform_callback();
 bool Check_FileVerinFirstBoot(void);
 
 bool Check_UpdateStatus(void);
-bool Change_DataNvramPermission(void);
-//bool Change_Protect_fMDPermission(void);
-//bool Change_Protect_sMDPermission(void);
-//bool Change_Ccci_cfgMDPermission(void);
+bool Change_DataNvramPermission(const char *cmd);
+
+bool NVM_EraseDeviceBlock(const char *path, struct erase_info_user erase_info);
 
 
 typedef struct NVRAM_PLATFORM {
@@ -459,6 +454,14 @@ typedef struct NVRAM_PLATFORM {
 	int layout_version;
 	int header_offset;
 } NVRAM_PLATFORM_T;
+
+extern int nvram_multi_storage_support(NVRAM_PLATFORM_T* pPlatform );
+extern bool nvram_md5_support();
+extern bool nvram_evdo_support();
+int NVM_CheckFileSize(int iRealFileLid,const TCFG_FILE *pCfgFielTable);
+extern bool nvram_new_partition_support();
+extern bool nvram_emmc_support();
+extern bool nvram_ecci_c2k_support();
 
 #ifdef __cplusplus
 }

@@ -232,7 +232,7 @@ typedef enum
 	AP_CFG_RDCL_CAMERA_FEATURE_LID,
 	AP_CFG_RDCL_CAMERA_GEOMETRY_LID,
 	AP_CFG_RDCL_FILE_MD_SBP_LID,
-#if (defined MT6752) | (defined MT6795) | (defined MT6735) | (defined MT8163) | (defined MT6580)
+#if (defined MT6752) | (defined MT6795) | (defined MT6735) | (defined MT8163) | (defined MT6580) | (defined MT8173)| (defined MT6755) | (defined MT6797)
     AP_CFG_RDCL_CAMERA_SHADING2_LID,
     AP_CFG_RDCL_CAMERA_SHADING3_LID,
     AP_CFG_RDCL_CAMERA_SHADING4_LID,

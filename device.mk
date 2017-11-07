@@ -73,7 +73,9 @@ PRODUCT_PACKAGES += \
     audio.r_submix.default \
     audio_policy.default \
     libtinycompress \
-    libtinyxml
+    libtinyxml \
+    libblisrc \
+    libblisrc32
 
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/configs/media_codecs.xml:system/etc/media_codecs.xml \

@@ -63,8 +63,9 @@
 
 #if EPO_SUPPORT
    // for EPO file
-#include "curl.h"
-#include "easy.h"
+// xen0n: fix build
+#include <curl/curl.h>
+#include <curl/easy.h>
 
 #define EPO_FILE "/data/misc/gps/EPO.DAT"
 #define EPO_FILE_HAL "/data/misc/gps/EPOHAL.DAT"
@@ -2408,7 +2409,7 @@ nmea_reader_parse(NmeaReader* const r)
         if (r->sv_status_gnss.num_svs != 0 && gps_nmea_end_tag) {
             DBG("r->sv_status_gnss.num_svs = %d, gps_nmea_end_tag = %d", r->sv_status_gnss.num_svs, gps_nmea_end_tag);
             r->sv_status_gnss.size = sizeof(GnssSvStatus);
-            callback_backup_mtk.gnss_sv_status_cb(&r->sv_status_gnss);
+            callback_backup_mtk.base.gnss_sv_status_cb(&r->sv_status_gnss);
             r->sv_count = r->sv_status_gnss.num_svs = 0;
             memset(sv_used_in_fix, 0, 256*sizeof(int));
         }
@@ -3500,7 +3501,6 @@ void mnld_to_gps_handler(int fd, GpsState* s) {   // from AGPSD->MNLD->HAL->FWK
             DBG("HAL_CMD_MEASUREMENT message recieved\n");
             if (gpsmeasurement_init_flag == 1) {
             int i = 0;
-            int num = 0;
             MTK_GPS_MEASUREMENT mtk_gps_measurement[32];
             buff_get_struct(mtk_gps_measurement, 32*sizeof(MTK_GPS_MEASUREMENT), buff, &offset);
             MTK_GPS_CLOCK mtk_gps_clock;
@@ -3523,51 +3523,42 @@ void mnld_to_gps_handler(int fd, GpsState* s) {   // from AGPSD->MNLD->HAL->FWK
             memset(&gpsdata, 0, sizeof(GpsData));
             gpsdata.size = sizeof(GpsData);
 
-            for (i = 0; i < 32; i++) {
-                if (mtk_gps_measurement[i].PRN != 0) {
-                    num = gpsdata.measurement_count;
-
-                    gpsdata.measurements[num].size = sizeof(GpsMeasurement);
-                    gpsdata.measurements[num].accumulated_delta_range_m = mtk_gps_measurement[i].AcDRInMeters;
-                    gpsdata.measurements[num].accumulated_delta_range_state = mtk_gps_measurement[i].AcDRState10;
-                    gpsdata.measurements[num].accumulated_delta_range_uncertainty_m = \
-                    mtk_gps_measurement[i].AcDRUnInMeters;
-                    gpsdata.measurements[num].azimuth_deg = mtk_gps_measurement[i].AzInDeg;
-                    gpsdata.measurements[num].azimuth_uncertainty_deg = mtk_gps_measurement[i].AzUnInDeg;
-                    gpsdata.measurements[num].bit_number = mtk_gps_measurement[i].BitNumber;
-                    gpsdata.measurements[num].carrier_cycles = mtk_gps_measurement[i].CarrierCycle;
-                    gpsdata.measurements[num].carrier_phase = mtk_gps_measurement[i].CarrierPhase;
-                    gpsdata.measurements[num].carrier_phase_uncertainty = mtk_gps_measurement[i].CarrierPhaseUn;
-                    gpsdata.measurements[num].carrier_frequency_hz = mtk_gps_measurement[i].CFInhZ;
-                    gpsdata.measurements[num].c_n0_dbhz = mtk_gps_measurement[i].Cn0InDbHz;
-                    gpsdata.measurements[num].code_phase_chips = mtk_gps_measurement[i].CPInChips;
-                    gpsdata.measurements[num].code_phase_uncertainty_chips = mtk_gps_measurement[i].CPUnInChips;
-                    gpsdata.measurements[num].doppler_shift_hz = mtk_gps_measurement[i].DopperShiftInHz;
-                    gpsdata.measurements[num].doppler_shift_uncertainty_hz = mtk_gps_measurement[i].DopperShiftUnInHz;
-                    gpsdata.measurements[num].elevation_deg = mtk_gps_measurement[i].ElInDeg;
-                    gpsdata.measurements[num].elevation_uncertainty_deg = mtk_gps_measurement[i].ElUnInDeg;
-                    gpsdata.measurements[num].flags = mtk_gps_measurement[i].flag;
-                    gpsdata.measurements[num].loss_of_lock = mtk_gps_measurement[i].LossOfLock;
-                    gpsdata.measurements[num].multipath_indicator = mtk_gps_measurement[i].MultipathIndicater;
-                    gpsdata.measurements[num].pseudorange_m = mtk_gps_measurement[i].PRInMeters;
-                    gpsdata.measurements[num].prn = mtk_gps_measurement[i].PRN;
-                    gpsdata.measurements[num].pseudorange_rate_mps = mtk_gps_measurement[i].PRRateInMeterPreSec;
-                    gpsdata.measurements[num].pseudorange_rate_uncertainty_mps = \
-                    mtk_gps_measurement[i].PRRateUnInMeterPreSec;
-                    gpsdata.measurements[num].pseudorange_uncertainty_m = mtk_gps_measurement[i].PRUnInMeters;
-                    gpsdata.measurements[num].received_gps_tow_ns = mtk_gps_measurement[i].ReGpsTowInNs;
-                    gpsdata.measurements[num].received_gps_tow_uncertainty_ns = mtk_gps_measurement[i].ReGpsTowUnInNs;
-                    gpsdata.measurements[num].snr_db = mtk_gps_measurement[i].SnrInDb;
-                    gpsdata.measurements[num].state = mtk_gps_measurement[i].state;
-                    gpsdata.measurements[num].time_from_last_bit_ms = mtk_gps_measurement[i].TimeFromLastBitInMs;
-                    gpsdata.measurements[num].time_offset_ns = mtk_gps_measurement[i].TimeOffsetInNs;
-                    gpsdata.measurements[num].used_in_fix = mtk_gps_measurement[i].UsedInFix;
-                    if (gpsdata.measurements[num].state == 0) {
-                        gpsdata.measurements[num].received_gps_tow_ns = 0;
-                        gpsdata.measurements[num].pseudorange_rate_mps = 1;
-                    }
-                    DBG("gpsdata measurements[%d] memcpy completed, old _num = %d, prn = %d\n",
-                        num, i, gpsdata.measurements[num].prn);
+            for (i = 0; i < 1; i++) {
+                DBG("gpsdata measurements[%d] memcpy completed", i);
+                gpsdata.measurements[i].size = sizeof(GpsMeasurement);
+                gpsdata.measurements[i].accumulated_delta_range_m = mtk_gps_measurement[i].AcDRInMeters;
+                gpsdata.measurements[i].accumulated_delta_range_state = mtk_gps_measurement[i].AcDRState10;
+                gpsdata.measurements[i].accumulated_delta_range_uncertainty_m = mtk_gps_measurement[i].AcDRUnInMeters;
+                gpsdata.measurements[i].azimuth_deg = mtk_gps_measurement[i].AzInDeg;
+                gpsdata.measurements[i].azimuth_uncertainty_deg = mtk_gps_measurement[i].AzUnInDeg;
+                gpsdata.measurements[i].bit_number = mtk_gps_measurement[i].BitNumber;
+                gpsdata.measurements[i].carrier_cycles = mtk_gps_measurement[i].CarrierCycle;
+                gpsdata.measurements[i].carrier_phase = mtk_gps_measurement[i].CarrierPhase;
+                gpsdata.measurements[i].carrier_phase_uncertainty = mtk_gps_measurement[i].CarrierPhaseUn;
+                gpsdata.measurements[i].carrier_frequency_hz = mtk_gps_measurement[i].CFInhZ;
+                gpsdata.measurements[i].c_n0_dbhz = mtk_gps_measurement[i].Cn0InDbHz;
+                gpsdata.measurements[i].code_phase_chips = mtk_gps_measurement[i].CPInChips;
+                gpsdata.measurements[i].code_phase_uncertainty_chips = mtk_gps_measurement[i].CPUnInChips;
+                gpsdata.measurements[i].doppler_shift_hz = mtk_gps_measurement[i].DopperShiftInHz;
+                gpsdata.measurements[i].doppler_shift_uncertainty_hz = mtk_gps_measurement[i].DopperShiftUnInHz;
+                gpsdata.measurements[i].elevation_deg = mtk_gps_measurement[i].ElInDeg;
+                gpsdata.measurements[i].elevation_uncertainty_deg = mtk_gps_measurement[i].ElUnInDeg;
+                gpsdata.measurements[i].flags = mtk_gps_measurement[i].flag;
+                gpsdata.measurements[i].loss_of_lock = mtk_gps_measurement[i].LossOfLock;
+                gpsdata.measurements[i].multipath_indicator = mtk_gps_measurement[i].MultipathIndicater;
+                gpsdata.measurements[i].pseudorange_m = mtk_gps_measurement[i].PRInMeters;
+                gpsdata.measurements[i].prn = mtk_gps_measurement[i].PRN;
+                gpsdata.measurements[i].pseudorange_rate_mps = mtk_gps_measurement[i].PRRateInMeterPreSec;
+                gpsdata.measurements[i].pseudorange_rate_uncertainty_mps = mtk_gps_measurement[i].PRRateUnInMeterPreSec;
+                gpsdata.measurements[i].pseudorange_uncertainty_m = mtk_gps_measurement[i].PRUnInMeters;
+                gpsdata.measurements[i].received_gps_tow_ns = mtk_gps_measurement[i].ReGpsTowInNs;
+                gpsdata.measurements[i].received_gps_tow_uncertainty_ns = mtk_gps_measurement[i].ReGpsTowUnInNs;
+                gpsdata.measurements[i].snr_db = mtk_gps_measurement[i].SnrInDb;
+                gpsdata.measurements[i].state = mtk_gps_measurement[i].state;
+                gpsdata.measurements[i].time_from_last_bit_ms = mtk_gps_measurement[i].TimeFromLastBitInMs;
+                gpsdata.measurements[i].time_offset_ns = mtk_gps_measurement[i].TimeOffsetInNs;
+                gpsdata.measurements[i].used_in_fix = mtk_gps_measurement[i].UsedInFix;
+                if (gpsdata.measurements[i].prn != 0) {
                     gpsdata.measurement_count++;
                 }
             }
@@ -4124,12 +4115,15 @@ copy_GpsCallbacks_mtk(GpsCallbacks_mtk* dst, GpsCallbacks_mtk* src)
         DBG("Use GpsCallbacks_mtk\n");
         return 0;
     }
+// xen0n: this is unnecessary as the callback is already in GpsCallbacks
+#if 0
     if (src->base.size == sizeof(GpsCallbacks)) {
         dst->base = src->base;
         dst->gnss_sv_status_cb = NULL;
         DBG("Use GpsCallbacks\n");
         return 0;
     }
+#endif
     ERR("Bad callback, size: %d, expected: %d or %d", src->base.size, sizeof(GpsCallbacks_mtk), sizeof(GpsCallbacks));
     return -1;    //  error
 }

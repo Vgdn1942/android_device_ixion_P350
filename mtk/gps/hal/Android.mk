@@ -59,7 +59,6 @@ LOCAL_SHARED_LIBRARIES := \
 					libcrypto \
 					libssl \
 					libz
-
 ifeq ($(MTK_TC1_FEATURE), yes)
 LOCAL_CFLAGS:= -DGPS_AT_COMMAND
 endif

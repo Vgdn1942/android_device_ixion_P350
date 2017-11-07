@@ -136,18 +136,7 @@ PRODUCT_COPY_FILES += \
 
 PRODUCT_PACKAGES += \
     gps.mt6580 \
-    mtk_agpsd \
-    wifi2agps \
-    mnld \
-    libmnl \
-    BGW
-
-# COMBO
-PRODUCT_PACKAGES += \
-    6620_launcher \
-    6620_wmt_concurrency \
-    6620_wmt_lpbk \
-    wmt_loader
+    mtk_agpsd
 
 # Torch
 PRODUCT_PACKAGES += \

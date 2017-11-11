@@ -1,0 +1,38 @@
+From 3e3db94b3ef4ae8ae96990cb8fc01bb7818934d4 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Sun, 27 Mar 2016 15:58:15 +0800
+Subject: [PATCH] ImsCallProfile: add MTK bits
+
+Change-Id: I0d8b2b6d46b00fa3c0180e0784c11488ec0e37eb
+---
+ telephony/java/com/android/ims/ImsCallProfile.java | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/telephony/java/com/android/ims/ImsCallProfile.java b/telephony/java/com/android/ims/ImsCallProfile.java
+index 50ee5438d39b5..281a189a5b3e6 100644
+--- a/telephony/java/com/android/ims/ImsCallProfile.java
++++ b/telephony/java/com/android/ims/ImsCallProfile.java
+@@ -179,6 +179,7 @@
+      *  DisplayText: Display text for the call.
+      *  AdditionalCallInfo: Additional call info.
+      *  CallRadioTech: The radio tech on which the call is placed.
++     *  pau : Additional user identity information
+      */
+     public static final String EXTRA_OI = "oi";
+     public static final String EXTRA_CNA = "cna";
+@@ -189,6 +190,15 @@
+     public static final String EXTRA_DISPLAY_TEXT = "DisplayText";
+     public static final String EXTRA_ADDITIONAL_CALL_INFO = "AdditionalCallInfo";
+     public static final String EXTRA_IS_CALL_PULL = "CallPull";
++    // MTK
++    public static final String EXTRA_PAU = "pau";
++
++    /// M: @{
++    public static final String EXTRA_MPTY = "mpty";
++    public static final String EXTRA_INCOMING_MPTY = "incoming_mpty";
++    public static final String EXTRA_CONF_PARTICIPANT_INDEX = "conf_participant_index";
++    public static final String EXTRA_CONF_PARTICIPANT_STATE = "conf_participant_state";
++    /// @}
+ 
+     /**
+      * Extra key which the RIL can use to indicate the radio technology used for a call.

@@ -1,0 +1,144 @@
+From 0a192bc835d13f78d252b29cb8596215615e8d89 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Thu, 9 Nov 2017 12:38:23 +0300
+Subject: [PATCH] fix build
+
+Change-Id: I88759c7142432b2c24ba91f11fca210fbfb3c856
+---
+ media/libstagefright/MediaSync.cpp                        |  3 ++-
+ media/libstagefright/SurfaceMediaSource.cpp               |  2 +-
+ media/libstagefright/filters/GraphicBufferListener.cpp    |  2 +-
+ media/libstagefright/omx/GraphicBufferSource.cpp          | 10 +++++-----
+ services/camera/libcameraservice/gui/RingBufferConsumer.h | 10 +++++-----
+ 5 files changed, 14 insertions(+), 13 deletions(-)
+
+diff --git a/media/libstagefright/MediaSync.cpp b/media/libstagefright/MediaSync.cpp
+index 3a45e25..1dc10c7 100644
+--- a/media/libstagefright/MediaSync.cpp
++++ b/media/libstagefright/MediaSync.cpp
+@@ -19,6 +19,7 @@
+ #include <inttypes.h>
+ 
+ #include <gui/BufferQueue.h>
++#include <gui/BufferItem.h>
+ #include <gui/IGraphicBufferConsumer.h>
+ #include <gui/IGraphicBufferProducer.h>
+ 
+@@ -625,7 +626,7 @@ void MediaSync::onFrameAvailableFromInput() {
+     }
+ 
+     // Acquire and detach the buffer from the input.
+-    BufferItem bufferItem;
++    BufferQueue::BufferItem bufferItem;
+     status_t status = mInput->acquireBuffer(&bufferItem, 0 /* presentWhen */);
+     if (status != NO_ERROR) {
+         ALOGE("acquiring buffer from input failed (%d)", status);
+diff --git a/media/libstagefright/SurfaceMediaSource.cpp b/media/libstagefright/SurfaceMediaSource.cpp
+index 147eb45..0c83035 100644
+--- a/media/libstagefright/SurfaceMediaSource.cpp
++++ b/media/libstagefright/SurfaceMediaSource.cpp
+@@ -298,7 +298,7 @@ status_t SurfaceMediaSource::read(
+     // TODO: mCurrentSlot can be made a bufferstate since there
+     // can be more than one "current" slots.
+ 
+-    BufferItem item;
++    BufferQueue::BufferItem item;
+     // If the recording has started and the queue is empty, then just
+     // wait here till the frames come in from the client side
+     while (mStarted) {
+diff --git a/media/libstagefright/filters/GraphicBufferListener.cpp b/media/libstagefright/filters/GraphicBufferListener.cpp
+index a606315..a9bfc03 100644
+--- a/media/libstagefright/filters/GraphicBufferListener.cpp
++++ b/media/libstagefright/filters/GraphicBufferListener.cpp
+@@ -86,7 +86,7 @@ void GraphicBufferListener::onSidebandStreamChanged() {
+ }
+ 
+ BufferItem GraphicBufferListener::getBufferItem() {
+-    BufferItem item;
++    BufferQueue::BufferItem item;
+ 
+     {
+         Mutex::Autolock autoLock(mMutex);
+diff --git a/media/libstagefright/omx/GraphicBufferSource.cpp b/media/libstagefright/omx/GraphicBufferSource.cpp
+index 28fa730..5dc8241 100644
+--- a/media/libstagefright/omx/GraphicBufferSource.cpp
++++ b/media/libstagefright/omx/GraphicBufferSource.cpp
+@@ -57,7 +57,7 @@ void GraphicBufferSource::PersistentProxyListener::onFrameAvailable(
+         if (consumer == NULL) {
+             return;
+         }
+-        BufferItem bi;
++        BufferQueue::BufferItem bi;
+         status_t err = consumer->acquireBuffer(&bi, 0);
+         if (err != OK) {
+             ALOGE("PersistentProxyListener: acquireBuffer failed (%d)", err);
+@@ -463,7 +463,7 @@ void GraphicBufferSource::suspend(bool suspend) {
+         mSuspended = true;
+ 
+         while (mNumFramesAvailable > 0) {
+-            BufferItem item;
++            BufferQueue::BufferItem item;
+             status_t err = mConsumer->acquireBuffer(&item, 0);
+ 
+             if (err == BufferQueue::NO_BUFFER_AVAILABLE) {
+@@ -520,7 +520,7 @@ bool GraphicBufferSource::fillCodecBuffer_l() {
+ 
+     ALOGV("fillCodecBuffer_l: acquiring buffer, avail=%zu",
+             mNumFramesAvailable);
+-    BufferItem item;
++    BufferQueue::BufferItem item;
+     status_t err = mConsumer->acquireBuffer(&item, 0);
+     if (err == BufferQueue::NO_BUFFER_AVAILABLE) {
+         // shouldn't happen
+@@ -611,7 +611,7 @@ bool GraphicBufferSource::repeatLatestBuffer_l() {
+         return false;
+     }
+ 
+-    BufferItem item;
++    BufferQueue::BufferItem item;
+     item.mBuf = mLatestBufferId;
+     item.mFrameNumber = mLatestBufferFrameNum;
+     item.mTimestamp = mRepeatLastFrameTimestamp;
+@@ -884,7 +884,7 @@ void GraphicBufferSource::onFrameAvailable(const BufferItem& /*item*/) {
+             ALOGV("onFrameAvailable: suspended, ignoring frame");
+         }
+ 
+-        BufferItem item;
++        BufferQueue::BufferItem item;
+         status_t err = mConsumer->acquireBuffer(&item, 0);
+         if (err == OK) {
+             if (item.mBuf < 0 ||
+diff --git a/services/camera/libcameraservice/gui/RingBufferConsumer.h b/services/camera/libcameraservice/gui/RingBufferConsumer.h
+index 83e7298..4d98a58 100644
+--- a/services/camera/libcameraservice/gui/RingBufferConsumer.h
++++ b/services/camera/libcameraservice/gui/RingBufferConsumer.h
+@@ -136,12 +136,12 @@ class RingBufferConsumer : public ConsumerBase,
+             return mBufferItem.mBuf == BufferQueue::INVALID_BUFFER_SLOT;
+         }
+ 
+-        BufferItem& getBufferItem() { return mBufferItem; }
+-        const BufferItem& getBufferItem() const { return mBufferItem; }
++        BufferQueue::BufferItem& getBufferItem() { return mBufferItem; }
++        const BufferQueue::BufferItem& getBufferItem() const { return mBufferItem; }
+ 
+       private:
+         wp<RingBufferConsumer> mConsumer;
+-        BufferItem             mBufferItem;
++        BufferQueue::BufferItem mBufferItem;
+     };
+ 
+     // Find a buffer using the filter, then pin it before returning it.
+@@ -174,8 +174,8 @@ class RingBufferConsumer : public ConsumerBase,
+     // Returns NOT_ENOUGH_DATA if list was empty.
+     status_t releaseOldestBufferLocked(size_t* pinnedFrames);
+ 
+-    struct RingBufferItem : public BufferItem {
+-        RingBufferItem() : BufferItem(), mPinCount(0) {}
++    struct RingBufferItem : public BufferQueue::BufferItem {
++        RingBufferItem() : BufferQueue::BufferItem(), mPinCount(0) {}
+         int mPinCount;
+     };
+ 
+-- 
+2.7.4
+

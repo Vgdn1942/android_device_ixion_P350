@@ -1,0 +1,96 @@
+From deb2c156a83a8c69c374fcc8156fd4ef10303e98 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Thu, 23 Jun 2016 19:59:25 +0800
+Subject: [PATCH] Camera: correctly handle MTK extended data packets
+
+Change-Id: I60c071ba1d975ecfbc1a9ccad17895cf90b40c9a
+---
+ core/jni/android_hardware_Camera.cpp | 54 ++++++++++++++++++++++++++++++++++++
+ 1 file changed, 54 insertions(+)
+
+diff --git a/core/jni/android_hardware_Camera.cpp b/core/jni/android_hardware_Camera.cpp
+index 4cf317efc1c87..1c1020d8761e0 100644
+--- a/core/jni/android_hardware_Camera.cpp
++++ b/core/jni/android_hardware_Camera.cpp
+@@ -34,6 +34,10 @@
+ #include <camera/Camera.h>
+ #include <binder/IMemory.h>
+ 
++#ifdef MTK_HARDWARE
++#include <camera/MtkCamera.h>
++#endif
++
+ using namespace android;
+ 
+ enum {
+@@ -98,6 +102,9 @@ class JNICameraContext: public CameraListener
+ 
+ private:
+     void copyAndPost(JNIEnv* env, const sp<IMemory>& dataPtr, int msgType);
++#ifdef MTK_HARDWARE
++    void copyAndPostExtData(JNIEnv* env, const sp<IMemory>& dataPtr, int msgType);
++#endif
+     void clearCallbackBuffers_l(JNIEnv *env, Vector<jbyteArray> *buffers);
+     void clearCallbackBuffers_l(JNIEnv *env);
+     jbyteArray getCallbackBuffer(JNIEnv *env, Vector<jbyteArray> *buffers, size_t bufferSize);
+@@ -352,6 +359,16 @@ void JNICameraContext::postData(int32_t msgType, const sp<IMemory>& dataPtr,
+         case 0:
+             break;
+ 
++#ifdef MTK_HARDWARE
++        case MTK_CAMERA_MSG_EXT_DATA:
++            copyAndPostExtData(env, dataPtr, dataMsgType);
++            // post frame metadata to Java
++            if (metadata && (msgType & CAMERA_MSG_PREVIEW_METADATA)) {
++                postMetadata(env, CAMERA_MSG_PREVIEW_METADATA, metadata);
++            }
++            break;
++#endif
++
+         default:
+             ALOGV("dataCallback(%d, %p)", dataMsgType, dataPtr.get());
+             copyAndPost(env, dataPtr, dataMsgType);
+@@ -364,6 +381,43 @@ void JNICameraContext::postData(int32_t msgType, const sp<IMemory>& dataPtr,
+     }
+ }
+ 
++#ifdef MTK_HARDWARE
++void JNICameraContext::copyAndPostExtData(JNIEnv* env, const sp<IMemory>& dataPtr, int msgType)
++{
++    jbyteArray obj = NULL;
++    uint32_t extMsgType = 0;
++
++    // allocate Java byte array and copy data
++    //
++    MtkCamMsgExtDataHelper MtkExtDataHelper;
++    if  ( MtkExtDataHelper.init(dataPtr) )
++    {
++        const jbyte* data = reinterpret_cast<const jbyte*>(MtkExtDataHelper.getExtParamBase());
++        const size_t size = MtkExtDataHelper.getExtParamSize();
++        const MtkCamMsgExtDataHelper::DataHeader extDataHeader = MtkExtDataHelper.getExtDataHeader();
++        extMsgType = extDataHeader.extMsgType;
++
++        ALOGV("[copyAndPostExtData] Allocating callback buffer");
++        obj = env->NewByteArray(size);
++        if (obj == NULL) {
++            ALOGE("[copyAndPostExtData] Couldn't allocate byte array");
++            env->ExceptionClear();
++        } else {
++            env->SetByteArrayRegion(obj, 0, size, data);
++        }
++
++        MtkExtDataHelper.uninit();
++    }
++
++    // post image data to Java
++    env->CallStaticVoidMethod(mCameraJClass, fields.post_event,
++            mCameraJObjectWeak, msgType, extMsgType, 0, obj);
++    if (obj) {
++        env->DeleteLocalRef(obj);
++    }
++}
++#endif
++
+ void JNICameraContext::postDataTimestamp(nsecs_t timestamp, int32_t msgType, const sp<IMemory>& dataPtr)
+ {
+     // TODO: plumb up to Java. For now, just drop the timestamp

@@ -1,0 +1,35 @@
+From 1f271b451d3c76a4a6c387ee8c236618e713efa4 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Thu, 23 Jun 2016 20:23:46 +0800
+Subject: [PATCH] Camera: implement MTK_CAMERA_MSG_EXT_DATA_COMPRESSED_IMAGE
+
+Change-Id: If11d85c35c3ff5dd264f96184f8a3a991b381b0e
+---
+ core/java/android/hardware/Camera.java | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/core/java/android/hardware/Camera.java b/core/java/android/hardware/Camera.java
+index 93214c399b63e..b5b979006a2bb 100644
+--- a/core/java/android/hardware/Camera.java
++++ b/core/java/android/hardware/Camera.java
+@@ -1451,6 +1451,20 @@ public void handleMessage(Message msg) {
+                         }
+                     }
+                     break;
++
++                // xen0n
++                case MTK_CAMERA_MSG_EXT_DATA_COMPRESSED_IMAGE:
++                    final int idx = (int) msg.arg2;
++                    final byte[] buf = (byte[]) msg.obj;
++                    final byte[] img = new byte[buf.length - 4];
++                    System.arraycopy(buf, 4, img, 0, img.length);
++                    Log.d(TAG, "MTK_CAMERA_MSG_EXT_DATA_COMPRESSED_IMAGE: idx=" + idx + " image length " + img.length);
++                    // process as a CAMERA_MSG_COMPRESSED_IMAGE
++                    if (mJpegCallback != null) {
++                        mJpegCallback.onPictureTaken(img, mCamera);
++                    }
++                    break;
++
+                 case MTK_CAMERA_MSG_EXT_DATA_JPS:
+                     if (mStereoCameraJpsCallback != null) {
+                         byte[] byteArray = ((byte[]) msg.obj);

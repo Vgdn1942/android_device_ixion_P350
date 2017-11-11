@@ -12,6 +12,7 @@ MYABSPATH=$(readlink -f "$0")
  	done
  	echo "Применение $PATCHNAME -> $PATCHTARGET"
  	cd "$CMBASE/$PATCHTARGET" || exit 1
- 	git apply -v "$PATCHBASE/$PATCHNAME"/* || exit 1
- 	cd "$CMBASE"
+ 	git apply -v --check "$PATCHBASE/$PATCHNAME"/*
+# 	 || exit 1
+ 	cd "$PATCHBASE"
  done

@@ -2,7 +2,6 @@
 
 import init.project.rc
 import init.xlog.rc
-import init.ssd.rc
 import init.${ro.hardware}.power.rc
 import init.modem.rc
 
@@ -14,14 +13,16 @@ on early-boot
 
 on init
 
-    write /proc/self/coredump_filter 39
+    # Support legacy paths
+    symlink /sdcard /mnt/sdcard
+   
+    # if primary storage is physical, set ro.vold.primary_physical to 1
+    #setprop ro.vold.primary_physical 1
 
     # BATTERY proc
     chown shell system /proc/mtk_battery_cmd/current_cmd
     chown shell system /proc/mtk_battery_cmd/discharging_cmd
     chmod 0666 /dev/kmsg
-
-    export USBOTG_STORAGE /storage/usbotg
 
 # Temp Backward compatibility
     symlink /dev/block/platform/mtk-msdc.0/by-name/boot /dev/bootimg
@@ -44,6 +45,36 @@ on init
     #create mountpoint for persist partition
     mkdir /persist 0771 system system
 
+# Mount staging areas for devices managed by vold
+    # See storage config details at http://source.android.com/tech/storage/
+    mkdir /mnt 0755 root system
+    mount tmpfs tmpfs /mnt mode=0755,uid=0,gid=1000
+    restorecon_recursive /mnt
+    # Support legacy paths
+    symlink /sdcard /mnt/sdcard
+
+    mkdir /mnt/secure 0700 root root
+    mkdir /mnt/secure/asec 0700 root root
+    mkdir /mnt/asec 0755 root system
+    mkdir /mnt/obb 0755 root system
+    mkdir /mnt/media_rw 0750 root media_rw
+    mkdir /mnt/user 0755 root root
+    mkdir /mnt/user/0 0755 root root
+    mkdir /mnt/expand 0771 system system
+
+    # Storage views to support runtime permissions
+    mkdir /storage 0755 root root
+    mkdir /mnt/runtime 0700 root root
+    mkdir /mnt/runtime/default 0755 root root
+    mkdir /mnt/runtime/default/self 0755 root root
+    mkdir /mnt/runtime/read 0755 root root
+    mkdir /mnt/runtime/read/self 0755 root root
+    mkdir /mnt/runtime/write 0755 root root
+    mkdir /mnt/runtime/write/self 0755 root root
+
+    # Symlink to keep legacy apps working in multi-user world
+    symlink /storage/self/primary /sdcard
+    symlink /mnt/user/0/primary /mnt/runtime/default/self/primary
 
 # Create CIP mount point
     mkdir /custom
@@ -57,10 +88,12 @@ on init
     chown root system /proc/lk_env
     chmod 0660 /proc/lk_env
 
-#usbotg
-    mkdir /mnt/media_rw/usbotg 0700 media_rw media_rw
-    mkdir /storage/usbotg 0700 root root
-# mount different fs start
+    # GPS
+    chown gps gps /sys/class/gpsdrv/gps/pwrctl
+    chown gps gps /sys/class/gpsdrv/gps/suspend
+    chown gps gps /sys/class/gpsdrv/gps/state
+    chown gps gps /sys/class/gpsdrv/gps/pwrsave
+    chown gps gps /sys/class/gpsdrv/gps/status
 
 on charger
     mount ext4 /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/system /system ro wait
@@ -78,7 +111,7 @@ on charger
 on fs
     write /proc/bootprof "INIT:Mount_START"
     mount_all /fstab.mt6580
-    exec /system/bin/tune2fs -O has_journal -u 10010 -r 4096 /dev/block/platform/mtk-msdc.0/by-name/userdata
+    exec /system/bin/tune2fs -O has_journal -u 10010 -r 4096 /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/userdata
 
     #change partition permissions
     exec /system/bin/chmod 0640 /dev/block/platform/mtk-msdc.0/by-name/boot
@@ -103,7 +136,42 @@ on fs
     exec /system/bin/chmod 0660 /dev/block/platform/mtk-msdc.0/by-name/frp
     write /proc/bootprof "INIT:Mount_END"
 
+service agpsd /system/bin/mtk_agpsd
+    class main
+    socket agpsd stream 660 gps system
+    socket agpsd2 stream 660 gps system
+    socket agpsd3 stream 660 gps system
+    user root
+    group gps ccci inet sdcard_r sdcard_rw misc
+    oneshot
+
+service mnld /system/xbin/mnld
+    class main
+    user root
+    group system gps inet misc sdcard_rw sdcard_r media_rw
+    socket mnld stream 660 gps system
+    oneshot
+
+service wifi2agps /system/bin/wifi2agps
+    class main
+    user root
+    group gps inet
+    oneshot
+
+service BGW /system/xbin/BGW
+    user root
+    group gps system radio
+    class main
+    oneshot
+
 on post-fs
+    # Mount default storage into root namespace
+    mount none /mnt/runtime/default /storage slave bind rec
+    # Support legacy paths
+    symlink /sdcard /storage/sdcard0
+
+    symlink /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name /dev/block/platform/mtk-msdc.0/by-name
+
     #change permissions for mediaserver
     chown root media /proc/clkmgr/mipi_test
 
@@ -141,6 +209,47 @@ on post-fs
 
 on post-fs-data
 
+    # Emulated internal storage area
+    mkdir /data/media 0770 media_rw media_rw
+
+    # Char device for BT 3.0 HS
+    exec /system/bin/mknod /dev/ampc0 c 151 0
+    chown bluetooth bluetooth /dev/ampc0
+    chmod 0660 /dev/ampc0
+
+    exec /system/bin/mknod /dev/wmtWifi c 153 0
+    chmod 0666 /dev/wmtWifi
+    chown system system /dev/wmtWifi
+
+    exec /system/bin/mknod /dev/Vcodec c 160 0
+    chmod 0660 /dev/Vcodec
+    chown system media /dev/Vcodec
+
+    exec /system/bin/mknod /dev/MJC c 168 0
+    chmod 0660 /dev/MJC
+    chown system media /dev/MJC
+
+    exec /system/bin/mknod /dev/stpwmt c 190 0
+    chmod 0660 /dev/stpwmt
+    chown system system /dev/stpwmt
+
+    exec /system/bin/mknod /dev/stpgps c 191 0
+    chmod 0660 /dev/stpgps
+    chown gps gps /dev/stpgps
+
+    exec /system/bin/mknod /dev/stpbt c 192 0
+    chmod 0660 /dev/stpbt
+    chown bluetooth radio /dev/stpbt
+
+    exec /system/bin/mknod /dev/fm c 193 0
+
+    # GPS
+    chmod 0666 /dev/gps
+    chown system gps /dev/gps
+
+    chmod 0660 /dev/wmtdetect
+    chown system system /dev/wmtdetect
+
     # create basic filesystem structure
     mkdir /data/nvram 2770 root system
 
@@ -155,12 +264,10 @@ on post-fs-data
     mkdir /data/drm/wv 0770 drm system
 
     # GPS
+    mkdir /data/agps_supl 0771 gps system
     mkdir /data/gps_mnl 0771 gps system
-    mkdir /data/mpe_mnl 0771 gps system
-    chown gps system /data/mpe_mnl
-    chmod 0775 /system/xbin/BGW
-    # xen0n: fix GPS HAL downloading EPO data to non-existent directory
-    mkdir /data/misc/gps 0771 gps system
+
+    mkdir /data/misc/gps 0770 gps gps
 
 # -----------------------
 # Add by MTK
@@ -438,18 +545,6 @@ on post-fs-data
 
     #Accdet
     chown root radio /sys/devices/platform/Accdet_Driver/driver/accdet_call_state
-
-    #VideoCodec
-    #insmod /system/lib/modules/vcodec_kernel_driver.ko
-    mknod /dev/Vcodec c 160 0
-    chmod 0660 /dev/Vcodec
-    chown system media /dev/Vcodec
-
-    #MJC
-    #insmod /system/lib/modules/mjc_kernel_driver.ko
-    #mknod /dev/MJC c 168 0
-    chmod 0660 /dev/MJC
-    chown system media /dev/MJC
 
     #kpd
     chown radio radio /sys/devices/platform/mtk-kpd/driver/kpd_call_state
@@ -735,8 +830,9 @@ on post-fs-data
     mkdir /data/app/mcRegistry 0770 system system
     mkdir /data/app/mcRegistry/TbStorage 0770 system system
 
-    # AGPS
-    mkdir /data/agps_supl 0771 gps system
+    #ttyMT2 for Connectivity BT/FM/GPS usage
+    chmod 0660 /dev/ttyMT2
+    chown system system /dev/ttyMT2
 
     # Recycle stuffs
     exec /system/bin/rm -f /cache/.ipoh.img
@@ -906,18 +1002,6 @@ service mobile_log_d /system/bin/mobile_log_d
 
 service met_log_d /system/bin/met_log_d
     class main
-    # Refer to http://source.android.com/devices/tech/storage/index.html
-    # It said, "Starting in Android 4.4, multiple external storage devices are surfaced to developers through
-    #           Context.getExternalFilesDirs(), Context.getExternalCacheDirs(), and Context.getObbDirs().
-    #           External storage devices surfaced through these APIs must be a semi-permanent part of the device (such as an SD card slot in a battery compartment).
-    #           Developers expect data stored in these locations to be available over long periods of time."
-    # Therefore, if the target has the SD card slot in a battery compartment, we need to specify SECONDARY_STORAGE (*** UN-Comment the following command ***)
-    #
-    # export SECONDARY_STORAGE /storage/sdcard1
-
-service fuse_usbotg /system/bin/sdcard -u 1023 -g 1023 -w 1023 -d /mnt/media_rw/usbotg /storage/usbotg
-    class late_start
-    disabled
 
 # bugreport is triggered by holding down volume down, volume up and power
 service bugreport /system/bin/dumpstate -d -p -B \
@@ -1250,25 +1334,6 @@ service pppd_gprs /system/bin/pppd_dt /dev/ttyACM0 debug noauth refuse-eap usepe
 #    class main
 #    oneshot
 
-service agpsd /system/bin/mtk_agpsd
-    class main
-    socket agpsd stream 660 gps system
-    socket agpsd2 stream 660 gps inet
-    socket agpsd3 stream 660 gps inet
-    user gps
-    group gps inet sdcard_r sdcard_rw misc radio
-
-service wifi2agps /system/bin/wifi2agps
-    class main
-    user wifi
-    group gps inet
-
-service mnld /system/xbin/mnld
-    class main
-    user gps
-    group gps inet misc sdcard_rw sdcard_r media_rw system
-    socket mnld stream 660 gps system
-
 service ipod /system/bin/ipod
     user root
     group root
@@ -1515,10 +1580,6 @@ service backuprestore /system/bin/br_app_data_service
     socket backuprestore stream 0660 root sdcard_rw
     user root
 
-#service BGW /system/xbin/BGW
-#    user system
-#    group gps system radio
-#    class main
 service MtkCodecService /system/bin/MtkCodecService
     class main
     user system
@@ -1567,10 +1628,10 @@ service ipo_swap /system/bin/ipo_swap
 # originally bulk of init.project.rc
 # this cannot be named setup_project_devices, because
 # system/core/init/init_parser.c:481 says strlen(name) can't be greater than 16
-service proj-dev-setup /system/bin/proj-dev-setup
-    user root
-    group root
-    class main
-    disabled
-    oneshot
+#service proj-dev-setup /system/bin/proj-dev-setup
+#    user root
+#    group root
+#    class main
+#    disabled
+#    oneshot
 

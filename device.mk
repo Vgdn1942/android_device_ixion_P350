@@ -32,8 +32,8 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
     persist.sys.timezone=Europe/Minsk
 
 # init
-PRODUCT_PACKAGES += \
-    proj-dev-setup
+#PRODUCT_PACKAGES += \
+#    proj-dev-setup
 
 # various MTK ABI fixes
 # this is the approach of the cm-13.0 sprout port
@@ -162,7 +162,6 @@ PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/root/init.recovery.mt6580.rc:root/init.recovery.mt6580.rc \
     $(LOCAL_PATH)/root/init.modem.rc:root/init.modem.rc \
     $(LOCAL_PATH)/root/init.project.rc:root/init.project.rc \
-    $(LOCAL_PATH)/root/init.ssd.rc:root/init.ssd.rc \
     $(LOCAL_PATH)/root/init.xlog.rc:root/init.xlog.rc \
     $(LOCAL_PATH)/root/ueventd.mt6580.rc:root/ueventd.mt6580.rc \
     $(LOCAL_PATH)/root/init.mt6580.power.rc:root/init.mt6580.power.rc \

@@ -1,0 +1,22 @@
+From 3b6575987b3a6f52a00aac2324c70cdf5d8043f7 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Sun, 12 Jun 2016 22:52:02 +0800
+Subject: [PATCH] fix build
+
+Change-Id: I30e4635925d82d74e36bbca16ab0b547d93de509
+---
+ media/jni/android_media_ImageReader.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/media/jni/android_media_ImageReader.cpp b/media/jni/android_media_ImageReader.cpp
+index 0034b07762a88..0e998bdeb7945 100644
+--- a/media/jni/android_media_ImageReader.cpp
++++ b/media/jni/android_media_ImageReader.cpp
+@@ -23,6 +23,7 @@
+ 
+ #include <cstdio>
+ 
++#include <gui/BufferItem.h>
+ #include <gui/CpuConsumer.h>
+ #include <gui/BufferItemConsumer.h>
+ #include <gui/Surface.h>

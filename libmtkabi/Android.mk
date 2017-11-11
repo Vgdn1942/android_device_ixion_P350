@@ -19,8 +19,14 @@ LOCAL_SRC_FILES := \
     mtk_parcel.cpp \
     mtk_string.cpp \
     mtkcam_cpuctrl.cpp \
+    mtk_omx.cpp \
 
-LOCAL_SHARED_LIBRARIES := libbinder libutils
+LOCAL_C_INCLUDES += \
+    frameworks/av
+
+LOCAL_SHARED_LIBRARIES := \
+    libbinder libutils libc libgui libui libicuuc libicui18n libmedia
+
 LOCAL_MODULE := libmtkabi
 LOCAL_MODULE_TAGS := optional
 

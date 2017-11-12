@@ -1,0 +1,62 @@
+From 6b3dce931e11703d73946174e23531f3ade79a0c Mon Sep 17 00:00:00 2001
+From: vgdn1942 <vgdn1942@gmail.com>
+Date: Sun, 12 Nov 2017 23:38:19 +0300
+Subject: [PATCH] Purge emulator in build
+
+Change-Id: If8d8f7367977ea5f7b23499f4f602c33be4c2fee
+---
+ target/product/emulator.mk | 41 -----------------------------------------
+ 1 file changed, 41 deletions(-)
+
+diff --git a/target/product/emulator.mk b/target/product/emulator.mk
+index cca29ab..b8af74d 100644
+--- a/target/product/emulator.mk
++++ b/target/product/emulator.mk
+@@ -18,44 +18,3 @@
+ # emulator-related modules to PRODUCT_PACKAGES.
+ #
+ 
+-# Host modules
+-PRODUCT_PACKAGES += \
+-
+-
+-# Device modules
+-PRODUCT_PACKAGES += \
+-    egl.cfg \
+-    gralloc.goldfish \
+-    libGLESv1_CM_emulation \
+-    lib_renderControl_enc \
+-    libEGL_emulation \
+-    libGLES_android \
+-    libGLESv2_enc \
+-    libOpenglSystemCommon \
+-    libGLESv2_emulation \
+-    libGLESv1_enc \
+-    qemu-props \
+-    qemud \
+-    camera.goldfish \
+-    camera.goldfish.jpeg \
+-    lights.goldfish \
+-    gps.goldfish \
+-    fingerprint.goldfish \
+-    sensors.goldfish \
+-    audio.primary.goldfish \
+-    vibrator.goldfish \
+-    power.goldfish \
+-    fingerprint.ranchu \
+-    fingerprintd \
+-    sensors.ranchu \
+-    e2fsck
+-
+-PRODUCT_COPY_FILES += \
+-    frameworks/native/data/etc/android.hardware.ethernet.xml:system/etc/permissions/android.hardware.ethernet.xml \
+-    device/generic/goldfish/fstab.goldfish:root/fstab.goldfish \
+-    device/generic/goldfish/init.goldfish.rc:root/init.goldfish.rc \
+-    device/generic/goldfish/init.goldfish.sh:system/etc/init.goldfish.sh \
+-    device/generic/goldfish/ueventd.goldfish.rc:root/ueventd.goldfish.rc \
+-    device/generic/goldfish/init.ranchu.rc:root/init.ranchu.rc \
+-    device/generic/goldfish/fstab.ranchu:root/fstab.ranchu \
+-    device/generic/goldfish/ueventd.ranchu.rc:root/ueventd.ranchu.rc
+-- 
+2.7.4
+

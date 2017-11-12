@@ -375,7 +375,7 @@
     <!--
       Codec = h.264, Baseline profile, level 3.1
     -->
-    <ExportVideoProfile name="h264" profile= "1" level="512"/>
+    <ExportVideoProfile name="h264" profile= "1" level="4096"/>
     <!--
       Codec = h.263, Baseline profile, level 70
     -->

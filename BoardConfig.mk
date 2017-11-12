@@ -5,7 +5,7 @@ LOCAL_PATH := device/ixion/P350
 TARGET_BOARD_PLATFORM := mt6580
 TARGET_NO_BOOTLOADER := true
 
-TARGET_LDPRELOAD += libxlog.so:libmtkabi.so
+TARGET_LDPRELOAD += libxlog.so:libmtkabi.so:libboringssl-compat.so
 
 # Architecture
 TARGET_ARCH := arm
@@ -77,6 +77,9 @@ BOARD_CHARGER_SHOW_PERCENTAGE := true
 
 # LightHAL
 TARGET_PROVIDES_LIBLIGHT := true
+
+# Add libboringssl-compat.so to provide BIO_f_base64
+TARGET_REQUIRES_B64_COMPAT = true
 
 # EGL
 BOARD_EGL_CFG := $(LOCAL_PATH)/configs/egl.cfg

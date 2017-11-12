@@ -25,6 +25,10 @@ TARGET_SCREEN_WIDTH := 720
 PRODUCT_PACKAGES += \
     libxlog
 
+# Add libboringssl-compat.so to provide BIO_f_base64
+PRODUCT_PACKAGES += \
+    libboringssl-compat
+
 # be a chinese
 EXTENDED_FONT_FOOTPRINT := true
 

@@ -1,0 +1,136 @@
+From 6a46e6bdb8b0cf07a3c3e496e99042b7fb810fe2 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Mon, 13 Nov 2017 21:29:32 +0300
+Subject: [PATCH] gps: use MTK gps header
+
+Change-Id: I10b2ad0021d2d6c7f156bf179116e22a9c519261
+---
+ include/hardware/gps.h | 75 ++++++++++++++++++++++++++++++++++++++++----------
+ 1 file changed, 61 insertions(+), 14 deletions(-)
+
+diff --git a/include/hardware/gps.h b/include/hardware/gps.h
+index 76b6cb7..1f79f8f 100644
+--- a/include/hardware/gps.h
++++ b/include/hardware/gps.h
+@@ -37,6 +37,9 @@ __BEGIN_DECLS
+ /** Milliseconds since January 1, 1970 */
+ typedef int64_t GpsUtcTime;
+ 
++/** Maximum number of GNSS SVs for gps_sv_status_callback(). */
++#define GNSS_MAX_SVS 256
++
+ /** Maximum number of SVs for gps_sv_status_callback(). */
+ #define GPS_MAX_SVS 32
+ 
+@@ -120,22 +123,22 @@ typedef uint16_t GpsLocationFlags;
+ 
+ /** Flags used to specify which aiding data to delete
+     when calling delete_aiding_data(). */
+-typedef uint16_t GpsAidingData;
++typedef uint32_t GpsAidingData;
+ // IMPORTANT: Note that the following values must match
+ // constants in GpsLocationProvider.java.
+-#define GPS_DELETE_EPHEMERIS        0x0001
+-#define GPS_DELETE_ALMANAC          0x0002
+-#define GPS_DELETE_POSITION         0x0004
+-#define GPS_DELETE_TIME             0x0008
+-#define GPS_DELETE_IONO             0x0010
+-#define GPS_DELETE_UTC              0x0020
+-#define GPS_DELETE_HEALTH           0x0040
+-#define GPS_DELETE_SVDIR            0x0080
+-#define GPS_DELETE_SVSTEER          0x0100
+-#define GPS_DELETE_SADATA           0x0200
+-#define GPS_DELETE_RTI              0x0400
+-#define GPS_DELETE_CELLDB_INFO      0x8000
+-#define GPS_DELETE_ALL              0xFFFF
++#define GPS_DELETE_EPHEMERIS        0x00000001
++#define GPS_DELETE_ALMANAC          0x00000002
++#define GPS_DELETE_POSITION         0x00000004
++#define GPS_DELETE_TIME             0x00000008
++#define GPS_DELETE_IONO             0x00000010
++#define GPS_DELETE_UTC              0x00000020
++#define GPS_DELETE_HEALTH           0x00000040
++#define GPS_DELETE_SVDIR            0x00000080
++#define GPS_DELETE_SVSTEER          0x00000100
++#define GPS_DELETE_SADATA           0x00000200
++#define GPS_DELETE_RTI              0x00000400
++#define GPS_DELETE_CELLDB_INFO      0x00000800
++#define GPS_DELETE_ALL              0xFFFFFFFF
+ 
+ /** AGPS type */
+ typedef uint16_t AGpsType;
+@@ -471,6 +474,32 @@ typedef struct {
+     float   azimuth;
+ } GpsSvInfo;
+ 
++/** Represents GNSS SV information. */
++typedef struct {
++    /** set to sizeof(GnssSvInfo) */
++    size_t          size;
++    /** Pseudo-random number for the SV. */
++    int     prn;
++    /** Signal to noise ratio. */
++    float   snr;
++    /** Elevation of SV in degrees. */
++    float   elevation;
++    /** Azimuth of SV in degrees. */
++    float   azimuth;
++    /**
++     * SVs have ephemeris data.
++     */
++    bool has_ephemeris;
++    /**
++     * SVs have almanac data.
++     */
++    bool has_almanac;
++    /**
++     * SVs were used for computing the most recent position fix.
++     */
++    bool used_in_fix;
++} GnssSvInfo;
++
+ /** Represents SV status. */
+ typedef struct {
+     /** set to sizeof(GpsSvStatus) */
+@@ -499,6 +528,17 @@ typedef struct {
+     uint32_t    used_in_fix_mask;
+ } GpsSvStatus;
+ 
++/** Represents GNSS SV status. */
++typedef struct {
++    /** set to sizeof(GnssSvStatus) */
++    size_t          size;
++
++    /** Number of SVs currently visible. */
++    int         num_svs;
++
++    /** Contains an array of GNSS SV information. */
++    GnssSvInfo   sv_list[GNSS_MAX_SVS];
++} GnssSvStatus;
+ 
+ /* 2G and 3G */
+ /* In 3G lac is discarded */
+@@ -539,6 +579,12 @@ typedef void (* gps_status_callback)(GpsStatus* status);
+  */
+ typedef void (* gps_sv_status_callback)(GpsSvStatus* sv_info);
+ 
++/**
++ * Callback with GNSS SV status information.
++ * Can only be called from a thread created by create_thread_cb.
++ */
++typedef void (* gnss_sv_status_callback)(GnssSvStatus* sv_info);
++
+ /** Callback for reporting NMEA sentences.
+  *  Can only be called from a thread created by create_thread_cb.
+  */
+@@ -572,6 +618,7 @@ typedef struct {
+     gps_location_callback location_cb;
+     gps_status_callback status_cb;
+     gps_sv_status_callback sv_status_cb;
++    gnss_sv_status_callback gnss_sv_status_cb;
+     gps_nmea_callback nmea_cb;
+     gps_set_capabilities set_capabilities_cb;
+     gps_acquire_wakelock acquire_wakelock_cb;
+-- 
+2.7.4
+

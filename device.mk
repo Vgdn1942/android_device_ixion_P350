@@ -138,6 +138,10 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
      $(LOCAL_PATH)/configs/agps_profiles_conf2.xml:system/etc/agps_profiles_conf2.xml
 
+# Need for gps.default.so
+PRODUCT_PACKAGES += \
+    libcurl
+
 # Torch
 PRODUCT_PACKAGES += \
     Torch

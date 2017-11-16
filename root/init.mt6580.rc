@@ -1309,20 +1309,20 @@ service pppd_gprs /system/bin/pppd_dt /dev/ttyACM0 debug noauth refuse-eap usepe
 service agpsd /system/bin/mtk_agpsd
     class main
     socket agpsd stream 660 gps system
-    socket agpsd2 stream 660 gps system
-    socket agpsd3 stream 660 gps system
+    socket agpsd2 stream 660 gps inet
+    socket agpsd3 stream 660 gps inet
     user gps
     group gps system ccci radio inet sdcard_r sdcard_rw misc
 
 service wifi2agps /system/bin/wifi2agps
     class main
-    user gps
+    user wifi
     group gps system wifi inet
 
 service mnld /system/xbin/mnld
     class main
     user gps
-    group gps system inet misc sdcard_rw sdcard_r media_rw
+    group gps system inet misc sdcard_rw sdcard_r media_rw radio
     socket mnld stream 660 gps system
 
 service ipod /system/bin/ipod

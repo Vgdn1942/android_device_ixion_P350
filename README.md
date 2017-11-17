@@ -30,8 +30,6 @@ Working:
 - Camera (only photos)
 - USB connection (ADB/MTP/PTP)
 - SD-Card
-
-Not tested:
 - GPS
 - Wi-Fi tethering
 - Second SIM

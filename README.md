@@ -44,15 +44,11 @@ Not working/Bugs:
 
 (in alphabetical order)
 
-* aiden09
-* Besik13
-* ccfxny
-* dee3000
 * DerTeufel
 * ferhung
 * fire855
-* hyperion70
+* nofearnohappy (4pda, fix USSD)
 * varunchitre15
 * xen0n
-* Zormax
+* Zormax (4pda, add EngineerMode)
 * others I might have forgotten to include

@@ -1,0 +1,3486 @@
+From 2b1442fab63f0557709ce6a14460c359824e39bb Mon Sep 17 00:00:00 2001
+From: vgdn1942 <vgdn1942@gmail.com>
+Date: Sat, 18 Nov 2017 16:45:40 +0300
+Subject: [PATCH] Revert new commits
+
+---
+ camera/CameraBase.cpp                              |  10 +-
+ drm/mediadrm/plugins/clearkey/InitDataParser.cpp   |   2 +-
+ include/camera/CameraBase.h                        |   2 +-
+ media/libeffects/downmix/EffectDownmix.c           |   4 -
+ .../libeffects/lvm/wrapper/Bundle/EffectBundle.cpp | 124 ++------
+ .../libeffects/lvm/wrapper/Reverb/EffectReverb.cpp |  39 +--
+ media/libeffects/visualizer/EffectVisualizer.cpp   |  54 +---
+ media/libmedia/IDataSource.cpp                     |  12 +-
+ media/libmedia/IEffect.cpp                         |  12 -
+ media/libmedia/IHDCP.cpp                           |  18 +-
+ media/libmediaplayerservice/MediaPlayerService.cpp |  42 +--
+ .../nuplayer/NuPlayerDecoder.cpp                   |  11 +-
+ media/libstagefright/AMRExtractor.cpp              |   2 +-
+ media/libstagefright/MPEG4Extractor.cpp            | 125 ++------
+ media/libstagefright/NuMediaExtractor.cpp          |   2 +-
+ media/libstagefright/OggExtractor.cpp              |  20 +-
+ media/libstagefright/SampleTable.cpp               |  25 +-
+ media/libstagefright/VBRISeeker.cpp                |  18 +-
+ media/libstagefright/avc_utils.cpp                 |   5 +-
+ .../codecs/aacenc/SoftAACEncoder.cpp               |  14 +-
+ .../libstagefright/codecs/aacenc/SoftAACEncoder.h  |   2 -
+ .../codecs/aacenc/SoftAACEncoder2.cpp              |  35 +-
+ .../libstagefright/codecs/aacenc/SoftAACEncoder2.h |   3 -
+ media/libstagefright/codecs/avcenc/SoftAVCEnc.cpp  |  12 -
+ media/libstagefright/codecs/avcenc/SoftAVCEnc.h    |   2 -
+ .../codecs/m4v_h263/dec/SoftMPEG4.cpp              |  23 +-
+ .../codecs/m4v_h263/dec/src/mb_motion_comp.cpp     |  18 +-
+ .../codecs/m4v_h263/dec/src/pvdec_api.cpp          |   7 -
+ .../libstagefright/codecs/m4v_h263/dec/src/vop.cpp |  18 +-
+ .../codecs/m4v_h263/enc/SoftMPEG4Encoder.cpp       |  35 +-
+ .../codecs/m4v_h263/enc/SoftMPEG4Encoder.h         |   2 -
+ .../codecs/m4v_h263/enc/src/mp4enc_api.cpp         |  28 +-
+ .../codecs/m4v_h263/enc/src/mp4lib_int.h           |   1 -
+ media/libstagefright/codecs/mpeg2dec/SoftMPEG2.cpp |  54 +---
+ media/libstagefright/codecs/mpeg2dec/SoftMPEG2.h   |   1 -
+ .../codecs/on2/enc/SoftVPXEncoder.cpp              |   9 +-
+ .../libstagefright/codecs/on2/enc/SoftVPXEncoder.h |   2 -
+ media/libstagefright/foundation/base64.cpp         |   3 +-
+ media/libstagefright/id3/ID3.cpp                   |  68 ++--
+ media/libstagefright/mpeg2ts/ESQueue.cpp           |   5 -
+ media/libstagefright/omx/GraphicBufferSource.cpp   |  30 +-
+ media/libstagefright/omx/GraphicBufferSource.h     |   6 +-
+ media/libstagefright/omx/OMXNodeInstance.cpp       |  35 +-
+ .../libstagefright/omx/SimpleSoftOMXComponent.cpp  |   9 +-
+ .../libstagefright/wifi-display/rtp/RTPSender.cpp  |  14 +-
+ services/audioflinger/AudioFlinger.cpp             |  23 +-
+ services/audioflinger/AudioFlinger.h               |   1 -
+ services/audioflinger/Effects.cpp                  | 352 +++++++--------------
+ services/audioflinger/Effects.h                    |  37 +--
+ services/audioflinger/Threads.cpp                  |  51 ++-
+ services/audioflinger/Threads.h                    |   7 +-
+ services/audioflinger/Tracks.cpp                   |  45 +--
+ .../service/AudioPolicyInterfaceImpl.cpp           |   5 +-
+ services/soundtrigger/SoundTriggerHwService.cpp    |   2 +-
+ 54 files changed, 367 insertions(+), 1119 deletions(-)
+
+diff --git a/camera/CameraBase.cpp b/camera/CameraBase.cpp
+index 871dcea..5d50aa8 100644
+--- a/camera/CameraBase.cpp
++++ b/camera/CameraBase.cpp
+@@ -65,7 +65,7 @@ namespace {
+ 
+ // establish binder interface to camera service
+ template <typename TCam, typename TCamTraits>
+-const sp<ICameraService> CameraBase<TCam, TCamTraits>::getCameraService()
++const sp<ICameraService>& CameraBase<TCam, TCamTraits>::getCameraService()
+ {
+     Mutex::Autolock _l(gLock);
+     if (gCameraService.get() == 0) {
+@@ -98,7 +98,7 @@ sp<TCam> CameraBase<TCam, TCamTraits>::connect(int cameraId,
+     sp<TCam> c = new TCam(cameraId);
+     sp<TCamCallbacks> cl = c;
+     status_t status = NO_ERROR;
+-    const sp<ICameraService> cs = getCameraService();
++    const sp<ICameraService>& cs = getCameraService();
+ 
+     if (cs != 0) {
+         TCamConnectService fnConnectService = TCamTraits::fnConnectService;
+@@ -195,7 +195,7 @@ int CameraBase<TCam, TCamTraits>::getNumberOfCameras() {
+ template <typename TCam, typename TCamTraits>
+ status_t CameraBase<TCam, TCamTraits>::getCameraInfo(int cameraId,
+                                struct CameraInfo* cameraInfo) {
+-    const sp<ICameraService> cs = getCameraService();
++    const sp<ICameraService>& cs = getCameraService();
+     if (cs == 0) return UNKNOWN_ERROR;
+     return cs->getCameraInfo(cameraId, cameraInfo);
+ }
+@@ -203,7 +203,7 @@ status_t CameraBase<TCam, TCamTraits>::getCameraInfo(int cameraId,
+ template <typename TCam, typename TCamTraits>
+ status_t CameraBase<TCam, TCamTraits>::addServiceListener(
+                             const sp<ICameraServiceListener>& listener) {
+-    const sp<ICameraService> cs = getCameraService();
++    const sp<ICameraService>& cs = getCameraService();
+     if (cs == 0) return UNKNOWN_ERROR;
+     return cs->addListener(listener);
+ }
+@@ -211,7 +211,7 @@ status_t CameraBase<TCam, TCamTraits>::addServiceListener(
+ template <typename TCam, typename TCamTraits>
+ status_t CameraBase<TCam, TCamTraits>::removeServiceListener(
+                             const sp<ICameraServiceListener>& listener) {
+-    const sp<ICameraService> cs = getCameraService();
++    const sp<ICameraService>& cs = getCameraService();
+     if (cs == 0) return UNKNOWN_ERROR;
+     return cs->removeListener(listener);
+ }
+diff --git a/drm/mediadrm/plugins/clearkey/InitDataParser.cpp b/drm/mediadrm/plugins/clearkey/InitDataParser.cpp
+index c9c2a38..c22d73a 100644
+--- a/drm/mediadrm/plugins/clearkey/InitDataParser.cpp
++++ b/drm/mediadrm/plugins/clearkey/InitDataParser.cpp
+@@ -109,7 +109,7 @@ android::status_t InitDataParser::parsePssh(const Vector<uint8_t>& initData,
+     memcpy(&keyIdCount, &initData[readPosition], sizeof(keyIdCount));
+     keyIdCount = ntohl(keyIdCount);
+     readPosition += sizeof(keyIdCount);
+-    if (readPosition + ((uint64_t)keyIdCount * kKeyIdSize) !=
++    if (readPosition + (keyIdCount * kKeyIdSize) !=
+             initData.size() - sizeof(uint32_t)) {
+         return android::ERROR_DRM_CANNOT_HANDLE;
+     }
+diff --git a/include/camera/CameraBase.h b/include/camera/CameraBase.h
+index 4c849de..1b93157 100644
+--- a/include/camera/CameraBase.h
++++ b/include/camera/CameraBase.h
+@@ -101,7 +101,7 @@ protected:
+     virtual void                     binderDied(const wp<IBinder>& who);
+ 
+     // helper function to obtain camera service handle
+-    static const sp<ICameraService> getCameraService();
++    static const sp<ICameraService>& getCameraService();
+ 
+     sp<TCamUser>                     mCamera;
+     status_t                         mStatus;
+diff --git a/media/libeffects/downmix/EffectDownmix.c b/media/libeffects/downmix/EffectDownmix.c
+index a6b7436..18059b2 100644
+--- a/media/libeffects/downmix/EffectDownmix.c
++++ b/media/libeffects/downmix/EffectDownmix.c
+@@ -414,10 +414,6 @@ static int Downmix_Command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdS
+             return -EINVAL;
+         }
+         effect_param_t *cmd = (effect_param_t *) pCmdData;
+-        if (cmd->psize != sizeof(int32_t)) {
+-            android_errorWriteLog(0x534e4554, "63662938");
+-            return -EINVAL;
+-        }
+         *(int *)pReplyData = Downmix_setParameter(pDownmixer, *(int32_t *)cmd->data,
+                 cmd->vsize, cmd->data + sizeof(int32_t));
+         break;
+diff --git a/media/libeffects/lvm/wrapper/Bundle/EffectBundle.cpp b/media/libeffects/lvm/wrapper/Bundle/EffectBundle.cpp
+index 04831ad..f0afd39 100644
+--- a/media/libeffects/lvm/wrapper/Bundle/EffectBundle.cpp
++++ b/media/libeffects/lvm/wrapper/Bundle/EffectBundle.cpp
+@@ -149,10 +149,7 @@ int  Virtualizer_getParameter  (EffectContext *pContext,
+                                void           *pParam,
+                                uint32_t       *pValueSize,
+                                void           *pValue);
+-int  Equalizer_setParameter    (EffectContext *pContext,
+-                               void *pParam,
+-                               uint32_t valueSize,
+-                               void *pValue);
++int  Equalizer_setParameter    (EffectContext *pContext, void *pParam, void *pValue);
+ int  Equalizer_getParameter    (EffectContext *pContext,
+                                 void          *pParam,
+                                 uint32_t      *pValueSize,
+@@ -1468,25 +1465,17 @@ int VirtualizerForceVirtualizationMode(EffectContext *pContext, audio_devices_t
+ //                            horizontal plane, +90 is directly above the user, -90 below
+ //
+ //----------------------------------------------------------------------------
+-void VirtualizerGetSpeakerAngles(audio_channel_mask_t channelMask,
++void VirtualizerGetSpeakerAngles(audio_channel_mask_t channelMask __unused,
+         audio_devices_t deviceType __unused, int32_t *pSpeakerAngles) {
+     // the channel count is guaranteed to be 1 or 2
+     // the device is guaranteed to be of type headphone
+-    // this virtualizer is always using 2 virtual speakers at -90 and 90deg of azimuth, 0deg of
+-    // elevation but the return information is sized for nbChannels * 3, so we have to consider
+-    // the (false here) case of a single channel, and return only 3 fields.
+-    if (audio_channel_count_from_out_mask(channelMask) == 1) {
+-        *pSpeakerAngles++ = (int32_t) AUDIO_CHANNEL_OUT_MONO; // same as FRONT_LEFT
+-        *pSpeakerAngles++ = 0; // azimuth
+-        *pSpeakerAngles = 0; // elevation
+-    } else {
+-        *pSpeakerAngles++ = (int32_t) AUDIO_CHANNEL_OUT_FRONT_LEFT;
+-        *pSpeakerAngles++ = -90; // azimuth
+-        *pSpeakerAngles++ = 0;   // elevation
+-        *pSpeakerAngles++ = (int32_t) AUDIO_CHANNEL_OUT_FRONT_RIGHT;
+-        *pSpeakerAngles++ = 90;  // azimuth
+-        *pSpeakerAngles   = 0;   // elevation
+-    }
++    // this virtualizer is always 2in with speakers at -90 and 90deg of azimuth, 0deg of elevation
++    *pSpeakerAngles++ = (int32_t) AUDIO_CHANNEL_OUT_FRONT_LEFT;
++    *pSpeakerAngles++ = -90; // azimuth
++    *pSpeakerAngles++ = 0;   // elevation
++    *pSpeakerAngles++ = (int32_t) AUDIO_CHANNEL_OUT_FRONT_RIGHT;
++    *pSpeakerAngles++ = 90;  // azimuth
++    *pSpeakerAngles   = 0;   // elevation
+ }
+ 
+ //----------------------------------------------------------------------------
+@@ -2368,12 +2357,8 @@ int Equalizer_getParameter(EffectContext     *pContext,
+ 
+     case EQ_PARAM_BAND_LEVEL:
+         param2 = *pParamTemp;
+-        if (param2 < 0 || param2 >= FIVEBAND_NUMBANDS) {
++        if (param2 >= FIVEBAND_NUMBANDS) {
+             status = -EINVAL;
+-            if (param2 < 0) {
+-                android_errorWriteLog(0x534e4554, "32438598");
+-                ALOGW("\tERROR Equalizer_getParameter() EQ_PARAM_BAND_LEVEL band %d", param2);
+-            }
+             break;
+         }
+         *(int16_t *)pValue = (int16_t)EqualizerGetBandLevel(pContext, param2);
+@@ -2383,12 +2368,8 @@ int Equalizer_getParameter(EffectContext     *pContext,
+ 
+     case EQ_PARAM_CENTER_FREQ:
+         param2 = *pParamTemp;
+-        if (param2 < 0 || param2 >= FIVEBAND_NUMBANDS) {
++        if (param2 >= FIVEBAND_NUMBANDS) {
+             status = -EINVAL;
+-            if (param2 < 0) {
+-                android_errorWriteLog(0x534e4554, "32436341");
+-                ALOGW("\tERROR Equalizer_getParameter() EQ_PARAM_CENTER_FREQ band %d", param2);
+-            }
+             break;
+         }
+         *(int32_t *)pValue = EqualizerGetCentreFrequency(pContext, param2);
+@@ -2398,12 +2379,8 @@ int Equalizer_getParameter(EffectContext     *pContext,
+ 
+     case EQ_PARAM_BAND_FREQ_RANGE:
+         param2 = *pParamTemp;
+-        if (param2 < 0 || param2 >= FIVEBAND_NUMBANDS) {
++        if (param2 >= FIVEBAND_NUMBANDS) {
+             status = -EINVAL;
+-            if (param2 < 0) {
+-                android_errorWriteLog(0x534e4554, "32247948");
+-                ALOGW("\tERROR Equalizer_getParameter() EQ_PARAM_BAND_FREQ_RANGE band %d", param2);
+-            }
+             break;
+         }
+         EqualizerGetBandFreqRange(pContext, param2, (uint32_t *)pValue, ((uint32_t *)pValue + 1));
+@@ -2430,22 +2407,11 @@ int Equalizer_getParameter(EffectContext     *pContext,
+ 
+     case EQ_PARAM_GET_PRESET_NAME:
+         param2 = *pParamTemp;
+-        if ((param2 < 0 && param2 != PRESET_CUSTOM) ||  param2 >= EqualizerGetNumPresets()) {
++        if (param2 >= EqualizerGetNumPresets()) {
++        //if (param2 >= 20) {     // AGO FIX
+             status = -EINVAL;
+-            if (param2 < 0) {
+-                android_errorWriteLog(0x534e4554, "32448258");
+-                ALOGE("\tERROR Equalizer_getParameter() EQ_PARAM_GET_PRESET_NAME preset %d",
+-                        param2);
+-            }
+             break;
+         }
+-
+-        if (*pValueSize < 1) {
+-            status = -EINVAL;
+-            android_errorWriteLog(0x534e4554, "37536407");
+-            break;
+-        }
+-
+         name = (char *)pValue;
+         strncpy(name, EqualizerGetPresetName(param2), *pValueSize - 1);
+         name[*pValueSize - 1] = 0;
+@@ -2483,17 +2449,12 @@ int Equalizer_getParameter(EffectContext     *pContext,
+ // Inputs:
+ //  pEqualizer    - handle to instance data
+ //  pParam        - pointer to parameter
+-//  valueSize     - value size
+ //  pValue        - pointer to value
+-
+ //
+ // Outputs:
+ //
+ //----------------------------------------------------------------------------
+-int Equalizer_setParameter (EffectContext *pContext,
+-                            void *pParam,
+-                            uint32_t valueSize,
+-                            void *pValue) {
++int Equalizer_setParameter (EffectContext *pContext, void *pParam, void *pValue){
+     int status = 0;
+     int32_t preset;
+     int32_t band;
+@@ -2505,10 +2466,6 @@ int Equalizer_setParameter (EffectContext *pContext,
+     //ALOGV("\tEqualizer_setParameter start");
+     switch (param) {
+     case EQ_PARAM_CUR_PRESET:
+-        if (valueSize < sizeof(int16_t)) {
+-          status = -EINVAL;
+-          break;
+-        }
+         preset = (int32_t)(*(uint16_t *)pValue);
+ 
+         //ALOGV("\tEqualizer_setParameter() EQ_PARAM_CUR_PRESET %d", preset);
+@@ -2519,29 +2476,17 @@ int Equalizer_setParameter (EffectContext *pContext,
+         EqualizerSetPreset(pContext, preset);
+         break;
+     case EQ_PARAM_BAND_LEVEL:
+-        if (valueSize < sizeof(int16_t)) {
+-          status = -EINVAL;
+-          break;
+-        }
+         band =  *pParamTemp;
+         level = (int32_t)(*(int16_t *)pValue);
+         //ALOGV("\tEqualizer_setParameter() EQ_PARAM_BAND_LEVEL band %d, level %d", band, level);
+-        if (band < 0 || band >= FIVEBAND_NUMBANDS) {
++        if (band >= FIVEBAND_NUMBANDS) {
+             status = -EINVAL;
+-            if (band < 0) {
+-                android_errorWriteLog(0x534e4554, "32095626");
+-                ALOGE("\tERROR Equalizer_setParameter() EQ_PARAM_BAND_LEVEL band %d", band);
+-            }
+             break;
+         }
+         EqualizerSetBandLevel(pContext, band, level);
+         break;
+     case EQ_PARAM_PROPERTIES: {
+         //ALOGV("\tEqualizer_setParameter() EQ_PARAM_PROPERTIES");
+-        if (valueSize < sizeof(int16_t)) {
+-          status = -EINVAL;
+-          break;
+-        }
+         int16_t *p = (int16_t *)pValue;
+         if ((int)p[0] >= EqualizerGetNumPresets()) {
+             status = -EINVAL;
+@@ -2550,13 +2495,6 @@ int Equalizer_setParameter (EffectContext *pContext,
+         if (p[0] >= 0) {
+             EqualizerSetPreset(pContext, (int)p[0]);
+         } else {
+-            if (valueSize < (2 + FIVEBAND_NUMBANDS) * sizeof(int16_t)) {
+-              android_errorWriteLog(0x534e4554, "37563371");
+-              ALOGE("\tERROR Equalizer_setParameter() EQ_PARAM_PROPERTIES valueSize %d < %d",
+-                    (int)valueSize, (int)((2 + FIVEBAND_NUMBANDS) * sizeof(int16_t)));
+-              status = -EINVAL;
+-              break;
+-            }
+             if ((int)p[1] != FIVEBAND_NUMBANDS) {
+                 status = -EINVAL;
+                 break;
+@@ -3166,6 +3104,10 @@ int Effect_command(effect_handle_t  self,
+             //ALOGV("\tEffect_command cmdCode Case: EFFECT_CMD_GET_PARAM start");
+ 
+             effect_param_t *p = (effect_param_t *)pCmdData;
++            if (SIZE_MAX - sizeof(effect_param_t) < (size_t)p->psize) {
++                android_errorWriteLog(0x534e4554, "26347509");
++                return -EINVAL;
++            }
+             if (pCmdData == NULL || cmdSize < sizeof(effect_param_t) ||
+                     cmdSize < (sizeof(effect_param_t) + p->psize) ||
+                     pReplyData == NULL || replySize == NULL ||
+@@ -3173,32 +3115,13 @@ int Effect_command(effect_handle_t  self,
+                 ALOGV("\tLVM_ERROR : EFFECT_CMD_GET_PARAM: ERROR");
+                 return -EINVAL;
+             }
+-            if (EFFECT_PARAM_SIZE_MAX - sizeof(effect_param_t) < (size_t)p->psize) {
+-                android_errorWriteLog(0x534e4554, "26347509");
+-                ALOGV("\tLVM_ERROR : EFFECT_CMD_GET_PARAM: psize too big");
+-                return -EINVAL;
+-            }
+-            uint32_t paddedParamSize = ((p->psize + sizeof(int32_t) - 1) / sizeof(int32_t)) *
+-                    sizeof(int32_t);
+-            if ((EFFECT_PARAM_SIZE_MAX - sizeof(effect_param_t) < paddedParamSize) ||
+-                (EFFECT_PARAM_SIZE_MAX - sizeof(effect_param_t) - paddedParamSize <
+-                    p->vsize)) {
+-                ALOGV("\tLVM_ERROR : EFFECT_CMD_GET_PARAM: padded_psize or vsize too big");
+-                return -EINVAL;
+-            }
+-            uint32_t expectedReplySize = sizeof(effect_param_t) + paddedParamSize + p->vsize;
+-            if (*replySize < expectedReplySize) {
+-                ALOGV("\tLVM_ERROR : EFFECT_CMD_GET_PARAM: min. replySize %u, got %u bytes",
+-                        expectedReplySize, *replySize);
+-                android_errorWriteLog(0x534e4554, "32705438");
+-                return -EINVAL;
+-            }
+ 
+             memcpy(pReplyData, pCmdData, sizeof(effect_param_t) + p->psize);
+ 
+             p = (effect_param_t *)pReplyData;
+ 
+-            uint32_t voffset = paddedParamSize;
++            int voffset = ((p->psize - 1) / sizeof(int32_t) + 1) * sizeof(int32_t);
++
+             if(pContext->EffectType == LVM_BASS_BOOST){
+                 p->status = android::BassBoost_getParameter(pContext,
+                                                             p->data,
+@@ -3342,8 +3265,7 @@ int Effect_command(effect_handle_t  self,
+ 
+                 *(int *)pReplyData = android::Equalizer_setParameter(pContext,
+                                                                     (void *)p->data,
+-                                                                    p->vsize,
+-                                                                    p->data + p->psize);
++                                                                     p->data + p->psize);
+             }
+             if(pContext->EffectType == LVM_VOLUME){
+                 //ALOGV("\tVolume_command cmdCode Case: EFFECT_CMD_SET_PARAM start");
+diff --git a/media/libeffects/lvm/wrapper/Reverb/EffectReverb.cpp b/media/libeffects/lvm/wrapper/Reverb/EffectReverb.cpp
+index 19892dd..4dc8b45 100644
+--- a/media/libeffects/lvm/wrapper/Reverb/EffectReverb.cpp
++++ b/media/libeffects/lvm/wrapper/Reverb/EffectReverb.cpp
+@@ -180,13 +180,12 @@ int  Reverb_init            (ReverbContext *pContext);
+ void Reverb_free            (ReverbContext *pContext);
+ int  Reverb_setConfig       (ReverbContext *pContext, effect_config_t *pConfig);
+ void Reverb_getConfig       (ReverbContext *pContext, effect_config_t *pConfig);
+-int  Reverb_setParameter    (ReverbContext *pContext, void *pParam, void *pValue, int vsize);
++int  Reverb_setParameter    (ReverbContext *pContext, void *pParam, void *pValue);
+ int  Reverb_getParameter    (ReverbContext *pContext,
+                              void          *pParam,
+                              uint32_t      *pValueSize,
+                              void          *pValue);
+ int Reverb_LoadPreset       (ReverbContext   *pContext);
+-int Reverb_paramValueSize   (int32_t param);
+ 
+ /* Effect Library Interface Implementation */
+ 
+@@ -1748,13 +1747,12 @@ int Reverb_getParameter(ReverbContext *pContext,
+ //  pContext         - handle to instance data
+ //  pParam           - pointer to parameter
+ //  pValue           - pointer to value
+-//  vsize            - value size
+ //
+ // Outputs:
+ //
+ //----------------------------------------------------------------------------
+ 
+-int Reverb_setParameter (ReverbContext *pContext, void *pParam, void *pValue, int vsize){
++int Reverb_setParameter (ReverbContext *pContext, void *pParam, void *pValue){
+     int status = 0;
+     int16_t level;
+     int16_t ratio;
+@@ -1778,11 +1776,6 @@ int Reverb_setParameter (ReverbContext *pContext, void *pParam, void *pValue, in
+         return 0;
+     }
+ 
+-    if (vsize < Reverb_paramValueSize(param)) {
+-        android_errorWriteLog(0x534e4554, "63526567");
+-        return -EINVAL;
+-    }
+-
+     switch (param){
+         case REVERB_PARAM_PROPERTIES:
+             ALOGV("\tReverb_setParameter() REVERB_PARAM_PROPERTIES");
+@@ -1858,31 +1851,6 @@ int Reverb_setParameter (ReverbContext *pContext, void *pParam, void *pValue, in
+     return status;
+ } /* end Reverb_setParameter */
+ 
+-
+-/**
+- * returns the size in bytes of the value of each environmental reverb parameter
+- */
+-int Reverb_paramValueSize(int32_t param) {
+-    switch (param) {
+-    case REVERB_PARAM_ROOM_LEVEL:
+-    case REVERB_PARAM_ROOM_HF_LEVEL:
+-    case REVERB_PARAM_REFLECTIONS_LEVEL:
+-    case REVERB_PARAM_REVERB_LEVEL:
+-        return sizeof(int16_t); // millibel
+-    case REVERB_PARAM_DECAY_TIME:
+-    case REVERB_PARAM_REFLECTIONS_DELAY:
+-    case REVERB_PARAM_REVERB_DELAY:
+-        return sizeof(uint32_t); // milliseconds
+-    case REVERB_PARAM_DECAY_HF_RATIO:
+-    case REVERB_PARAM_DIFFUSION:
+-    case REVERB_PARAM_DENSITY:
+-        return sizeof(int16_t); // permille
+-    case REVERB_PARAM_PROPERTIES:
+-        return sizeof(s_reverb_settings); // struct of all reverb properties
+-    }
+-    return sizeof(int32_t);
+-}
+-
+ } // namespace
+ } // namespace
+ 
+@@ -2054,8 +2022,7 @@ int Reverb_command(effect_handle_t  self,
+ 
+             *(int *)pReplyData = android::Reverb_setParameter(pContext,
+                                                              (void *)p->data,
+-                                                              p->data + p->psize,
+-                                                              p->vsize);
++                                                              p->data + p->psize);
+         } break;
+ 
+         case EFFECT_CMD_ENABLE:
+diff --git a/media/libeffects/visualizer/EffectVisualizer.cpp b/media/libeffects/visualizer/EffectVisualizer.cpp
+index b7d27d6..91f9fc7 100644
+--- a/media/libeffects/visualizer/EffectVisualizer.cpp
++++ b/media/libeffects/visualizer/EffectVisualizer.cpp
+@@ -59,8 +59,6 @@ enum visualizer_state_e {
+ 
+ #define DISCARD_MEASUREMENTS_TIME_MS 2000 // discard measurements older than this number of ms
+ 
+-#define MAX_LATENCY_MS 3000 // 3 seconds of latency for audio pipeline
+-
+ // maximum number of buffers for which we keep track of the measurements
+ #define MEASUREMENT_WINDOW_MAX_SIZE_IN_BUFFERS 25 // note: buffer index is stored in uint8_t
+ 
+@@ -523,29 +521,18 @@ int Visualizer_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
+             break;
+         }
+         switch (*(uint32_t *)p->data) {
+-        case VISUALIZER_PARAM_CAPTURE_SIZE: {
+-            const uint32_t captureSize = *((uint32_t *)p->data + 1);
+-            if (captureSize > VISUALIZER_CAPTURE_SIZE_MAX) {
+-                android_errorWriteLog(0x534e4554, "31781965");
+-                *(int32_t *)pReplyData = -EINVAL;
+-                ALOGW("set mCaptureSize = %u > %u", captureSize, VISUALIZER_CAPTURE_SIZE_MAX);
+-            } else {
+-                pContext->mCaptureSize = captureSize;
+-                ALOGV("set mCaptureSize = %u", captureSize);
+-            }
+-            } break;
++        case VISUALIZER_PARAM_CAPTURE_SIZE:
++            pContext->mCaptureSize = *((uint32_t *)p->data + 1);
++            ALOGV("set mCaptureSize = %" PRIu32, pContext->mCaptureSize);
++            break;
+         case VISUALIZER_PARAM_SCALING_MODE:
+             pContext->mScalingMode = *((uint32_t *)p->data + 1);
+             ALOGV("set mScalingMode = %" PRIu32, pContext->mScalingMode);
+             break;
+-        case VISUALIZER_PARAM_LATENCY: {
+-            uint32_t latency = *((uint32_t *)p->data + 1);
+-            if (latency > MAX_LATENCY_MS) {
+-                latency = MAX_LATENCY_MS; // clamp latency b/31781965
+-            }
+-            pContext->mLatency = latency;
+-            ALOGV("set mLatency = %u", latency);
+-            } break;
++        case VISUALIZER_PARAM_LATENCY:
++            pContext->mLatency = *((uint32_t *)p->data + 1);
++            ALOGV("set mLatency = %" PRIu32, pContext->mLatency);
++            break;
+         case VISUALIZER_PARAM_MEASUREMENT_MODE:
+             pContext->mMeasurementMode = *((uint32_t *)p->data + 1);
+             ALOGV("set mMeasurementMode = %" PRIu32, pContext->mMeasurementMode);
+@@ -584,18 +571,10 @@ int Visualizer_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
+                 if (latencyMs < 0) {
+                     latencyMs = 0;
+                 }
+-                uint32_t deltaSmpl = captureSize
+-                        + pContext->mConfig.inputCfg.samplingRate * latencyMs / 1000;
+-
+-                // large sample rate, latency, or capture size, could cause overflow.
+-                // do not offset more than the size of buffer.
+-                if (deltaSmpl > CAPTURE_BUF_SIZE) {
+-                    android_errorWriteLog(0x534e4554, "31781965");
+-                    deltaSmpl = CAPTURE_BUF_SIZE;
+-                }
++                const uint32_t deltaSmpl =
++                    pContext->mConfig.inputCfg.samplingRate * latencyMs / 1000;
++                int32_t capturePoint = pContext->mCaptureIdx - captureSize - deltaSmpl;
+ 
+-                int32_t capturePoint = pContext->mCaptureIdx - deltaSmpl;
+-                // a negative capturePoint means we wrap the buffer.
+                 if (capturePoint < 0) {
+                     uint32_t size = -capturePoint;
+                     if (size > captureSize) {
+@@ -623,14 +602,9 @@ int Visualizer_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
+     case VISUALIZER_CMD_MEASURE: {
+         if (pReplyData == NULL || replySize == NULL ||
+                 *replySize < (sizeof(int32_t) * MEASUREMENT_COUNT)) {
+-            if (replySize == NULL) {
+-                ALOGV("VISUALIZER_CMD_MEASURE() error replySize NULL");
+-            } else {
+-                ALOGV("VISUALIZER_CMD_MEASURE() error *replySize %" PRIu32
+-                        " < (sizeof(int32_t) * MEASUREMENT_COUNT) %" PRIu32,
+-                        *replySize,
+-                        uint32_t(sizeof(int32_t)) * MEASUREMENT_COUNT);
+-            }
++            ALOGV("VISUALIZER_CMD_MEASURE() error *replySize %" PRIu32
++                    " < (sizeof(int32_t) * MEASUREMENT_COUNT) %" PRIu32, *replySize,
++                    sizeof(int32_t) * MEASUREMENT_COUNT);
+             android_errorWriteLog(0x534e4554, "30229821");
+             return -EINVAL;
+         }
+diff --git a/media/libmedia/IDataSource.cpp b/media/libmedia/IDataSource.cpp
+index a969c7d..76d1d68 100644
+--- a/media/libmedia/IDataSource.cpp
++++ b/media/libmedia/IDataSource.cpp
+@@ -50,16 +50,8 @@ struct BpDataSource : public BpInterface<IDataSource> {
+         data.writeInterfaceToken(IDataSource::getInterfaceDescriptor());
+         data.writeInt64(offset);
+         data.writeInt64(size);
+-        status_t err = remote()->transact(READ_AT, data, &reply);
+-        if (err != OK) {
+-            return err;
+-        }
+-        int64_t value = 0;
+-        err = reply.readInt64(&value);
+-        if (err != OK) {
+-            return err;
+-        }
+-        return (ssize_t)value;
++        remote()->transact(READ_AT, data, &reply);
++        return reply.readInt64();
+     }
+ 
+     virtual status_t getSize(off64_t* size) {
+diff --git a/media/libmedia/IEffect.cpp b/media/libmedia/IEffect.cpp
+index af6d8de..faf5795 100644
+--- a/media/libmedia/IEffect.cpp
++++ b/media/libmedia/IEffect.cpp
+@@ -25,9 +25,6 @@
+ 
+ namespace android {
+ 
+-// Maximum command/reply size expected
+-#define EFFECT_PARAM_SIZE_MAX       65536
+-
+ enum {
+     ENABLE = IBinder::FIRST_CALL_TRANSACTION,
+     DISABLE,
+@@ -159,10 +156,6 @@ status_t BnEffect::onTransact(
+             uint32_t cmdSize = data.readInt32();
+             char *cmd = NULL;
+             if (cmdSize) {
+-                if (cmdSize > EFFECT_PARAM_SIZE_MAX) {
+-                    reply->writeInt32(NO_MEMORY);
+-                    return NO_ERROR;
+-                }
+                 cmd = (char *)calloc(cmdSize, 1);
+                 if (cmd == NULL) {
+                     reply->writeInt32(NO_MEMORY);
+@@ -174,11 +167,6 @@ status_t BnEffect::onTransact(
+             uint32_t replySz = replySize;
+             char *resp = NULL;
+             if (replySize) {
+-                if (replySize > EFFECT_PARAM_SIZE_MAX) {
+-                    free(cmd);
+-                    reply->writeInt32(NO_MEMORY);
+-                    return NO_ERROR;
+-                }
+                 resp = (char *)calloc(replySize, 1);
+                 if (resp == NULL) {
+                     free(cmd);
+diff --git a/media/libmedia/IHDCP.cpp b/media/libmedia/IHDCP.cpp
+index e8c8a3d..f3a8902 100644
+--- a/media/libmedia/IHDCP.cpp
++++ b/media/libmedia/IHDCP.cpp
+@@ -241,11 +241,14 @@ status_t BnHDCP::onTransact(
+         case HDCP_ENCRYPT:
+         {
+             size_t size = data.readInt32();
+-            void *inData = NULL;
++            size_t bufSize = 2 * size;
++
+             // watch out for overflow
+-            if (size <= SIZE_MAX / 2) {
+-                inData = malloc(2 * size);
++            void *inData = NULL;
++            if (bufSize > size) {
++                inData = malloc(bufSize);
+             }
++
+             if (inData == NULL) {
+                 reply->writeInt32(ERROR_OUT_OF_RANGE);
+                 return OK;
+@@ -253,16 +256,11 @@ status_t BnHDCP::onTransact(
+ 
+             void *outData = (uint8_t *)inData + size;
+ 
+-            status_t err = data.read(inData, size);
+-            if (err != OK) {
+-                free(inData);
+-                reply->writeInt32(err);
+-                return OK;
+-            }
++            data.read(inData, size);
+ 
+             uint32_t streamCTR = data.readInt32();
+             uint64_t inputCTR;
+-            err = encrypt(inData, size, streamCTR, &inputCTR, outData);
++            status_t err = encrypt(inData, size, streamCTR, &inputCTR, outData);
+ 
+             reply->writeInt32(err);
+ 
+diff --git a/media/libmediaplayerservice/MediaPlayerService.cpp b/media/libmediaplayerservice/MediaPlayerService.cpp
+index a2ec691..61afe99 100644
+--- a/media/libmediaplayerservice/MediaPlayerService.cpp
++++ b/media/libmediaplayerservice/MediaPlayerService.cpp
+@@ -84,9 +84,6 @@
+ #include "HTTPBase.h"
+ #include "RemoteDisplay.h"
+ 
+-static const int kDumpLockRetries = 50;
+-static const int kDumpLockSleepUs = 20000;
+-
+ namespace {
+ using android::media::Metadata;
+ using android::status_t;
+@@ -420,32 +417,12 @@ status_t MediaPlayerService::Client::dump(int fd, const Vector<String16>& args)
+     snprintf(buffer, 255, "  pid(%d), connId(%d), status(%d), looping(%s)\n",
+             mPid, mConnId, mStatus, mLoop?"true": "false");
+     result.append(buffer);
+-
+-    sp<MediaPlayerBase> p;
+-    sp<AudioOutput> audioOutput;
+-    bool locked = false;
+-    for (int i = 0; i < kDumpLockRetries; ++i) {
+-        if (mLock.tryLock() == NO_ERROR) {
+-            locked = true;
+-            break;
+-        }
+-        usleep(kDumpLockSleepUs);
+-    }
+-
+-    if (locked) {
+-        p = mPlayer;
+-        audioOutput = mAudioOutput;
+-        mLock.unlock();
+-    } else {
+-        result.append("  lock is taken, no dump from player and audio output\n");
+-    }
+     write(fd, result.string(), result.size());
+-
+-    if (p != NULL) {
+-        p->dump(fd, args);
++    if (mPlayer != NULL) {
++        mPlayer->dump(fd, args);
+     }
+-    if (audioOutput != 0) {
+-        audioOutput->dump(fd, args);
++    if (mAudioOutput != 0) {
++        mAudioOutput->dump(fd, args);
+     }
+     write(fd, "\n", 1);
+     return NO_ERROR;
+@@ -614,10 +591,7 @@ MediaPlayerService::Client::Client(
+ MediaPlayerService::Client::~Client()
+ {
+     ALOGV("Client(%d) destructor pid = %d", mConnId, mPid);
+-    {
+-        Mutex::Autolock l(mLock);
+-        mAudioOutput.clear();
+-    }
++    mAudioOutput.clear();
+     wp<Client> client(this);
+     disconnect();
+     mService->removeClient(client);
+@@ -636,9 +610,10 @@ void MediaPlayerService::Client::disconnect()
+         Mutex::Autolock l(mLock);
+         p = mPlayer;
+         mClient.clear();
+-        mPlayer.clear();
+     }
+ 
++    mPlayer.clear();
++
+     // clear the notification to prevent callbacks to dead client
+     // and reset the player. We assume the player will serialize
+     // access to itself if necessary.
+@@ -659,7 +634,7 @@ void MediaPlayerService::Client::disconnect()
+ sp<MediaPlayerBase> MediaPlayerService::Client::createPlayer(player_type playerType)
+ {
+     // determine if we have the right player type
+-    sp<MediaPlayerBase> p = getPlayer();
++    sp<MediaPlayerBase> p = mPlayer;
+     if ((p != NULL) && (p->playerType() != playerType)) {
+         ALOGV("delete player");
+         p.clear();
+@@ -716,7 +691,6 @@ void MediaPlayerService::Client::setDataSource_post(
+     }
+ 
+     if (mStatus == OK) {
+-        Mutex::Autolock l(mLock);
+         mPlayer = p;
+     }
+ }
+diff --git a/media/libmediaplayerservice/nuplayer/NuPlayerDecoder.cpp b/media/libmediaplayerservice/nuplayer/NuPlayerDecoder.cpp
+index b52e6d2..a18e1da 100644
+--- a/media/libmediaplayerservice/nuplayer/NuPlayerDecoder.cpp
++++ b/media/libmediaplayerservice/nuplayer/NuPlayerDecoder.cpp
+@@ -549,10 +549,7 @@ bool NuPlayer::Decoder::handleAnInputBuffer(size_t index) {
+         ALOGI("[%s] resubmitting CSD", mComponentName.c_str());
+         msg->setBuffer("buffer", buffer);
+         mCSDsToSubmit.removeAt(0);
+-        if (!onInputBufferFetched(msg)) {
+-            handleError(UNKNOWN_ERROR);
+-            return false;
+-        }
++        CHECK(onInputBufferFetched(msg));
+         return true;
+     }
+ 
+@@ -916,11 +913,7 @@ bool NuPlayer::Decoder::onInputBufferFetched(const sp<AMessage> &msg) {
+ 
+         // copy into codec buffer
+         if (buffer != codecBuffer) {
+-            if (buffer->size() > codecBuffer->capacity()) {
+-                handleError(ERROR_BUFFER_TOO_SMALL);
+-                mDequeuedInputBuffers.push_back(bufferIx);
+-                return false;
+-            }
++            CHECK_LE(buffer->size(), codecBuffer->capacity());
+             codecBuffer->setRange(0, buffer->size());
+             memcpy(codecBuffer->data(), buffer->data(), buffer->size());
+         }
+diff --git a/media/libstagefright/AMRExtractor.cpp b/media/libstagefright/AMRExtractor.cpp
+index 9c07403..a6fb3d8 100644
+--- a/media/libstagefright/AMRExtractor.cpp
++++ b/media/libstagefright/AMRExtractor.cpp
+@@ -253,7 +253,7 @@ status_t AMRSource::read(
+ 
+     int64_t seekTimeUs;
+     ReadOptions::SeekMode mode;
+-    if (mOffsetTableLength > 0 && options && options->getSeekTo(&seekTimeUs, &mode)) {
++    if (options && options->getSeekTo(&seekTimeUs, &mode)) {
+         size_t size;
+         int64_t seekFrame = seekTimeUs / 20000ll;  // 20ms per frame.
+         mCurrentTimeUs = seekFrame * 20000ll;
+diff --git a/media/libstagefright/MPEG4Extractor.cpp b/media/libstagefright/MPEG4Extractor.cpp
+index 9e37ed3..80ef7b7 100755
+--- a/media/libstagefright/MPEG4Extractor.cpp
++++ b/media/libstagefright/MPEG4Extractor.cpp
+@@ -67,7 +67,6 @@ public:
+                 Vector<SidxEntry> &sidx,
+                 const Trex *trex,
+                 off64_t firstMoofOffset);
+-    virtual status_t init();
+ 
+     virtual status_t start(MetaData *params = NULL);
+     virtual status_t stop();
+@@ -482,8 +481,7 @@ sp<MetaData> MPEG4Extractor::getTrackMetaData(
+             } else {
+                 uint32_t sampleIndex;
+                 uint32_t sampleTime;
+-                if (track->timescale != 0 &&
+-                        track->sampleTable->findThumbnailSample(&sampleIndex) == OK
++                if (track->sampleTable->findThumbnailSample(&sampleIndex) == OK
+                         && track->sampleTable->getMetaDataForSample(
+                             sampleIndex, NULL /* offset */, NULL /* size */,
+                             &sampleTime) == OK) {
+@@ -897,16 +895,6 @@ status_t MPEG4Extractor::parseChunk(off64_t *offset, int depth) {
+         case FOURCC('s', 'c', 'h', 'i'):
+         case FOURCC('e', 'd', 't', 's'):
+         {
+-            if (chunk_type == FOURCC('m', 'o', 'o', 'v') && depth != 0) {
+-                ALOGE("moov: depth %d", depth);
+-                return ERROR_MALFORMED;
+-            }
+-
+-            if (chunk_type == FOURCC('m', 'o', 'o', 'v') && mInitCheck == OK) {
+-                ALOGE("duplicate moov");
+-                return ERROR_MALFORMED;
+-            }
+-
+             if (chunk_type == FOURCC('m', 'o', 'o', 'f') && !mMoofFound) {
+                 // store the offset of the first segment
+                 mMoofFound = true;
+@@ -935,10 +923,6 @@ status_t MPEG4Extractor::parseChunk(off64_t *offset, int depth) {
+ 
+             bool isTrack = false;
+             if (chunk_type == FOURCC('t', 'r', 'a', 'k')) {
+-                if (depth != 1) {
+-                    ALOGE("trak: depth %d", depth);
+-                    return ERROR_MALFORMED;
+-                }
+                 isTrack = true;
+ 
+                 Track *track = new Track;
+@@ -962,10 +946,6 @@ status_t MPEG4Extractor::parseChunk(off64_t *offset, int depth) {
+             while (*offset < stop_offset) {
+                 status_t err = parseChunk(offset, depth + 1);
+                 if (err != OK) {
+-                    if (isTrack) {
+-                        mLastTrack->skipTrack = true;
+-                        break;
+-                    }
+                     return err;
+                 }
+             }
+@@ -980,12 +960,6 @@ status_t MPEG4Extractor::parseChunk(off64_t *offset, int depth) {
+                 if (!mLastTrack->meta->findInt32(kKeyTrackID, &trackId)) {
+                     mLastTrack->skipTrack = true;
+                 }
+-
+-                status_t err = verifyTrack(mLastTrack);
+-                if (err != OK) {
+-                    mLastTrack->skipTrack = true;
+-                }
+-
+                 if (mLastTrack->skipTrack) {
+                     Track *cur = mFirstTrack;
+ 
+@@ -1003,6 +977,12 @@ status_t MPEG4Extractor::parseChunk(off64_t *offset, int depth) {
+ 
+                     return OK;
+                 }
++
++                status_t err = verifyTrack(mLastTrack);
++
++                if (err != OK) {
++                    return err;
++                }
+             } else if (chunk_type == FOURCC('m', 'o', 'o', 'v')) {
+                 mInitCheck = OK;
+ 
+@@ -1205,7 +1185,6 @@ status_t MPEG4Extractor::parseChunk(off64_t *offset, int depth) {
+             ALOGV("allocated pssh @ %p", pssh.data);
+             ssize_t requested = (ssize_t) pssh.datalen;
+             if (mDataSource->readAt(data_offset + 24, pssh.data, requested) < requested) {
+-                delete[] pssh.data;
+                 return ERROR_IO;
+             }
+             mPssh.push_back(pssh);
+@@ -1312,6 +1291,10 @@ status_t MPEG4Extractor::parseChunk(off64_t *offset, int depth) {
+ 
+         case FOURCC('s', 't', 's', 'd'):
+         {
++            if (chunk_data_size < 8) {
++                return ERROR_MALFORMED;
++            }
++
+             uint8_t buffer[8];
+             if (chunk_data_size < (off64_t)sizeof(buffer)) {
+                 return ERROR_MALFORMED;
+@@ -1909,10 +1892,6 @@ status_t MPEG4Extractor::parseChunk(off64_t *offset, int depth) {
+         {
+             *offset += chunk_size;
+ 
+-            if (depth != 1) {
+-                ALOGE("mvhd: depth %d", depth);
+-                return ERROR_MALFORMED;
+-            }
+             if (chunk_data_size < 32) {
+                 return ERROR_MALFORMED;
+             }
+@@ -2053,10 +2032,7 @@ status_t MPEG4Extractor::parseChunk(off64_t *offset, int depth) {
+             *offset += chunk_size;
+ 
+             if (underQTMetaPath(mPath, 3)) {
+-                status_t err = parseQTMetaKey(data_offset, chunk_data_size);
+-                if (err != OK) {
+-                    return err;
+-                }
++                parseQTMetaKey(data_offset, chunk_data_size);
+             }
+             break;
+         }
+@@ -2200,10 +2176,7 @@ status_t MPEG4Extractor::parseChunk(off64_t *offset, int depth) {
+ 
+         case FOURCC('s', 'i', 'd', 'x'):
+         {
+-            status_t err = parseSegmentIndex(data_offset, chunk_data_size);
+-            if (err != OK) {
+-                return err;
+-            }
++            parseSegmentIndex(data_offset, chunk_data_size);
+             *offset += chunk_size;
+             return UNKNOWN_ERROR; // stop parsing after sidx
+         }
+@@ -2213,10 +2186,7 @@ status_t MPEG4Extractor::parseChunk(off64_t *offset, int depth) {
+             // check if we're parsing 'ilst' for meta keys
+             // if so, treat type as a number (key-id).
+             if (underQTMetaPath(mPath, 3)) {
+-                status_t err = parseQTMetaVal(chunk_type, data_offset, chunk_data_size);
+-                if (err != OK) {
+-                    return err;
+-                }
++                parseQTMetaVal(chunk_type, data_offset, chunk_data_size);
+             }
+ 
+             *offset += chunk_size;
+@@ -2684,10 +2654,8 @@ status_t MPEG4Extractor::parseITunesMetaData(off64_t offset, size_t size) {
+                     int32_t delay, padding;
+                     if (sscanf(mLastCommentData,
+                                " %*x %x %x %*x", &delay, &padding) == 2) {
+-                        if (mLastTrack == NULL) {
+-                            delete[] buffer;
++                        if (mLastTrack == NULL)
+                             return ERROR_MALFORMED;
+-                        }
+ 
+                         mLastTrack->meta->setInt32(kKeyEncoderDelay, delay);
+                         mLastTrack->meta->setInt32(kKeyEncoderPadding, padding);
+@@ -2799,13 +2767,6 @@ status_t MPEG4Extractor::parse3GPPMetaData(off64_t offset, size_t size, int dept
+         }
+         case FOURCC('y', 'r', 'r', 'c'):
+         {
+-            if (size < 6) {
+-                delete[] buffer;
+-                buffer = NULL;
+-                ALOGE("b/62133227");
+-                android_errorWriteLog(0x534e4554, "62133227");
+-                return ERROR_MALFORMED;
+-            }
+             char tmp[5];
+             uint16_t year = U16_AT(&buffer[4]);
+ 
+@@ -2828,8 +2789,6 @@ status_t MPEG4Extractor::parse3GPPMetaData(off64_t offset, size_t size, int dept
+ 
+         // smallest possible valid UTF-16 string w BOM: 0xfe 0xff 0x00 0x00
+         if (size < 6) {
+-            delete[] buffer;
+-            buffer = NULL;
+             return ERROR_MALFORMED;
+         }
+ 
+@@ -2965,13 +2924,9 @@ sp<MediaSource> MPEG4Extractor::getTrack(size_t index) {
+ 
+     ALOGV("getTrack called, pssh: %zu", mPssh.size());
+ 
+-    sp<MPEG4Source> source =  new MPEG4Source(this,
++    return new MPEG4Source(this,
+             track->meta, mDataSource, track->timescale, track->sampleTable,
+             mSidxEntries, trex, mMoofOffset);
+-    if (source->init() != OK) {
+-        return NULL;
+-    }
+-    return source;
+ }
+ 
+ // static
+@@ -3368,7 +3323,6 @@ MPEG4Source::MPEG4Source(
+       mTrex(trex),
+       mFirstMoofOffset(firstMoofOffset),
+       mCurrentMoofOffset(firstMoofOffset),
+-      mNextMoofOffset(-1),
+       mCurrentTime(0),
+       mCurrentSampleInfoAllocSize(0),
+       mCurrentSampleInfoSizes(NULL),
+@@ -3435,14 +3389,10 @@ MPEG4Source::MPEG4Source(
+ 
+     CHECK(format->findInt32(kKeyTrackID, &mTrackId));
+ 
+-}
+-
+-status_t MPEG4Source::init() {
+     if (mFirstMoofOffset != 0) {
+         off64_t offset = mFirstMoofOffset;
+-        return parseChunk(&offset);
++        parseChunk(&offset);
+     }
+-    return OK;
+ }
+ 
+ MPEG4Source::~MPEG4Source() {
+@@ -3562,35 +3512,13 @@ status_t MPEG4Source::parseChunk(off64_t *offset) {
+ 
+                 while (true) {
+                     if (mDataSource->readAt(*offset, hdr, 8) < 8) {
+-                        // no more box to the end of file.
+-                        break;
++                        return ERROR_END_OF_STREAM;
+                     }
+                     chunk_size = ntohl(hdr[0]);
+                     chunk_type = ntohl(hdr[1]);
+-                    if (chunk_size == 1) {
+-                        // ISO/IEC 14496-12:2012, 8.8.4 Movie Fragment Box, moof is a Box
+-                        // which is defined in 4.2 Object Structure.
+-                        // When chunk_size==1, 8 bytes follows as "largesize".
+-                        if (mDataSource->readAt(*offset + 8, &chunk_size, 8) < 8) {
+-                            return ERROR_IO;
+-                        }
+-                        chunk_size = ntoh64(chunk_size);
+-                        if (chunk_size < 16) {
+-                            // The smallest valid chunk is 16 bytes long in this case.
+-                            return ERROR_MALFORMED;
+-                        }
+-                    } else if (chunk_size == 0) {
+-                        // next box extends to end of file.
+-                    } else if (chunk_size < 8) {
+-                        // The smallest valid chunk is 8 bytes long in this case.
+-                        return ERROR_MALFORMED;
+-                    }
+-
+                     if (chunk_type == FOURCC('m', 'o', 'o', 'f')) {
+                         mNextMoofOffset = *offset;
+                         break;
+-                    } else if (chunk_size == 0) {
+-                        break;
+                     }
+                     *offset += chunk_size;
+                 }
+@@ -4455,25 +4383,17 @@ status_t MPEG4Source::fragmentedRead(
+                 totalOffset += se->mSize;
+             }
+             mCurrentMoofOffset = totalOffset;
+-            mNextMoofOffset = -1;
+             mCurrentSamples.clear();
+             mCurrentSampleIndex = 0;
+-            status_t err = parseChunk(&totalOffset);
+-            if (err != OK) {
+-                return err;
+-            }
++            parseChunk(&totalOffset);
+             mCurrentTime = totalTime * mTimescale / 1000000ll;
+         } else {
+             // without sidx boxes, we can only seek to 0
+             mCurrentMoofOffset = mFirstMoofOffset;
+-            mNextMoofOffset = -1;
+             mCurrentSamples.clear();
+             mCurrentSampleIndex = 0;
+             off64_t tmp = mCurrentMoofOffset;
+-            status_t err = parseChunk(&tmp);
+-            if (err != OK) {
+-                return err;
+-            }
++            parseChunk(&tmp);
+             mCurrentTime = 0;
+         }
+ 
+@@ -4502,10 +4422,7 @@ status_t MPEG4Source::fragmentedRead(
+             mCurrentMoofOffset = nextMoof;
+             mCurrentSamples.clear();
+             mCurrentSampleIndex = 0;
+-            status_t err = parseChunk(&nextMoof);
+-            if (err != OK) {
+-                return err;
+-            }
++            parseChunk(&nextMoof);
+             if (mCurrentSampleIndex >= mCurrentSamples.size()) {
+                 return ERROR_END_OF_STREAM;
+             }
+diff --git a/media/libstagefright/NuMediaExtractor.cpp b/media/libstagefright/NuMediaExtractor.cpp
+index 6de2bb3..f24cf3a 100644
+--- a/media/libstagefright/NuMediaExtractor.cpp
++++ b/media/libstagefright/NuMediaExtractor.cpp
+@@ -542,7 +542,7 @@ bool NuMediaExtractor::getTotalBitrate(int64_t *bitrate) const {
+     }
+ 
+     off64_t size;
+-    if (mDurationUs > 0 && mDataSource->getSize(&size) == OK) {
++    if (mDurationUs >= 0 && mDataSource->getSize(&size) == OK) {
+         *bitrate = size * 8000000ll / mDurationUs;  // in bits/sec
+         return true;
+     }
+diff --git a/media/libstagefright/OggExtractor.cpp b/media/libstagefright/OggExtractor.cpp
+index bd6037f..d63ac96 100644
+--- a/media/libstagefright/OggExtractor.cpp
++++ b/media/libstagefright/OggExtractor.cpp
+@@ -578,10 +578,6 @@ status_t MyOpusExtractor::readNextPacket(MediaBuffer **out) {
+             }
+             // First two pages are header pages.
+             if (err == ERROR_END_OF_STREAM || mCurrentPage.mPageNo > 2) {
+-                if (mBuf != NULL) {
+-                    mBuf->release();
+-                    mBuf = NULL;
+-                }
+                 break;
+             }
+             curGranulePosition = mCurrentPage.mGranulePosition;
+@@ -701,21 +697,7 @@ status_t MyOggExtractor::_readNextPacket(MediaBuffer **out, bool calcVorbisTimes
+             if (buffer != NULL) {
+                 fullSize += buffer->range_length();
+             }
+-            if (fullSize > 16 * 1024 * 1024) { // arbitrary limit of 16 MB packet size
+-                if (buffer != NULL) {
+-                    buffer->release();
+-                }
+-                ALOGE("b/36592202");
+-                return ERROR_MALFORMED;
+-            }
+-            MediaBuffer *tmp = new (std::nothrow) MediaBuffer(fullSize);
+-            if (tmp == NULL) {
+-                if (buffer != NULL) {
+-                    buffer->release();
+-                }
+-                ALOGE("b/36592202");
+-                return ERROR_MALFORMED;
+-            }
++            MediaBuffer *tmp = new MediaBuffer(fullSize);
+             if (buffer != NULL) {
+                 memcpy(tmp->data(), buffer->data(), buffer->range_length());
+                 tmp->set_range(0, buffer->range_length());
+diff --git a/media/libstagefright/SampleTable.cpp b/media/libstagefright/SampleTable.cpp
+index c07bedb..8a38c24 100644
+--- a/media/libstagefright/SampleTable.cpp
++++ b/media/libstagefright/SampleTable.cpp
+@@ -512,6 +512,8 @@ status_t SampleTable::setSyncSampleParams(off64_t data_offset, size_t data_size)
+         return ERROR_MALFORMED;
+     }
+ 
++    mSyncSampleOffset = data_offset;
++
+     uint8_t header[8];
+     if (mDataSource->readAt(
+                 data_offset, header, sizeof(header)) < (ssize_t)sizeof(header)) {
+@@ -523,13 +525,13 @@ status_t SampleTable::setSyncSampleParams(off64_t data_offset, size_t data_size)
+         return ERROR_MALFORMED;
+     }
+ 
+-    uint32_t numSyncSamples = U32_AT(&header[4]);
++    mNumSyncSamples = U32_AT(&header[4]);
+ 
+-    if (numSyncSamples < 2) {
++    if (mNumSyncSamples < 2) {
+         ALOGV("Table of sync samples is empty or has only a single entry!");
+     }
+ 
+-    uint64_t allocSize = (uint64_t)numSyncSamples * sizeof(uint32_t);
++    uint64_t allocSize = (uint64_t)mNumSyncSamples * sizeof(uint32_t);
+     if (allocSize > kMaxTotalSize) {
+         ALOGE("Sync sample table size too large.");
+         return ERROR_OUT_OF_RANGE;
+@@ -547,31 +549,22 @@ status_t SampleTable::setSyncSampleParams(off64_t data_offset, size_t data_size)
+         return ERROR_OUT_OF_RANGE;
+     }
+ 
+-    mSyncSamples = new (std::nothrow) uint32_t[numSyncSamples];
++    mSyncSamples = new (std::nothrow) uint32_t[mNumSyncSamples];
+     if (!mSyncSamples) {
+         ALOGE("Cannot allocate sync sample table with %llu entries.",
+-                (unsigned long long)numSyncSamples);
++                (unsigned long long)mNumSyncSamples);
+         return ERROR_OUT_OF_RANGE;
+     }
+ 
+-    if (mDataSource->readAt(data_offset + 8, mSyncSamples,
++    if (mDataSource->readAt(mSyncSampleOffset + 8, mSyncSamples,
+             (size_t)allocSize) != (ssize_t)allocSize) {
+-        delete mSyncSamples;
+-        mSyncSamples = NULL;
+         return ERROR_IO;
+     }
+ 
+-    for (size_t i = 0; i < numSyncSamples; ++i) {
+-        if (mSyncSamples[i] == 0) {
+-            ALOGE("b/32423862, unexpected zero value in stss");
+-            continue;
+-        }
++    for (size_t i = 0; i < mNumSyncSamples; ++i) {
+         mSyncSamples[i] = ntohl(mSyncSamples[i]) - 1;
+     }
+ 
+-    mSyncSampleOffset = data_offset;
+-    mNumSyncSamples = numSyncSamples;
+-
+     return OK;
+ }
+ 
+diff --git a/media/libstagefright/VBRISeeker.cpp b/media/libstagefright/VBRISeeker.cpp
+index 5067ddc..8a0fcac 100644
+--- a/media/libstagefright/VBRISeeker.cpp
++++ b/media/libstagefright/VBRISeeker.cpp
+@@ -83,23 +83,8 @@ sp<VBRISeeker> VBRISeeker::CreateFromSource(
+          scale,
+          entrySize);
+ 
+-    if (entrySize > 4) {
+-        ALOGE("invalid VBRI entry size: %zu", entrySize);
+-        return NULL;
+-    }
+-
+-    sp<VBRISeeker> seeker = new (std::nothrow) VBRISeeker;
+-    if (seeker == NULL) {
+-        ALOGW("Couldn't allocate VBRISeeker");
+-        return NULL;
+-    }
+-
+     size_t totalEntrySize = numEntries * entrySize;
+-    uint8_t *buffer = new (std::nothrow) uint8_t[totalEntrySize];
+-    if (!buffer) {
+-        ALOGW("Couldn't allocate %zu bytes", totalEntrySize);
+-        return NULL;
+-    }
++    uint8_t *buffer = new uint8_t[totalEntrySize];
+ 
+     n = source->readAt(pos + sizeof(vbriHeader), buffer, totalEntrySize);
+     if (n < (ssize_t)totalEntrySize) {
+@@ -109,6 +94,7 @@ sp<VBRISeeker> VBRISeeker::CreateFromSource(
+         return NULL;
+     }
+ 
++    sp<VBRISeeker> seeker = new VBRISeeker;
+     seeker->mBasePos = post_id3_pos + frameSize;
+     // only update mDurationUs if the calculated duration is valid (non zero)
+     // otherwise, leave duration at -1 so that getDuration() and getOffsetForTime()
+diff --git a/media/libstagefright/avc_utils.cpp b/media/libstagefright/avc_utils.cpp
+index bf014ba..98b5c0e 100644
+--- a/media/libstagefright/avc_utils.cpp
++++ b/media/libstagefright/avc_utils.cpp
+@@ -454,10 +454,7 @@ bool IsAVCReferenceFrame(const sp<ABuffer> &accessUnit) {
+     size_t nalSize;
+     bool bIsReferenceFrame = true;
+     while (getNextNALUnit(&data, &size, &nalStart, &nalSize, true) == OK) {
+-        if (nalSize == 0u) {
+-            ALOGW("skipping empty nal unit from potentially malformed bitstream");
+-            continue;
+-        }
++        CHECK_GT(nalSize, 0u);
+ 
+         unsigned nalType = nalStart[0] & 0x1f;
+ 
+diff --git a/media/libstagefright/codecs/aacenc/SoftAACEncoder.cpp b/media/libstagefright/codecs/aacenc/SoftAACEncoder.cpp
+index 96bbb85..ab0a228 100644
+--- a/media/libstagefright/codecs/aacenc/SoftAACEncoder.cpp
++++ b/media/libstagefright/codecs/aacenc/SoftAACEncoder.cpp
+@@ -62,7 +62,8 @@ SoftAACEncoder::SoftAACEncoder(
+ }
+ 
+ SoftAACEncoder::~SoftAACEncoder() {
+-    onReset();
++    delete[] mInputFrame;
++    mInputFrame = NULL;
+ 
+     if (mEncoderHandle) {
+         CHECK_EQ(VO_ERR_NONE, mApiHandle->Uninit(mEncoderHandle));
+@@ -578,17 +579,6 @@ void SoftAACEncoder::onQueueFilled(OMX_U32 portIndex) {
+     }
+ }
+ 
+-void SoftAACEncoder::onReset() {
+-    delete[] mInputFrame;
+-    mInputFrame = NULL;
+-    mInputSize = 0;
+-
+-    mSentCodecSpecificData = false;
+-    mInputTimeUs = -1ll;
+-    mSawInputEOS = false;
+-    mSignalledError = false;
+-}
+-
+ }  // namespace android
+ 
+ android::SoftOMXComponent *createSoftOMXComponent(
+diff --git a/media/libstagefright/codecs/aacenc/SoftAACEncoder.h b/media/libstagefright/codecs/aacenc/SoftAACEncoder.h
+index 981cbbb..d148eb7 100644
+--- a/media/libstagefright/codecs/aacenc/SoftAACEncoder.h
++++ b/media/libstagefright/codecs/aacenc/SoftAACEncoder.h
+@@ -43,8 +43,6 @@ protected:
+ 
+     virtual void onQueueFilled(OMX_U32 portIndex);
+ 
+-    virtual void onReset();
+-
+ private:
+     enum {
+         kNumBuffers             = 4,
+diff --git a/media/libstagefright/codecs/aacenc/SoftAACEncoder2.cpp b/media/libstagefright/codecs/aacenc/SoftAACEncoder2.cpp
+index 8a7a5cc..e8dabed 100644
+--- a/media/libstagefright/codecs/aacenc/SoftAACEncoder2.cpp
++++ b/media/libstagefright/codecs/aacenc/SoftAACEncoder2.cpp
+@@ -16,7 +16,6 @@
+ 
+ //#define LOG_NDEBUG 0
+ #define LOG_TAG "SoftAACEncoder2"
+-#include <log/log.h>
+ #include <utils/Log.h>
+ 
+ #include "SoftAACEncoder2.h"
+@@ -52,7 +51,6 @@ SoftAACEncoder2::SoftAACEncoder2(
+       mSentCodecSpecificData(false),
+       mInputSize(0),
+       mInputFrame(NULL),
+-      mAllocatedFrameSize(0),
+       mInputTimeUs(-1ll),
+       mSawInputEOS(false),
+       mSignalledError(false) {
+@@ -64,7 +62,8 @@ SoftAACEncoder2::SoftAACEncoder2(
+ SoftAACEncoder2::~SoftAACEncoder2() {
+     aacEncClose(&mAACEncoder);
+ 
+-    onReset();
++    delete[] mInputFrame;
++    mInputFrame = NULL;
+ }
+ 
+ void SoftAACEncoder2::initPorts() {
+@@ -479,15 +478,6 @@ void SoftAACEncoder2::onQueueFilled(OMX_U32 /* portIndex */) {
+ 
+         BufferInfo *outInfo = *outQueue.begin();
+         OMX_BUFFERHEADERTYPE *outHeader = outInfo->mHeader;
+-
+-        if (outHeader->nOffset + encInfo.confSize > outHeader->nAllocLen) {
+-            ALOGE("b/34617444");
+-            android_errorWriteLog(0x534e4554,"34617444");
+-            notify(OMX_EventError, OMX_ErrorUndefined, 0, NULL);
+-            mSignalledError = true;
+-            return;
+-        }
+-
+         outHeader->nFilledLen = encInfo.confSize;
+         outHeader->nFlags = OMX_BUFFERFLAG_CODECCONFIG;
+ 
+@@ -534,15 +524,6 @@ void SoftAACEncoder2::onQueueFilled(OMX_U32 /* portIndex */) {
+ 
+             if (mInputFrame == NULL) {
+                 mInputFrame = new int16_t[numBytesPerInputFrame / sizeof(int16_t)];
+-                mAllocatedFrameSize = numBytesPerInputFrame;
+-            } else if (mAllocatedFrameSize != numBytesPerInputFrame) {
+-                ALOGE("b/34621073: changed size from %d to %d",
+-                        (int)mAllocatedFrameSize, (int)numBytesPerInputFrame);
+-                android_errorWriteLog(0x534e4554,"34621073");
+-                delete mInputFrame;
+-                mInputFrame = new int16_t[numBytesPerInputFrame / sizeof(int16_t)];
+-                mAllocatedFrameSize = numBytesPerInputFrame;
+-
+             }
+ 
+             if (mInputSize == 0) {
+@@ -689,18 +670,6 @@ void SoftAACEncoder2::onQueueFilled(OMX_U32 /* portIndex */) {
+     }
+ }
+ 
+-void SoftAACEncoder2::onReset() {
+-    delete[] mInputFrame;
+-    mInputFrame = NULL;
+-    mInputSize = 0;
+-    mAllocatedFrameSize = 0;
+-
+-    mSentCodecSpecificData = false;
+-    mInputTimeUs = -1ll;
+-    mSawInputEOS = false;
+-    mSignalledError = false;
+-}
+-
+ }  // namespace android
+ 
+ android::SoftOMXComponent *createSoftOMXComponent(
+diff --git a/media/libstagefright/codecs/aacenc/SoftAACEncoder2.h b/media/libstagefright/codecs/aacenc/SoftAACEncoder2.h
+index 123fd25..bce9c24 100644
+--- a/media/libstagefright/codecs/aacenc/SoftAACEncoder2.h
++++ b/media/libstagefright/codecs/aacenc/SoftAACEncoder2.h
+@@ -42,8 +42,6 @@ protected:
+ 
+     virtual void onQueueFilled(OMX_U32 portIndex);
+ 
+-    virtual void onReset();
+-
+ private:
+     enum {
+         kNumBuffers             = 4,
+@@ -62,7 +60,6 @@ private:
+     bool mSentCodecSpecificData;
+     size_t mInputSize;
+     int16_t *mInputFrame;
+-    size_t mAllocatedFrameSize;
+     int64_t mInputTimeUs;
+ 
+     bool mSawInputEOS;
+diff --git a/media/libstagefright/codecs/avcenc/SoftAVCEnc.cpp b/media/libstagefright/codecs/avcenc/SoftAVCEnc.cpp
+index 07d1245..e4e8fd7 100644
+--- a/media/libstagefright/codecs/avcenc/SoftAVCEnc.cpp
++++ b/media/libstagefright/codecs/avcenc/SoftAVCEnc.cpp
+@@ -611,7 +611,6 @@ OMX_ERRORTYPE SoftAVC::initEncoder() {
+     IV_STATUS_T status;
+     WORD32 level;
+     uint32_t displaySizeY;
+-
+     CHECK(!mStarted);
+ 
+     OMX_ERRORTYPE errType = OMX_ErrorNone;
+@@ -915,9 +914,6 @@ OMX_ERRORTYPE SoftAVC::releaseEncoder() {
+         }
+     }
+ 
+-    // clear other pointers into the space being free()d
+-    mCodecCtx = NULL;
+-
+     mStarted = false;
+ 
+     return OMX_ErrorNone;
+@@ -1449,14 +1445,6 @@ void SoftAVC::onQueueFilled(OMX_U32 portIndex) {
+     return;
+ }
+ 
+-void SoftAVC::onReset() {
+-    SoftVideoEncoderOMXComponent::onReset();
+-
+-    if (releaseEncoder() != OMX_ErrorNone) {
+-        ALOGW("releaseEncoder failed");
+-    }
+-}
+-
+ }  // namespace android
+ 
+ android::SoftOMXComponent *createSoftOMXComponent(
+diff --git a/media/libstagefright/codecs/avcenc/SoftAVCEnc.h b/media/libstagefright/codecs/avcenc/SoftAVCEnc.h
+index 77aca9b..4418a7f 100644
+--- a/media/libstagefright/codecs/avcenc/SoftAVCEnc.h
++++ b/media/libstagefright/codecs/avcenc/SoftAVCEnc.h
+@@ -137,8 +137,6 @@ struct SoftAVC : public SoftVideoEncoderOMXComponent {
+ protected:
+     virtual ~SoftAVC();
+ 
+-    virtual void onReset();
+-
+ private:
+     enum {
+         kNumBuffers = 2,
+diff --git a/media/libstagefright/codecs/m4v_h263/dec/SoftMPEG4.cpp b/media/libstagefright/codecs/m4v_h263/dec/SoftMPEG4.cpp
+index 411a251..1dd631a 100644
+--- a/media/libstagefright/codecs/m4v_h263/dec/SoftMPEG4.cpp
++++ b/media/libstagefright/codecs/m4v_h263/dec/SoftMPEG4.cpp
+@@ -255,28 +255,13 @@ void SoftMPEG4::onQueueFilled(OMX_U32 /* portIndex */) {
+             mSignalledError = true;
+             return;
+         }
+-
+-        // Need to check if header contains new info, e.g., width/height, etc.
+-        VopHeaderInfo header_info;
+-        uint8_t *bitstreamTmp = bitstream;
+-        if (PVDecodeVopHeader(
+-                    mHandle, &bitstreamTmp, &timestamp, &tmp,
+-                    &header_info, &useExtTimestamp,
+-                    outHeader->pBuffer) != PV_TRUE) {
+-            ALOGE("failed to decode vop header.");
+-
+-            notify(OMX_EventError, OMX_ErrorUndefined, 0, NULL);
+-            mSignalledError = true;
+-            return;
+-        }
+-        if (handlePortSettingsChange()) {
+-            return;
+-        }
+-
+         // The PV decoder is lying to us, sometimes it'll claim to only have
+         // consumed a subset of the buffer when it clearly consumed all of it.
+         // ignore whatever it says...
+-        if (PVDecodeVopBody(mHandle, &tmp) != PV_TRUE) {
++        if (PVDecodeVideoFrame(
++                    mHandle, &bitstream, &timestamp, &tmp,
++                    &useExtTimestamp,
++                    outHeader->pBuffer) != PV_TRUE) {
+             ALOGE("failed to decode video frame.");
+ 
+             notify(OMX_EventError, OMX_ErrorUndefined, 0, NULL);
+diff --git a/media/libstagefright/codecs/m4v_h263/dec/src/mb_motion_comp.cpp b/media/libstagefright/codecs/m4v_h263/dec/src/mb_motion_comp.cpp
+index 877723d..fbc7be1 100644
+--- a/media/libstagefright/codecs/m4v_h263/dec/src/mb_motion_comp.cpp
++++ b/media/libstagefright/codecs/m4v_h263/dec/src/mb_motion_comp.cpp
+@@ -15,10 +15,6 @@
+  * and limitations under the License.
+  * -------------------------------------------------------------------
+  */
+-
+-#define LOG_TAG "m4v_h263"
+-#include <log/log.h>
+-
+ /*
+ ------------------------------------------------------------------------------
+  INPUT AND OUTPUT DEFINITIONS
+@@ -240,11 +236,6 @@ void  MBMotionComp(
+ 
+     /* Pointer to previous luminance frame */
+     c_prev  = prev->yChan;
+-    if (!c_prev) {
+-        ALOGE("b/35269635");
+-        android_errorWriteLog(0x534e4554, "35269635");
+-        return;
+-    }
+ 
+     pred_block = video->mblock->pred_block;
+ 
+@@ -583,14 +574,7 @@ void  SkippedMBMotionComp(
+ 
+     /* zero motion compensation for previous frame */
+     /*mby*width + mbx;*/
+-    c_prev  = prev->yChan;
+-    if (!c_prev) {
+-        ALOGE("b/35269635");
+-        android_errorWriteLog(0x534e4554, "35269635");
+-        return;
+-    }
+-    c_prev += offset;
+-
++    c_prev  = prev->yChan + offset;
+     /*by*width_uv + bx;*/
+     cu_prev = prev->uChan + (offset >> 2) + (xpos >> 2);
+     /*by*width_uv + bx;*/
+diff --git a/media/libstagefright/codecs/m4v_h263/dec/src/pvdec_api.cpp b/media/libstagefright/codecs/m4v_h263/dec/src/pvdec_api.cpp
+index 8d5d071..c1720c6 100644
+--- a/media/libstagefright/codecs/m4v_h263/dec/src/pvdec_api.cpp
++++ b/media/libstagefright/codecs/m4v_h263/dec/src/pvdec_api.cpp
+@@ -15,8 +15,6 @@
+  * and limitations under the License.
+  * -------------------------------------------------------------------
+  */
+-#define LOG_TAG "pvdec_api"
+-#include <log/log.h>
+ #include "mp4dec_lib.h"
+ #include "vlc_decode.h"
+ #include "bitstream.h"
+@@ -1337,11 +1335,6 @@ Bool PVDecodeVopBody(VideoDecControls *decCtrl, int32 buffer_size[])
+             }
+         }
+ 
+-        if (!video->prevVop->yChan) {
+-            ALOGE("b/35269635");
+-            android_errorWriteLog(0x534e4554, "35269635");
+-            return PV_FALSE;
+-        }
+         oscl_memcpy(currVop->yChan, video->prevVop->yChan, (decCtrl->size*3) / 2);
+ 
+         video->prevVop = prevVop;
+diff --git a/media/libstagefright/codecs/m4v_h263/dec/src/vop.cpp b/media/libstagefright/codecs/m4v_h263/dec/src/vop.cpp
+index f18f789..60c79a6 100644
+--- a/media/libstagefright/codecs/m4v_h263/dec/src/vop.cpp
++++ b/media/libstagefright/codecs/m4v_h263/dec/src/vop.cpp
+@@ -15,8 +15,6 @@
+  * and limitations under the License.
+  * -------------------------------------------------------------------
+  */
+-#include "log/log.h"
+-
+ #include "mp4dec_lib.h"
+ #include "bitstream.h"
+ #include "vlc_decode.h"
+@@ -1338,7 +1336,8 @@ PV_STATUS DecodeShortHeader(VideoDecData *video, Vop *currVop)
+             }
+             tmpvar = BitstreamReadBits16(stream, 9);
+ 
+-            int tmpDisplayWidth = (tmpvar + 1) << 2;
++            video->displayWidth = (tmpvar + 1) << 2;
++            video->width = (video->displayWidth + 15) & -16;
+             /* marker bit */
+             if (!BitstreamRead1Bits(stream))
+             {
+@@ -1351,21 +1350,14 @@ PV_STATUS DecodeShortHeader(VideoDecData *video, Vop *currVop)
+                 status = PV_FAIL;
+                 goto return_point;
+             }
+-            int tmpDisplayHeight = tmpvar << 2;
+-            int tmpHeight = (tmpDisplayHeight + 15) & -16;
+-            int tmpWidth = (tmpDisplayWidth + 15) & -16;
++            video->displayHeight = tmpvar << 2;
++            video->height = (video->displayHeight + 15) & -16;
+ 
+-            if (tmpHeight * tmpWidth > video->size)
++            if (video->height * video->width > video->size)
+             {
+-                // This is just possibly "b/37079296".
+-                ALOGE("b/37079296");
+                 status = PV_FAIL;
+                 goto return_point;
+             }
+-            video->displayWidth = tmpDisplayWidth;
+-            video->width = tmpWidth;
+-            video->displayHeight = tmpDisplayHeight;
+-            video->height = tmpHeight;
+ 
+             video->nTotalMB = video->width / MB_SIZE * video->height / MB_SIZE;
+ 
+diff --git a/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.cpp b/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.cpp
+index 8002386..2eb51c9 100644
+--- a/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.cpp
++++ b/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.cpp
+@@ -99,7 +99,6 @@ SoftMPEG4Encoder::SoftMPEG4Encoder(
+ 
+ SoftMPEG4Encoder::~SoftMPEG4Encoder() {
+     ALOGV("Destruct SoftMPEG4Encoder");
+-    onReset();
+     releaseEncoder();
+     List<BufferInfo *> &outQueue = getPortQueue(1);
+     List<BufferInfo *> &inQueue = getPortQueue(0);
+@@ -209,15 +208,22 @@ OMX_ERRORTYPE SoftMPEG4Encoder::initEncoder() {
+ }
+ 
+ OMX_ERRORTYPE SoftMPEG4Encoder::releaseEncoder() {
+-    if (mEncParams) {
+-        delete mEncParams;
+-        mEncParams = NULL;
++    if (!mStarted) {
++        return OMX_ErrorNone;
+     }
+ 
+-    if (mHandle) {
+-        delete mHandle;
+-        mHandle = NULL;
+-    }
++    PVCleanUpVideoEncoder(mHandle);
++
++    free(mInputFrameData);
++    mInputFrameData = NULL;
++
++    delete mEncParams;
++    mEncParams = NULL;
++
++    delete mHandle;
++    mHandle = NULL;
++
++    mStarted = false;
+ 
+     return OMX_ErrorNone;
+ }
+@@ -513,19 +519,6 @@ void SoftMPEG4Encoder::onQueueFilled(OMX_U32 /* portIndex */) {
+     }
+ }
+ 
+-void SoftMPEG4Encoder::onReset() {
+-    if (!mStarted) {
+-        return;
+-    }
+-
+-    PVCleanUpVideoEncoder(mHandle);
+-
+-    free(mInputFrameData);
+-    mInputFrameData = NULL;
+-
+-    mStarted = false;
+-}
+-
+ }  // namespace android
+ 
+ android::SoftOMXComponent *createSoftOMXComponent(
+diff --git a/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.h b/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.h
+index 422fe22..3389c37 100644
+--- a/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.h
++++ b/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.h
+@@ -48,8 +48,6 @@ struct SoftMPEG4Encoder : public SoftVideoEncoderOMXComponent {
+ 
+     virtual void onQueueFilled(OMX_U32 portIndex);
+ 
+-    virtual void onReset();
+-
+ protected:
+     virtual ~SoftMPEG4Encoder();
+ 
+diff --git a/media/libstagefright/codecs/m4v_h263/enc/src/mp4enc_api.cpp b/media/libstagefright/codecs/m4v_h263/enc/src/mp4enc_api.cpp
+index 7ab8f45..c2b7c8d 100644
+--- a/media/libstagefright/codecs/m4v_h263/enc/src/mp4enc_api.cpp
++++ b/media/libstagefright/codecs/m4v_h263/enc/src/mp4enc_api.cpp
+@@ -773,7 +773,7 @@ OSCL_EXPORT_REF Bool    PVInitVideoEncoder(VideoEncControls *encoderControl, Vid
+             || (size_t)(size + (size >> 1)) > SIZE_MAX / sizeof(PIXEL)) {
+         goto CLEAN_UP;
+     }
+-    video->currVop->allChan = video->currVop->yChan = (PIXEL *)M4VENC_MALLOC(sizeof(PIXEL) * (size + (size >> 1))); /* Memory for currVop Y */
++    video->currVop->yChan = (PIXEL *)M4VENC_MALLOC(sizeof(PIXEL) * (size + (size >> 1))); /* Memory for currVop Y */
+     if (video->currVop->yChan == NULL) goto CLEAN_UP;
+     video->currVop->uChan = video->currVop->yChan + size;/* Memory for currVop U */
+     video->currVop->vChan = video->currVop->uChan + (size >> 2);/* Memory for currVop V */
+@@ -791,7 +791,7 @@ OSCL_EXPORT_REF Bool    PVInitVideoEncoder(VideoEncControls *encoderControl, Vid
+ 
+     video->prevBaseVop = (Vop *) M4VENC_MALLOC(sizeof(Vop));         /* Memory for Previous Base Vop */
+     if (video->prevBaseVop == NULL) goto CLEAN_UP;
+-    video->prevBaseVop->allChan = video->prevBaseVop->yChan = (PIXEL *) M4VENC_MALLOC(sizeof(PIXEL) * (size + (size >> 1))); /* Memory for prevBaseVop Y */
++    video->prevBaseVop->yChan = (PIXEL *) M4VENC_MALLOC(sizeof(PIXEL) * (size + (size >> 1))); /* Memory for prevBaseVop Y */
+     if (video->prevBaseVop->yChan == NULL) goto CLEAN_UP;
+     video->prevBaseVop->uChan = video->prevBaseVop->yChan + size; /* Memory for prevBaseVop U */
+     video->prevBaseVop->vChan = video->prevBaseVop->uChan + (size >> 2); /* Memory for prevBaseVop V */
+@@ -808,7 +808,7 @@ OSCL_EXPORT_REF Bool    PVInitVideoEncoder(VideoEncControls *encoderControl, Vid
+     {
+         video->nextBaseVop = (Vop *) M4VENC_MALLOC(sizeof(Vop));         /* Memory for Next Base Vop */
+         if (video->nextBaseVop == NULL) goto CLEAN_UP;
+-        video->nextBaseVop->allChan = video->nextBaseVop->yChan = (PIXEL *) M4VENC_MALLOC(sizeof(PIXEL) * (size + (size >> 1))); /* Memory for nextBaseVop Y */
++        video->nextBaseVop->yChan = (PIXEL *) M4VENC_MALLOC(sizeof(PIXEL) * (size + (size >> 1))); /* Memory for nextBaseVop Y */
+         if (video->nextBaseVop->yChan == NULL) goto CLEAN_UP;
+         video->nextBaseVop->uChan = video->nextBaseVop->yChan + size; /* Memory for nextBaseVop U */
+         video->nextBaseVop->vChan = video->nextBaseVop->uChan + (size >> 2); /* Memory for nextBaseVop V */
+@@ -825,7 +825,7 @@ OSCL_EXPORT_REF Bool    PVInitVideoEncoder(VideoEncControls *encoderControl, Vid
+     {
+         video->prevEnhanceVop = (Vop *) M4VENC_MALLOC(sizeof(Vop));      /* Memory for Previous Enhancement Vop */
+         if (video->prevEnhanceVop == NULL) goto CLEAN_UP;
+-        video->prevEnhanceVop->allChan = video->prevEnhanceVop->yChan = (PIXEL *) M4VENC_MALLOC(sizeof(PIXEL) * (size + (size >> 1))); /* Memory for Previous Ehancement Y */
++        video->prevEnhanceVop->yChan = (PIXEL *) M4VENC_MALLOC(sizeof(PIXEL) * (size + (size >> 1))); /* Memory for Previous Ehancement Y */
+         if (video->prevEnhanceVop->yChan == NULL) goto CLEAN_UP;
+         video->prevEnhanceVop->uChan = video->prevEnhanceVop->yChan + size; /* Memory for Previous Enhancement U */
+         video->prevEnhanceVop->vChan = video->prevEnhanceVop->uChan + (size >> 2); /* Memory for Previous Enhancement V */
+@@ -1196,35 +1196,39 @@ OSCL_EXPORT_REF Bool    PVCleanUpVideoEncoder(VideoEncControls *encoderControl)
+ 
+         if (video->currVop)
+         {
+-            if (video->currVop->allChan)
++            if (video->currVop->yChan)
+             {
+-                M4VENC_FREE(video->currVop->allChan);
++                video->currVop->yChan -= offset;
++                M4VENC_FREE(video->currVop->yChan);
+             }
+             M4VENC_FREE(video->currVop);
+         }
+ 
+         if (video->nextBaseVop)
+         {
+-            if (video->nextBaseVop->allChan)
++            if (video->nextBaseVop->yChan)
+             {
+-                M4VENC_FREE(video->nextBaseVop->allChan);
++                video->nextBaseVop->yChan -= offset;
++                M4VENC_FREE(video->nextBaseVop->yChan);
+             }
+             M4VENC_FREE(video->nextBaseVop);
+         }
+ 
+         if (video->prevBaseVop)
+         {
+-            if (video->prevBaseVop->allChan)
++            if (video->prevBaseVop->yChan)
+             {
+-                M4VENC_FREE(video->prevBaseVop->allChan);
++                video->prevBaseVop->yChan -= offset;
++                M4VENC_FREE(video->prevBaseVop->yChan);
+             }
+             M4VENC_FREE(video->prevBaseVop);
+         }
+         if (video->prevEnhanceVop)
+         {
+-            if (video->prevEnhanceVop->allChan)
++            if (video->prevEnhanceVop->yChan)
+             {
+-                M4VENC_FREE(video->prevEnhanceVop->allChan);
++                video->prevEnhanceVop->yChan -= offset;
++                M4VENC_FREE(video->prevEnhanceVop->yChan);
+             }
+             M4VENC_FREE(video->prevEnhanceVop);
+         }
+diff --git a/media/libstagefright/codecs/m4v_h263/enc/src/mp4lib_int.h b/media/libstagefright/codecs/m4v_h263/enc/src/mp4lib_int.h
+index b05099c..3bc9421 100644
+--- a/media/libstagefright/codecs/m4v_h263/enc/src/mp4lib_int.h
++++ b/media/libstagefright/codecs/m4v_h263/enc/src/mp4lib_int.h
+@@ -39,7 +39,6 @@ typedef struct tagBitstream
+ 
+ typedef struct tagVOP
+ {
+-    PIXEL   *allChan;           /* [yuv]Chan point into this buffer */
+     PIXEL   *yChan;             /* The Y component */
+     PIXEL   *uChan;             /* The U component */
+     PIXEL   *vChan;             /* The V component */
+diff --git a/media/libstagefright/codecs/mpeg2dec/SoftMPEG2.cpp b/media/libstagefright/codecs/mpeg2dec/SoftMPEG2.cpp
+index eeeab59..e134d38 100644
+--- a/media/libstagefright/codecs/mpeg2dec/SoftMPEG2.cpp
++++ b/media/libstagefright/codecs/mpeg2dec/SoftMPEG2.cpp
+@@ -68,36 +68,31 @@ SoftMPEG2::SoftMPEG2(
+             kProfileLevels, ARRAY_SIZE(kProfileLevels),
+             320 /* width */, 240 /* height */, callbacks,
+             appData, component),
+-      mCodecCtx(NULL),
+       mMemRecords(NULL),
+       mFlushOutBuffer(NULL),
+       mOmxColorFormat(OMX_COLOR_FormatYUV420Planar),
+       mIvColorFormat(IV_YUV_420P),
+       mNewWidth(mWidth),
+       mNewHeight(mHeight),
+-      mChangingResolution(false),
+-      mSignalledError(false) {
++      mChangingResolution(false) {
+     initPorts(kNumBuffers, INPUT_BUF_SIZE, kNumBuffers, CODEC_MIME_TYPE);
+ 
+     // If input dump is enabled, then open create an empty file
+     GENERATE_FILE_NAMES();
+     CREATE_DUMP_FILE(mInFile);
++
++    CHECK_EQ(initDecoder(), (status_t)OK);
+ }
+ 
+ SoftMPEG2::~SoftMPEG2() {
+-    if (OK != deInitDecoder()) {
+-        ALOGE("Failed to deinit decoder");
+-        notify(OMX_EventError, OMX_ErrorUnsupportedSetting, 0, NULL);
+-        mSignalledError = true;
+-        return;
+-    }
++    CHECK_EQ(deInitDecoder(), (status_t)OK);
+ }
+ 
+ 
+-static ssize_t getMinTimestampIdx(OMX_S64 *pNTimeStamp, bool *pIsTimeStampValid) {
++static size_t getMinTimestampIdx(OMX_S64 *pNTimeStamp, bool *pIsTimeStampValid) {
+     OMX_S64 minTimeStamp = LLONG_MAX;
+-    ssize_t idx = -1;
+-    for (ssize_t i = 0; i < MAX_TIME_STAMPS; i++) {
++    int idx = -1;
++    for (size_t i = 0; i < MAX_TIME_STAMPS; i++) {
+         if (pIsTimeStampValid[i]) {
+             if (pNTimeStamp[i] < minTimeStamp) {
+                 minTimeStamp = pNTimeStamp[i];
+@@ -207,7 +202,6 @@ status_t SoftMPEG2::resetDecoder() {
+     /* Set number of cores/threads to be used by the codec */
+     setNumCores();
+ 
+-    mSignalledError = false;
+     return OK;
+ }
+ 
+@@ -435,7 +429,6 @@ status_t SoftMPEG2::deInitDecoder() {
+ 
+     mInitNeeded = true;
+     mChangingResolution = false;
+-    mCodecCtx = NULL;
+ 
+     return OK;
+ }
+@@ -447,11 +440,10 @@ status_t SoftMPEG2::reInitDecoder() {
+ 
+     ret = initDecoder();
+     if (OK != ret) {
+-        ALOGE("Failed to initialize decoder");
++        ALOGE("Create failure");
+         deInitDecoder();
+-        return ret;
++        return NO_MEMORY;
+     }
+-    mSignalledError = false;
+     return OK;
+ }
+ 
+@@ -549,22 +541,10 @@ void SoftMPEG2::onPortFlushCompleted(OMX_U32 portIndex) {
+ void SoftMPEG2::onQueueFilled(OMX_U32 portIndex) {
+     UNUSED(portIndex);
+ 
+-    if (mSignalledError) {
+-        return;
+-    }
+     if (mOutputPortSettingsChange != NONE) {
+         return;
+     }
+ 
+-    if (NULL == mCodecCtx) {
+-        if (OK != initDecoder()) {
+-            ALOGE("Failed to initialize decoder");
+-            notify(OMX_EventError, OMX_ErrorUnsupportedSetting, 0, NULL);
+-            mSignalledError = true;
+-            return;
+-        }
+-    }
+-
+     List<BufferInfo *> &inQueue = getPortQueue(kInputPortIndex);
+     List<BufferInfo *> &outQueue = getPortQueue(kOutputPortIndex);
+ 
+@@ -621,9 +601,7 @@ void SoftMPEG2::onQueueFilled(OMX_U32 portIndex) {
+             bool portWillReset = false;
+             handlePortSettingsChange(&portWillReset, mNewWidth, mNewHeight);
+ 
+-            if (OK != reInitDecoder()) {
+-                ALOGE("Failed to reinitialize decoder");
+-            }
++            CHECK_EQ(reInitDecoder(), (status_t)OK);
+             return;
+         }
+ 
+@@ -694,10 +672,7 @@ void SoftMPEG2::onQueueFilled(OMX_U32 portIndex) {
+                 bool portWillReset = false;
+                 handlePortSettingsChange(&portWillReset, s_dec_op.u4_pic_wd, s_dec_op.u4_pic_ht);
+ 
+-                if (OK != reInitDecoder()) {
+-                    ALOGE("Failed to reinitialize decoder");
+-                    return;
+-                }
++                CHECK_EQ(reInitDecoder(), (status_t)OK);
+ 
+                 if (setDecodeArgs(&s_dec_ip, &s_dec_op, inHeader, outHeader, timeStampIx)) {
+                     ivdec_api_function(mCodecCtx, (void *)&s_dec_ip, (void *)&s_dec_op);
+@@ -741,15 +716,10 @@ void SoftMPEG2::onQueueFilled(OMX_U32 portIndex) {
+             }
+ 
+             if (s_dec_op.u4_output_present) {
+-                ssize_t timeStampIdx;
++                size_t timeStampIdx;
+                 outHeader->nFilledLen = (mWidth * mHeight * 3) / 2;
+ 
+                 timeStampIdx = getMinTimestampIdx(mTimeStamps, mTimeStampsValid);
+-                if (timeStampIdx < 0) {
+-                    ALOGE("b/62872863, Invalid timestamp index!");
+-                    android_errorWriteLog(0x534e4554, "62872863");
+-                    return;
+-                }
+                 outHeader->nTimeStamp = mTimeStamps[timeStampIdx];
+                 mTimeStampsValid[timeStampIdx] = false;
+ 
+diff --git a/media/libstagefright/codecs/mpeg2dec/SoftMPEG2.h b/media/libstagefright/codecs/mpeg2dec/SoftMPEG2.h
+index e7cbc0e..f48b70b 100644
+--- a/media/libstagefright/codecs/mpeg2dec/SoftMPEG2.h
++++ b/media/libstagefright/codecs/mpeg2dec/SoftMPEG2.h
+@@ -105,7 +105,6 @@ private:
+     // codec. So the codec is switching to decode the new resolution.
+     bool mChangingResolution;
+     bool mFlushNeeded;
+-    bool mSignalledError;
+     bool mWaitForI;
+ 
+     status_t initDecoder();
+diff --git a/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.cpp b/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.cpp
+index 26c0fca..5c950c7 100644
+--- a/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.cpp
++++ b/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.cpp
+@@ -788,9 +788,7 @@ void SoftVPXEncoder::onQueueFilled(OMX_U32 /* portIndex */) {
+         if (inputBufferHeader->nTimeStamp > mLastTimestamp) {
+             frameDuration = (uint32_t)(inputBufferHeader->nTimeStamp - mLastTimestamp);
+         } else {
+-            // Use default of 30 fps in case of 0 frame rate.
+-            uint32_t framerate = mFramerate ?: (30 << 16);
+-            frameDuration = (uint32_t)(((uint64_t)1000000 << 16) / framerate);
++            frameDuration = (uint32_t)(((uint64_t)1000000 << 16) / mFramerate);
+         }
+         mLastTimestamp = inputBufferHeader->nTimeStamp;
+         codec_return = vpx_codec_encode(
+@@ -844,11 +842,6 @@ void SoftVPXEncoder::onQueueFilled(OMX_U32 /* portIndex */) {
+     }
+ }
+ 
+-void SoftVPXEncoder::onReset() {
+-    releaseEncoder();
+-    mLastTimestamp = 0x7FFFFFFFFFFFFFFFLL;
+-}
+-
+ }  // namespace android
+ 
+ 
+diff --git a/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.h b/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.h
+index 2033e64..cd0a0cf 100644
+--- a/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.h
++++ b/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.h
+@@ -87,8 +87,6 @@ protected:
+     // encoding of the frame
+     virtual void onQueueFilled(OMX_U32 portIndex);
+ 
+-    virtual void onReset();
+-
+ private:
+     enum TemporalReferences {
+         // For 1 layer case: reference all (last, golden, and alt ref), but only
+diff --git a/media/libstagefright/foundation/base64.cpp b/media/libstagefright/foundation/base64.cpp
+index cc89064..7da7db9 100644
+--- a/media/libstagefright/foundation/base64.cpp
++++ b/media/libstagefright/foundation/base64.cpp
+@@ -78,7 +78,8 @@ sp<ABuffer> decodeBase64(const AString &s) {
+         accum = (accum << 6) | value;
+ 
+         if (((i + 1) % 4) == 0) {
+-            if (j < outLen) { out[j++] = (accum >> 16); }
++            out[j++] = (accum >> 16);
++
+             if (j < outLen) { out[j++] = (accum >> 8) & 0xff; }
+             if (j < outLen) { out[j++] = accum & 0xff; }
+ 
+diff --git a/media/libstagefright/id3/ID3.cpp b/media/libstagefright/id3/ID3.cpp
+index fee13ea..d1fd0d9 100644
+--- a/media/libstagefright/id3/ID3.cpp
++++ b/media/libstagefright/id3/ID3.cpp
+@@ -379,7 +379,7 @@ bool ID3::removeUnsynchronizationV2_4(bool iTunesHack) {
+             flags &= ~1;
+         }
+ 
+-        if ((flags & 2) && (dataSize >= 2)) {
++        if (flags & 2) {
+             // This file has "unsynchronization", so we have to replace occurrences
+             // of 0xff 0x00 with just 0xff in order to get the real data.
+ 
+@@ -395,15 +395,11 @@ bool ID3::removeUnsynchronizationV2_4(bool iTunesHack) {
+                 mData[writeOffset++] = mData[readOffset++];
+             }
+             // move the remaining data following this frame
+-            if (readOffset <= oldSize) {
+-                memmove(&mData[writeOffset], &mData[readOffset], oldSize - readOffset);
+-            } else {
+-                ALOGE("b/34618607 (%zu %zu %zu %zu)", readOffset, writeOffset, oldSize, mSize);
+-                android_errorWriteLog(0x534e4554, "34618607");
+-            }
++            memmove(&mData[writeOffset], &mData[readOffset], oldSize - readOffset);
+ 
++            flags &= ~2;
+         }
+-        flags &= ~2;
++
+         if (flags != prevFlags || iTunesHack) {
+             WriteSyncsafeInteger(&mData[offset + 4], dataSize);
+             mData[offset + 8] = flags >> 8;
+@@ -841,21 +837,20 @@ void ID3::Iterator::findFrame() {
+     }
+ }
+ 
+-// return includes terminator;  if unterminated, returns > limit
+-static size_t StringSize(const uint8_t *start, size_t limit, uint8_t encoding) {
+-
++static size_t StringSize(const uint8_t *start, uint8_t encoding) {
+     if (encoding == 0x00 || encoding == 0x03) {
+         // ISO 8859-1 or UTF-8
+-        return strnlen((const char *)start, limit) + 1;
++        return strlen((const char *)start) + 1;
+     }
+ 
+     // UCS-2
+     size_t n = 0;
+-    while ((n+1 < limit) && (start[n] != '\0' || start[n + 1] != '\0')) {
++    while (start[n] != '\0' || start[n + 1] != '\0') {
+         n += 2;
+     }
+-    n += 2;
+-    return n;
++
++    // Add size of null termination.
++    return n + 2;
+ }
+ 
+ const void *
+@@ -876,19 +871,11 @@ ID3::getAlbumArt(size_t *length, String8 *mime) const {
+ 
+         if (mVersion == ID3_V2_3 || mVersion == ID3_V2_4) {
+             uint8_t encoding = data[0];
+-            size_t consumed = 1;
+-
+-            // *always* in an 8-bit encoding
+-            size_t mimeLen = StringSize(&data[consumed], size - consumed, 0x00);
+-            if (mimeLen > size - consumed) {
+-                ALOGW("bogus album art size: mime");
+-                return NULL;
+-            }
+-            mime->setTo((const char *)&data[consumed]);
+-            consumed += mimeLen;
++            mime->setTo((const char *)&data[1]);
++            size_t mimeLen = strlen((const char *)&data[1]) + 1;
+ 
+ #if 0
+-            uint8_t picType = data[consumed];
++            uint8_t picType = data[1 + mimeLen];
+             if (picType != 0x03) {
+                 // Front Cover Art
+                 it.next();
+@@ -896,30 +883,20 @@ ID3::getAlbumArt(size_t *length, String8 *mime) const {
+             }
+ #endif
+ 
+-            consumed++;
+-            if (consumed >= size) {
+-                ALOGW("bogus album art size: pic type");
+-                return NULL;
+-            }
+-
+-            size_t descLen = StringSize(&data[consumed], size - consumed, encoding);
+-            consumed += descLen;
++            size_t descLen = StringSize(&data[2 + mimeLen], encoding);
+ 
+-            if (consumed >= size) {
+-                ALOGW("bogus album art size: description");
++            if (size < 2 ||
++                    size - 2 < mimeLen ||
++                    size - 2 - mimeLen < descLen) {
++                ALOGW("bogus album art sizes");
+                 return NULL;
+             }
++            *length = size - 2 - mimeLen - descLen;
+ 
+-            *length = size - consumed;
+-
+-            return &data[consumed];
++            return &data[2 + mimeLen + descLen];
+         } else {
+             uint8_t encoding = data[0];
+ 
+-            if (size <= 5) {
+-                return NULL;
+-            }
+-
+             if (!memcmp(&data[1], "PNG", 3)) {
+                 mime->setTo("image/png");
+             } else if (!memcmp(&data[1], "JPG", 3)) {
+@@ -939,10 +916,7 @@ ID3::getAlbumArt(size_t *length, String8 *mime) const {
+             }
+ #endif
+ 
+-            size_t descLen = StringSize(&data[5], size - 5, encoding);
+-            if (descLen > size - 5) {
+-                return NULL;
+-            }
++            size_t descLen = StringSize(&data[5], encoding);
+ 
+             *length = size - 5 - descLen;
+ 
+diff --git a/media/libstagefright/mpeg2ts/ESQueue.cpp b/media/libstagefright/mpeg2ts/ESQueue.cpp
+index 7359e8b..36ec367 100644
+--- a/media/libstagefright/mpeg2ts/ESQueue.cpp
++++ b/media/libstagefright/mpeg2ts/ESQueue.cpp
+@@ -715,11 +715,6 @@ sp<ABuffer> ElementaryStreamQueue::dequeueAccessUnitAAC() {
+         bits.skipBits(2);
+ 
+         unsigned aac_frame_length = bits.getBits(13);
+-        if (aac_frame_length == 0){
+-            ALOGE("b/62673179, Invalid AAC frame length!");
+-            android_errorWriteLog(0x534e4554, "62673179");
+-            return NULL;
+-        }
+ 
+         bits.skipBits(11);  // adts_buffer_fullness
+ 
+diff --git a/media/libstagefright/omx/GraphicBufferSource.cpp b/media/libstagefright/omx/GraphicBufferSource.cpp
+index 28fa730..1a7dc9d 100644
+--- a/media/libstagefright/omx/GraphicBufferSource.cpp
++++ b/media/libstagefright/omx/GraphicBufferSource.cpp
+@@ -170,12 +170,9 @@ GraphicBufferSource::GraphicBufferSource(
+         mIsPersistent = true;
+     }
+     mConsumer->setDefaultBufferSize(bufferWidth, bufferHeight);
+-}
+-
+-status_t GraphicBufferSource::init() {
+-    // Note that we can't create an sp<...>(this) in a method that will not keep a
+-    // reference once the method ends, as that may cause the refcount of 'this'
+-    // dropping to 0 at the end of the method.  Since all we need is a wp<...>
++    // Note that we can't create an sp<...>(this) in a ctor that will not keep a
++    // reference once the ctor ends, as that would cause the refcount of 'this'
++    // dropping to 0 at the end of the ctor.  Since all we need is a wp<...>
+     // that's what we create.
+     wp<BufferQueue::ConsumerListener> listener = static_cast<BufferQueue::ConsumerListener*>(this);
+     sp<IConsumerListener> proxy;
+@@ -189,9 +186,10 @@ status_t GraphicBufferSource::init() {
+     if (mInitCheck != NO_ERROR) {
+         ALOGE("Error connecting to BufferQueue: %s (%d)",
+                 strerror(-mInitCheck), mInitCheck);
++        return;
+     }
+ 
+-    return mInitCheck;
++    CHECK(mInitCheck == NO_ERROR);
+ }
+ 
+ GraphicBufferSource::~GraphicBufferSource() {
+@@ -473,12 +471,6 @@ void GraphicBufferSource::suspend(bool suspend) {
+             } else if (err != OK) {
+                 ALOGW("suspend: acquireBuffer returned err=%d", err);
+                 break;
+-            } else if (item.mBuf < 0 ||
+-                    item.mBuf >= BufferQueue::NUM_BUFFER_SLOTS) {
+-                // Invalid buffer index
+-                ALOGW("suspend: corrupted buffer index (%d)",
+-                        item.mBuf);
+-                break;
+             }
+ 
+             ++mNumBufferAcquired;
+@@ -530,10 +522,6 @@ bool GraphicBufferSource::fillCodecBuffer_l() {
+         // now what? fake end-of-stream?
+         ALOGW("fillCodecBuffer_l: acquireBuffer returned err=%d", err);
+         return false;
+-    } else if (item.mBuf < 0 || item.mBuf >= BufferQueue::NUM_BUFFER_SLOTS) {
+-        // Invalid buffer index
+-        ALOGW("fillCodecBuffer_l: corrupted buffer index (%d)", item.mBuf);
+-        return false;
+     }
+ 
+     mNumBufferAcquired++;
+@@ -887,14 +875,8 @@ void GraphicBufferSource::onFrameAvailable(const BufferItem& /*item*/) {
+         BufferQueue::BufferItem item;
+         status_t err = mConsumer->acquireBuffer(&item, 0);
+         if (err == OK) {
+-            if (item.mBuf < 0 ||
+-                    item.mBuf >= BufferQueue::NUM_BUFFER_SLOTS) {
+-                // Invalid buffer index
+-                ALOGW("onFrameAvailable: corrupted buffer index (%d)",
+-                        item.mBuf);
+-                return;
+-            }
+             mNumBufferAcquired++;
++
+             // If this is the first time we're seeing this buffer, add it to our
+             // slot table.
+             if (item.mGraphicBuffer != NULL) {
+diff --git a/media/libstagefright/omx/GraphicBufferSource.h b/media/libstagefright/omx/GraphicBufferSource.h
+index b8e6c45..2f929d9 100644
+--- a/media/libstagefright/omx/GraphicBufferSource.h
++++ b/media/libstagefright/omx/GraphicBufferSource.h
+@@ -61,7 +61,11 @@ public:
+ 
+     virtual ~GraphicBufferSource();
+ 
+-    status_t init();
++    // We can't throw an exception if the constructor fails, so we just set
++    // this and require that the caller test the value.
++    status_t initCheck() const {
++        return mInitCheck;
++    }
+ 
+     // Returns the handle to the producer side of the BufferQueue.  Buffers
+     // queued on this will be received by GraphicBufferSource.
+diff --git a/media/libstagefright/omx/OMXNodeInstance.cpp b/media/libstagefright/omx/OMXNodeInstance.cpp
+index 8d7ffb9..c09064f 100644
+--- a/media/libstagefright/omx/OMXNodeInstance.cpp
++++ b/media/libstagefright/omx/OMXNodeInstance.cpp
+@@ -170,10 +170,8 @@ struct BufferMeta {
+         return buf;
+     }
+ 
+-    bool copyingOrSharingToOmx(const OMX_BUFFERHEADERTYPE *header) const {
+-        return mCopyToOmx
+-                                    // sharing buffer with client
+-                || (mMem != NULL && mMem->pointer() == header->pBuffer);
++    bool copyToOmx() const {
++        return mCopyToOmx;
+     }
+ 
+     void setGraphicBuffer(const sp<GraphicBuffer> &graphicBuffer) {
+@@ -773,12 +771,6 @@ status_t OMXNodeInstance::useBuffer(
+         return BAD_VALUE;
+     }
+ 
+-    if (!mSailed) {
+-        ALOGE("b/35467458");
+-        android_errorWriteLog(0x534e4554, "35467458");
+-        return BAD_VALUE;
+-    }
+-
+     // metadata buffers are not connected cross process
+     BufferMeta *buffer_meta;
+     bool isMeta = mMetadataType[portIndex] != kMetadataBufferTypeInvalid;
+@@ -792,6 +784,13 @@ status_t OMXNodeInstance::useBuffer(
+         }
+         memset(data, 0, allottedSize);
+ 
++        // if we are not connecting the buffers, the sizes must match
++        if (allottedSize != params->size()) {
++            CLOG_ERROR(useBuffer, BAD_VALUE, SIMPLE_BUFFER(portIndex, (size_t)allottedSize, data));
++            delete[] data;
++            return BAD_VALUE;
++        }
++
+         buffer_meta = new BufferMeta(
+                 params, portIndex, false /* copyToOmx */, false /* copyFromOmx */, data);
+     } else {
+@@ -1050,7 +1049,7 @@ status_t OMXNodeInstance::createGraphicBufferSource(
+             usageBits,
+             bufferConsumer);
+ 
+-    if ((err = bufferSource->init()) != OK) {
++    if ((err = bufferSource->initCheck()) != OK) {
+         return err;
+     }
+     setGraphicBufferSource(bufferSource);
+@@ -1122,12 +1121,6 @@ status_t OMXNodeInstance::allocateBuffer(
+         void **buffer_data) {
+     Mutex::Autolock autoLock(mLock);
+ 
+-    if (!mSailed) {
+-        ALOGE("b/35467458");
+-        android_errorWriteLog(0x534e4554, "35467458");
+-        return BAD_VALUE;
+-    }
+-
+     BufferMeta *buffer_meta = new BufferMeta(size, portIndex);
+ 
+     OMX_BUFFERHEADERTYPE *header;
+@@ -1169,12 +1162,6 @@ status_t OMXNodeInstance::allocateBufferWithBackup(
+         return BAD_VALUE;
+     }
+ 
+-    if (!mSailed) {
+-        ALOGE("b/35467458");
+-        android_errorWriteLog(0x534e4554, "35467458");
+-        return BAD_VALUE;
+-    }
+-
+     // metadata buffers are not connected cross process
+     bool isMeta = mMetadataType[portIndex] != kMetadataBufferTypeInvalid;
+     bool copy = !(crossProcess && isMeta);
+@@ -1296,7 +1283,7 @@ status_t OMXNodeInstance::emptyBuffer(
+ 
+     // convert incoming ANW meta buffers if component is configured for gralloc metadata mode
+     // ignore rangeOffset in this case
+-    if (buffer_meta->copyingOrSharingToOmx(header)
++    if (buffer_meta->copyToOmx()
+             && mMetadataType[kPortIndexInput] == kMetadataBufferTypeGrallocSource
+             && backup->capacity() >= sizeof(VideoNativeMetadata)
+             && codec->capacity() >= sizeof(VideoGrallocMetadata)
+diff --git a/media/libstagefright/omx/SimpleSoftOMXComponent.cpp b/media/libstagefright/omx/SimpleSoftOMXComponent.cpp
+index 06556b7..2ae807e 100644
+--- a/media/libstagefright/omx/SimpleSoftOMXComponent.cpp
++++ b/media/libstagefright/omx/SimpleSoftOMXComponent.cpp
+@@ -199,13 +199,6 @@ OMX_ERRORTYPE SimpleSoftOMXComponent::useBuffer(
+     Mutex::Autolock autoLock(mLock);
+     CHECK_LT(portIndex, mPorts.size());
+ 
+-    PortInfo *port = &mPorts.editItemAt(portIndex);
+-    if (size < port->mDef.nBufferSize) {
+-        ALOGE("b/63522430, Buffer size is too small.");
+-        android_errorWriteLog(0x534e4554, "63522430");
+-        return OMX_ErrorBadParameter;
+-    }
+-
+     *header = new OMX_BUFFERHEADERTYPE;
+     (*header)->nSize = sizeof(OMX_BUFFERHEADERTYPE);
+     (*header)->nVersion.s.nVersionMajor = 1;
+@@ -228,6 +221,8 @@ OMX_ERRORTYPE SimpleSoftOMXComponent::useBuffer(
+     (*header)->nOutputPortIndex = portIndex;
+     (*header)->nInputPortIndex = portIndex;
+ 
++    PortInfo *port = &mPorts.editItemAt(portIndex);
++
+     CHECK(mState == OMX_StateLoaded || port->mDef.bEnabled == OMX_FALSE);
+ 
+     CHECK_LT(port->mBuffers.size(), port->mDef.nBufferCountActual);
+diff --git a/media/libstagefright/wifi-display/rtp/RTPSender.cpp b/media/libstagefright/wifi-display/rtp/RTPSender.cpp
+index 83af393..c66a898 100644
+--- a/media/libstagefright/wifi-display/rtp/RTPSender.cpp
++++ b/media/libstagefright/wifi-display/rtp/RTPSender.cpp
+@@ -762,16 +762,10 @@ status_t RTPSender::parseTSFB(const uint8_t *data, size_t size) {
+     return OK;
+ }
+ 
+-status_t RTPSender::parseAPP(const uint8_t *data, size_t size) {
+-    static const size_t late_offset = 8;
+-    static const char late_string[] = "late";
+-    static const size_t avgLatencyUs_offset = late_offset + sizeof(late_string) - 1;
+-    static const size_t maxLatencyUs_offset = avgLatencyUs_offset + sizeof(int64_t);
+-
+-    if ((size >= (maxLatencyUs_offset + sizeof(int64_t)))
+-            && !memcmp(late_string, &data[late_offset], sizeof(late_string) - 1)) {
+-        int64_t avgLatencyUs = (int64_t)U64_AT(&data[avgLatencyUs_offset]);
+-        int64_t maxLatencyUs = (int64_t)U64_AT(&data[maxLatencyUs_offset]);
++status_t RTPSender::parseAPP(const uint8_t *data, size_t size __unused) {
++    if (!memcmp("late", &data[8], 4)) {
++        int64_t avgLatencyUs = (int64_t)U64_AT(&data[12]);
++        int64_t maxLatencyUs = (int64_t)U64_AT(&data[20]);
+ 
+         sp<AMessage> notify = mNotify->dup();
+         notify->setInt32("what", kWhatInformSender);
+diff --git a/services/audioflinger/AudioFlinger.cpp b/services/audioflinger/AudioFlinger.cpp
+index 9d435e9..23215dd 100644
+--- a/services/audioflinger/AudioFlinger.cpp
++++ b/services/audioflinger/AudioFlinger.cpp
+@@ -1346,7 +1346,7 @@ void AudioFlinger::removeNotificationClient(pid_t pid)
+     ALOGV("%d died, releasing its sessions", pid);
+     size_t num = mAudioSessionRefs.size();
+     bool removed = false;
+-    for (size_t i = 0; i < num; ) {
++    for (size_t i = 0; i< num; ) {
+         AudioSessionRef *ref = mAudioSessionRefs.itemAt(i);
+         ALOGV(" pid %d @ %d", ref->mPid, i);
+         if (ref->mPid == pid) {
+@@ -2343,7 +2343,7 @@ void AudioFlinger::acquireAudioSessionId(int audioSession, pid_t pid)
+     }
+ 
+     size_t num = mAudioSessionRefs.size();
+-    for (size_t i = 0; i < num; i++) {
++    for (size_t i = 0; i< num; i++) {
+         AudioSessionRef *ref = mAudioSessionRefs.editItemAt(i);
+         if (ref->mSessionid == audioSession && ref->mPid == caller) {
+             ref->mCnt++;
+@@ -2364,7 +2364,7 @@ void AudioFlinger::releaseAudioSessionId(int audioSession, pid_t pid)
+         caller = pid;
+     }
+     size_t num = mAudioSessionRefs.size();
+-    for (size_t i = 0; i < num; i++) {
++    for (size_t i = 0; i< num; i++) {
+         AudioSessionRef *ref = mAudioSessionRefs.itemAt(i);
+         if (ref->mSessionid == audioSession && ref->mPid == caller) {
+             ref->mCnt--;
+@@ -2382,18 +2382,6 @@ void AudioFlinger::releaseAudioSessionId(int audioSession, pid_t pid)
+     ALOGW_IF(caller != getpid_cached, "session id %d not found for pid %d", audioSession, caller);
+ }
+ 
+-bool AudioFlinger::isSessionAcquired_l(audio_session_t audioSession)
+-{
+-    size_t num = mAudioSessionRefs.size();
+-    for (size_t i = 0; i < num; i++) {
+-        AudioSessionRef *ref = mAudioSessionRefs.itemAt(i);
+-        if (ref->mSessionid == audioSession) {
+-            return true;
+-        }
+-    }
+-    return false;
+-}
+-
+ void AudioFlinger::purgeStaleEffects_l() {
+ 
+     ALOGV("purging stale effects");
+@@ -2735,9 +2723,8 @@ sp<IEffect> AudioFlinger::createEffect(
+         sp<Client> client = registerPid(pid);
+ 
+         // create effect on selected output thread
+-        bool pinned = (sessionId > AUDIO_SESSION_OUTPUT_MIX) && isSessionAcquired_l((audio_session_t)sessionId);
+         handle = thread->createEffect_l(client, effectClient, priority, sessionId,
+-                &desc, enabled, &lStatus, pinned);
++                &desc, enabled, &lStatus);
+         if (handle != 0 && id != NULL) {
+             *id = handle->id();
+         }
+@@ -2937,7 +2924,7 @@ bool AudioFlinger::updateOrphanEffectChains(const sp<AudioFlinger::EffectModule>
+     ALOGV("updateOrphanEffectChains session %d index %d", session, index);
+     if (index >= 0) {
+         sp<EffectChain> chain = mOrphanEffectChains.valueAt(index);
+-        if (chain->removeEffect_l(effect, true) == 0) {
++        if (chain->removeEffect_l(effect) == 0) {
+             ALOGV("updateOrphanEffectChains removing effect chain at index %d", index);
+             mOrphanEffectChains.removeItemsAt(index);
+         }
+diff --git a/services/audioflinger/AudioFlinger.h b/services/audioflinger/AudioFlinger.h
+index 3e9a088..08fa70d 100644
+--- a/services/audioflinger/AudioFlinger.h
++++ b/services/audioflinger/AudioFlinger.h
+@@ -593,7 +593,6 @@ private:
+                 void        removeNotificationClient(pid_t pid);
+                 bool isNonOffloadableGlobalEffectEnabled_l();
+                 void onNonOffloadableGlobalEffectEnable();
+-                bool isSessionAcquired_l(audio_session_t audioSession);
+ 
+                 // Store an effect chain to mOrphanEffectChains keyed vector.
+                 // Called when a thread exits and effects are still attached to it.
+diff --git a/services/audioflinger/Effects.cpp b/services/audioflinger/Effects.cpp
+index 58df3bd..5505d2e 100644
+--- a/services/audioflinger/Effects.cpp
++++ b/services/audioflinger/Effects.cpp
+@@ -59,9 +59,8 @@ AudioFlinger::EffectModule::EffectModule(ThreadBase *thread,
+                                         const wp<AudioFlinger::EffectChain>& chain,
+                                         effect_descriptor_t *desc,
+                                         int id,
+-                                        audio_session_t sessionId,
+-                                        bool pinned)
+-    : mPinned(pinned),
++                                        int sessionId)
++    : mPinned(sessionId > AUDIO_SESSION_OUTPUT_MIX),
+       mThread(thread), mChain(chain), mId(id), mSessionId(sessionId),
+       mDescriptor(*desc),
+       // mConfig is set by configure() and not used before then
+@@ -72,7 +71,7 @@ AudioFlinger::EffectModule::EffectModule(ThreadBase *thread,
+       mSuspended(false),
+       mAudioFlinger(thread->mAudioFlinger)
+ {
+-    ALOGV("Constructor %p pinned %d", this, pinned);
++    ALOGV("Constructor %p", this);
+     int lStatus;
+ 
+     // create effect engine from effect factory
+@@ -87,8 +86,6 @@ AudioFlinger::EffectModule::EffectModule(ThreadBase *thread,
+         goto Error;
+     }
+ 
+-    setOffloaded(thread->type() == ThreadBase::OFFLOAD, thread->id());
+-
+     ALOGV("Constructor success name %s, Interface %p", mDescriptor.name, mEffectInterface);
+     return;
+ Error:
+@@ -101,8 +98,9 @@ AudioFlinger::EffectModule::~EffectModule()
+ {
+     ALOGV("Destructor %p", this);
+     if (mEffectInterface != NULL) {
+-        ALOGW("EffectModule %p destructor called with unreleased interface", this);
+-        release_l();
++        remove_effect_from_hal_l();
++        // release effect engine
++        EffectRelease(mEffectInterface);
+     }
+ }
+ 
+@@ -117,7 +115,7 @@ status_t AudioFlinger::EffectModule::addHandle(EffectHandle *handle)
+     size_t i;
+     for (i = 0; i < size; i++) {
+         EffectHandle *h = mHandles[i];
+-        if (h == NULL || h->disconnected()) {
++        if (h == NULL || h->destroyed_l()) {
+             continue;
+         }
+         // first non destroyed handle is considered in control
+@@ -145,14 +143,9 @@ status_t AudioFlinger::EffectModule::addHandle(EffectHandle *handle)
+     return status;
+ }
+ 
+-ssize_t AudioFlinger::EffectModule::removeHandle(EffectHandle *handle)
++size_t AudioFlinger::EffectModule::removeHandle(EffectHandle *handle)
+ {
+     Mutex::Autolock _l(mLock);
+-    return removeHandle_l(handle);
+-}
+-
+-ssize_t AudioFlinger::EffectModule::removeHandle_l(EffectHandle *handle)
+-{
+     size_t size = mHandles.size();
+     size_t i;
+     for (i = 0; i < size; i++) {
+@@ -161,10 +154,9 @@ ssize_t AudioFlinger::EffectModule::removeHandle_l(EffectHandle *handle)
+         }
+     }
+     if (i == size) {
+-        ALOGW("%s %p handle not found %p", __FUNCTION__, this, handle);
+-        return BAD_VALUE;
++        return size;
+     }
+-    ALOGV("removeHandle_l() %p removed handle %p in position %zu", this, handle, i);
++    ALOGV("removeHandle() %p removed handle %p in position %d", this, handle, i);
+ 
+     mHandles.removeAt(i);
+     // if removed from first place, move effect control from this handle to next in line
+@@ -191,7 +183,7 @@ AudioFlinger::EffectHandle *AudioFlinger::EffectModule::controlHandle_l()
+     // the first valid handle in the list has control over the module
+     for (size_t i = 0; i < mHandles.size(); i++) {
+         EffectHandle *h = mHandles[i];
+-        if (h != NULL && !h->disconnected()) {
++        if (h != NULL && !h->destroyed_l()) {
+             return h;
+         }
+     }
+@@ -199,22 +191,29 @@ AudioFlinger::EffectHandle *AudioFlinger::EffectModule::controlHandle_l()
+     return NULL;
+ }
+ 
+-// unsafe method called when the effect parent thread has been destroyed
+-ssize_t AudioFlinger::EffectModule::disconnectHandle(EffectHandle *handle, bool unpinIfLast)
++size_t AudioFlinger::EffectModule::disconnect(EffectHandle *handle, bool unpinIfLast)
+ {
+     ALOGV("disconnect() %p handle %p", this, handle);
+-    Mutex::Autolock _l(mLock);
+-    ssize_t numHandles = removeHandle_l(handle);
+-    if ((numHandles == 0) && (!mPinned || unpinIfLast)) {
+-        AudioSystem::unregisterEffect(mId);
+-        sp<AudioFlinger> af = mAudioFlinger.promote();
+-        if (af != 0) {
+-            mLock.unlock();
+-            af->updateOrphanEffectChains(this);
+-            mLock.lock();
++    // keep a strong reference on this EffectModule to avoid calling the
++    // destructor before we exit
++    sp<EffectModule> keep(this);
++    {
++        if (removeHandle(handle) == 0) {
++            if (!isPinned() || unpinIfLast) {
++                sp<ThreadBase> thread = mThread.promote();
++                if (thread != 0) {
++                    Mutex::Autolock _l(thread->mLock);
++                    thread->removeEffect_l(this);
++                }
++                sp<AudioFlinger> af = mAudioFlinger.promote();
++                if (af != 0) {
++                    af->updateOrphanEffectChains(this);
++                }
++                AudioSystem::unregisterEffect(mId);
++            }
+         }
+     }
+-    return numHandles;
++    return mHandles.size();
+ }
+ 
+ void AudioFlinger::EffectModule::updateState() {
+@@ -529,17 +528,6 @@ status_t AudioFlinger::EffectModule::stop_l()
+     return status;
+ }
+ 
+-// must be called with EffectChain::mLock held
+-void AudioFlinger::EffectModule::release_l()
+-{
+-    if (mEffectInterface != NULL) {
+-        remove_effect_from_hal_l();
+-        // release effect engine
+-        EffectRelease(mEffectInterface);
+-        mEffectInterface = NULL;
+-    }
+-}
+-
+ status_t AudioFlinger::EffectModule::remove_effect_from_hal_l()
+ {
+     if ((mDescriptor.flags & EFFECT_FLAG_TYPE_MASK) == EFFECT_FLAG_TYPE_PRE_PROC ||
+@@ -583,29 +571,6 @@ status_t AudioFlinger::EffectModule::command(uint32_t cmdCode,
+         android_errorWriteLog(0x534e4554, "29251553");
+         return -EINVAL;
+     }
+-    if (cmdCode == EFFECT_CMD_GET_PARAM &&
+-            (sizeof(effect_param_t) > cmdSize ||
+-                    ((effect_param_t *)pCmdData)->psize > cmdSize
+-                                                          - sizeof(effect_param_t))) {
+-        android_errorWriteLog(0x534e4554, "32438594");
+-        return -EINVAL;
+-    }
+-    if (cmdCode == EFFECT_CMD_GET_PARAM &&
+-        (sizeof(effect_param_t) > *replySize
+-          || ((effect_param_t *)pCmdData)->psize > *replySize
+-                                                   - sizeof(effect_param_t)
+-          || ((effect_param_t *)pCmdData)->vsize > *replySize
+-                                                   - sizeof(effect_param_t)
+-                                                   - ((effect_param_t *)pCmdData)->psize
+-          || roundUpDelta(((effect_param_t *)pCmdData)->psize, (uint32_t)sizeof(int)) >
+-                                                   *replySize
+-                                                   - sizeof(effect_param_t)
+-                                                   - ((effect_param_t *)pCmdData)->psize
+-                                                   - ((effect_param_t *)pCmdData)->vsize)) {
+-        ALOGV("\tLVM_ERROR : EFFECT_CMD_GET_PARAM: reply size inconsistent");
+-                     android_errorWriteLog(0x534e4554, "32705438");
+-        return -EINVAL;
+-    }
+     if ((cmdCode == EFFECT_CMD_SET_PARAM
+             || cmdCode == EFFECT_CMD_SET_PARAM_DEFERRED) &&  // DEFERRED not generally used
+         (sizeof(effect_param_t) > cmdSize
+@@ -632,7 +597,7 @@ status_t AudioFlinger::EffectModule::command(uint32_t cmdCode,
+         uint32_t size = (replySize == NULL) ? 0 : *replySize;
+         for (size_t i = 1; i < mHandles.size(); i++) {
+             EffectHandle *h = mHandles[i];
+-            if (h != NULL && !h->disconnected()) {
++            if (h != NULL && !h->destroyed_l()) {
+                 h->commandExecuted(cmdCode, cmdSize, pCmdData, size, pReplyData);
+             }
+         }
+@@ -685,7 +650,7 @@ status_t AudioFlinger::EffectModule::setEnabled_l(bool enabled)
+         }
+         for (size_t i = 1; i < mHandles.size(); i++) {
+             EffectHandle *h = mHandles[i];
+-            if (h != NULL && !h->disconnected()) {
++            if (h != NULL && !h->destroyed_l()) {
+                 h->setEnabled(enabled);
+             }
+         }
+@@ -850,7 +815,8 @@ bool AudioFlinger::EffectModule::purgeHandles()
+     Mutex::Autolock _l(mLock);
+     for (size_t i = 0; i < mHandles.size(); i++) {
+         EffectHandle *handle = mHandles[i];
+-        if (handle != NULL && !handle->disconnected()) {
++        if (handle != NULL && !handle->destroyed_l()) {
++            handle->effect().clear();
+             if (handle->hasControl()) {
+                 enabled = handle->enabled();
+             }
+@@ -1077,7 +1043,7 @@ void AudioFlinger::EffectModule::dump(int fd, const Vector<String16>& args __unu
+     result.append("\t\t\t  Pid Priority Ctrl Locked client server\n");
+     for (size_t i = 0; i < mHandles.size(); ++i) {
+         EffectHandle *handle = mHandles[i];
+-        if (handle != NULL && !handle->disconnected()) {
++        if (handle != NULL && !handle->destroyed_l()) {
+             handle->dumpToBuffer(buffer, SIZE);
+             result.append(buffer);
+         }
+@@ -1103,7 +1069,7 @@ AudioFlinger::EffectHandle::EffectHandle(const sp<EffectModule>& effect,
+                                         int32_t priority)
+     : BnEffect(),
+     mEffect(effect), mEffectClient(effectClient), mClient(client), mCblk(NULL),
+-    mPriority(priority), mHasControl(false), mEnabled(false), mDisconnected(false)
++    mPriority(priority), mHasControl(false), mEnabled(false), mDestroyed(false)
+ {
+     ALOGV("constructor %p", this);
+ 
+@@ -1126,6 +1092,14 @@ AudioFlinger::EffectHandle::EffectHandle(const sp<EffectModule>& effect,
+ AudioFlinger::EffectHandle::~EffectHandle()
+ {
+     ALOGV("Destructor %p", this);
++
++    if (mEffect == 0) {
++        mDestroyed = true;
++        return;
++    }
++    mEffect->lock();
++    mDestroyed = true;
++    mEffect->unlock();
+     disconnect(false);
+ }
+ 
+@@ -1136,15 +1110,13 @@ status_t AudioFlinger::EffectHandle::initCheck()
+ 
+ status_t AudioFlinger::EffectHandle::enable()
+ {
+-    AutoMutex _l(mLock);
+     ALOGV("enable %p", this);
+-    sp<EffectModule> effect = mEffect.promote();
+-    if (effect == 0 || mDisconnected) {
+-        return DEAD_OBJECT;
+-    }
+     if (!mHasControl) {
+         return INVALID_OPERATION;
+     }
++    if (mEffect == 0) {
++        return DEAD_OBJECT;
++    }
+ 
+     if (mEnabled) {
+         return NO_ERROR;
+@@ -1152,20 +1124,20 @@ status_t AudioFlinger::EffectHandle::enable()
+ 
+     mEnabled = true;
+ 
+-    sp<ThreadBase> thread = effect->thread().promote();
++    sp<ThreadBase> thread = mEffect->thread().promote();
+     if (thread != 0) {
+-        thread->checkSuspendOnEffectEnabled(effect, true, effect->sessionId());
++        thread->checkSuspendOnEffectEnabled(mEffect, true, mEffect->sessionId());
+     }
+ 
+     // checkSuspendOnEffectEnabled() can suspend this same effect when enabled
+-    if (effect->suspended()) {
++    if (mEffect->suspended()) {
+         return NO_ERROR;
+     }
+ 
+-    status_t status = effect->setEnabled(true);
++    status_t status = mEffect->setEnabled(true);
+     if (status != NO_ERROR) {
+         if (thread != 0) {
+-            thread->checkSuspendOnEffectEnabled(effect, false, effect->sessionId());
++            thread->checkSuspendOnEffectEnabled(mEffect, false, mEffect->sessionId());
+         }
+         mEnabled = false;
+     } else {
+@@ -1176,13 +1148,13 @@ status_t AudioFlinger::EffectHandle::enable()
+                 Mutex::Autolock _l(t->mLock);
+                 t->broadcast_l();
+             }
+-            if (!effect->isOffloadable()) {
++            if (!mEffect->isOffloadable()) {
+                 if (thread->type() == ThreadBase::OFFLOAD ||
+                    (thread->type() == ThreadBase::DIRECT && thread->mIsDirectPcm)) {
+                     PlaybackThread *t = (PlaybackThread *)thread.get();
+                     t->invalidateTracks(AUDIO_STREAM_MUSIC);
+                 }
+-                if (effect->sessionId() == AUDIO_SESSION_OUTPUT_MIX) {
++                if (mEffect->sessionId() == AUDIO_SESSION_OUTPUT_MIX) {
+                     thread->mAudioFlinger->onNonOffloadableGlobalEffectEnable();
+                 }
+             }
+@@ -1194,29 +1166,27 @@ status_t AudioFlinger::EffectHandle::enable()
+ status_t AudioFlinger::EffectHandle::disable()
+ {
+     ALOGV("disable %p", this);
+-    AutoMutex _l(mLock);
+-    sp<EffectModule> effect = mEffect.promote();
+-    if (effect == 0 || mDisconnected) {
+-        return DEAD_OBJECT;
+-    }
+     if (!mHasControl) {
+         return INVALID_OPERATION;
+     }
++    if (mEffect == 0) {
++        return DEAD_OBJECT;
++    }
+ 
+     if (!mEnabled) {
+         return NO_ERROR;
+     }
+     mEnabled = false;
+ 
+-    if (effect->suspended()) {
++    if (mEffect->suspended()) {
+         return NO_ERROR;
+     }
+ 
+-    status_t status = effect->setEnabled(false);
++    status_t status = mEffect->setEnabled(false);
+ 
+-    sp<ThreadBase> thread = effect->thread().promote();
++    sp<ThreadBase> thread = mEffect->thread().promote();
+     if (thread != 0) {
+-        thread->checkSuspendOnEffectEnabled(effect, false, effect->sessionId());
++        thread->checkSuspendOnEffectEnabled(mEffect, false, mEffect->sessionId());
+         if ((thread->type() == ThreadBase::OFFLOAD) ||
+             (thread->type() == ThreadBase::DIRECT && thread->mIsDirectPcm)){
+             PlaybackThread *t = (PlaybackThread *)thread.get();
+@@ -1230,39 +1200,25 @@ status_t AudioFlinger::EffectHandle::disable()
+ 
+ void AudioFlinger::EffectHandle::disconnect()
+ {
+-    ALOGV("%s %p", __FUNCTION__, this);
+     disconnect(true);
+ }
+ 
+ void AudioFlinger::EffectHandle::disconnect(bool unpinIfLast)
+ {
+-    AutoMutex _l(mLock);
+-    ALOGV("disconnect(%s) %p", unpinIfLast ? "true" : "false", this);
+-    if (mDisconnected) {
+-        if (unpinIfLast) {
+-            android_errorWriteLog(0x534e4554, "32707507");
+-        }
++    ALOGV("disconnect(%s)", unpinIfLast ? "true" : "false");
++    if (mEffect == 0) {
+         return;
+     }
+-    mDisconnected = true;
+-    sp<ThreadBase> thread;
+-    {
+-        sp<EffectModule> effect = mEffect.promote();
+-        if (effect != 0) {
+-            thread = effect->thread().promote();
+-        }
+-    }
+-    if (thread != 0) {
+-        thread->disconnectEffectHandle(this, unpinIfLast);
+-    } else {
+-        ALOGW("%s Effect handle %p disconnected after thread destruction", __FUNCTION__, this);
+-        // try to cleanup as much as we can
+-        sp<EffectModule> effect = mEffect.promote();
+-        if (effect != 0) {
+-            effect->disconnectHandle(this, unpinIfLast);
++    // restore suspended effects if the disconnected handle was enabled and the last one.
++    if ((mEffect->disconnect(this, unpinIfLast) == 0) && mEnabled) {
++        sp<ThreadBase> thread = mEffect->thread().promote();
++        if (thread != 0) {
++            thread->checkSuspendOnEffectEnabled(mEffect, false, mEffect->sessionId());
+         }
+     }
+ 
++    // release sp on module => module destructor can be called now
++    mEffect.clear();
+     if (mClient != 0) {
+         if (mCblk != NULL) {
+             // unlike ~TrackBase(), mCblk is never a local new, so don't delete
+@@ -1282,117 +1238,55 @@ status_t AudioFlinger::EffectHandle::command(uint32_t cmdCode,
+                                              void *pReplyData)
+ {
+     ALOGVV("command(), cmdCode: %d, mHasControl: %d, mEffect: %p",
+-            cmdCode, mHasControl, mEffect.unsafe_get());
+-
+-    // reject commands reserved for internal use by audio framework if coming from outside
+-    // of audioserver
+-    switch(cmdCode) {
+-        case EFFECT_CMD_ENABLE:
+-        case EFFECT_CMD_DISABLE:
+-        case EFFECT_CMD_SET_PARAM:
+-        case EFFECT_CMD_SET_PARAM_DEFERRED:
+-        case EFFECT_CMD_SET_PARAM_COMMIT:
+-        case EFFECT_CMD_GET_PARAM:
+-            break;
+-        default:
+-            if (cmdCode >= EFFECT_CMD_FIRST_PROPRIETARY) {
+-                break;
+-            }
+-            android_errorWriteLog(0x534e4554, "62019992");
+-            return BAD_VALUE;
+-    }
+-
+-    if (cmdCode == EFFECT_CMD_ENABLE) {
+-        if (*replySize < sizeof(int)) {
+-            android_errorWriteLog(0x534e4554, "32095713");
+-            return BAD_VALUE;
+-        }
+-        *(int *)pReplyData = NO_ERROR;
+-        *replySize = sizeof(int);
+-        return enable();
+-    } else if (cmdCode == EFFECT_CMD_DISABLE) {
+-        if (*replySize < sizeof(int)) {
+-            android_errorWriteLog(0x534e4554, "32095713");
+-            return BAD_VALUE;
+-        }
+-        *(int *)pReplyData = NO_ERROR;
+-        *replySize = sizeof(int);
+-        return disable();
+-    }
++            cmdCode, mHasControl, (mEffect == 0) ? 0 : mEffect.get());
+ 
+-    AutoMutex _l(mLock);
+-    sp<EffectModule> effect = mEffect.promote();
+-    if (effect == 0 || mDisconnected) {
+-        return DEAD_OBJECT;
+-    }
+     // only get parameter command is permitted for applications not controlling the effect
+     if (!mHasControl && cmdCode != EFFECT_CMD_GET_PARAM) {
+         return INVALID_OPERATION;
+     }
++    if (mEffect == 0) {
++        return DEAD_OBJECT;
++    }
+     if (mClient == 0) {
+         return INVALID_OPERATION;
+     }
+ 
+     // handle commands that are not forwarded transparently to effect engine
+     if (cmdCode == EFFECT_CMD_SET_PARAM_COMMIT) {
+-        if (*replySize < sizeof(int)) {
+-            android_errorWriteLog(0x534e4554, "32095713");
+-            return BAD_VALUE;
+-        }
+-        *(int *)pReplyData = NO_ERROR;
+-        *replySize = sizeof(int);
+-
+         // No need to trylock() here as this function is executed in the binder thread serving a
+         // particular client process:  no risk to block the whole media server process or mixer
+         // threads if we are stuck here
+         Mutex::Autolock _l(mCblk->lock);
+-        // keep local copy of index in case of client corruption b/32220769
+-        const uint32_t clientIndex = mCblk->clientIndex;
+-        const uint32_t serverIndex = mCblk->serverIndex;
+-        if (clientIndex > EFFECT_PARAM_BUFFER_SIZE ||
+-            serverIndex > EFFECT_PARAM_BUFFER_SIZE) {
++        if (mCblk->clientIndex > EFFECT_PARAM_BUFFER_SIZE ||
++            mCblk->serverIndex > EFFECT_PARAM_BUFFER_SIZE) {
+             mCblk->serverIndex = 0;
+             mCblk->clientIndex = 0;
+             return BAD_VALUE;
+         }
+         status_t status = NO_ERROR;
+-        effect_param_t *param = NULL;
+-        for (uint32_t index = serverIndex; index < clientIndex;) {
+-            int *p = (int *)(mBuffer + index);
+-            const int size = *p++;
+-            if (size < 0
+-                    || size > EFFECT_PARAM_BUFFER_SIZE
+-                    || ((uint8_t *)p + size) > mBuffer + clientIndex) {
++        while (mCblk->serverIndex < mCblk->clientIndex) {
++            int reply;
++            uint32_t rsize = sizeof(int);
++            int *p = (int *)(mBuffer + mCblk->serverIndex);
++            int size = *p++;
++            if (((uint8_t *)p + size) > mBuffer + mCblk->clientIndex) {
+                 ALOGW("command(): invalid parameter block size");
+-                status = BAD_VALUE;
+                 break;
+             }
+-
+-            // copy to local memory in case of client corruption b/32220769
+-            param = (effect_param_t *)realloc(param, size);
+-            if (param == NULL) {
+-                ALOGW("command(): out of memory");
+-                status = NO_MEMORY;
+-                break;
++            effect_param_t *param = (effect_param_t *)p;
++            if (param->psize == 0 || param->vsize == 0) {
++                ALOGW("command(): null parameter or value size");
++                mCblk->serverIndex += size;
++                continue;
+             }
+-            memcpy(param, p, size);
+-
+-            int reply = 0;
+-            uint32_t rsize = sizeof(reply);
+-            status_t ret = effect->command(EFFECT_CMD_SET_PARAM,
+-                                            size,
+-                                            param,
++            uint32_t psize = sizeof(effect_param_t) +
++                             ((param->psize - 1) / sizeof(int) + 1) * sizeof(int) +
++                             param->vsize;
++            status_t ret = mEffect->command(EFFECT_CMD_SET_PARAM,
++                                            psize,
++                                            p,
+                                             &rsize,
+                                             &reply);
+-
+-            // verify shared memory: server index shouldn't change; client index can't go back.
+-            if (serverIndex != mCblk->serverIndex
+-                    || clientIndex > mCblk->clientIndex) {
+-                android_errorWriteLog(0x534e4554, "32220769");
+-                status = BAD_VALUE;
+-                break;
+-            }
+-
+             // stop at first error encountered
+             if (ret != NO_ERROR) {
+                 status = ret;
+@@ -1402,15 +1296,20 @@ status_t AudioFlinger::EffectHandle::command(uint32_t cmdCode,
+                 *(int *)pReplyData = reply;
+                 break;
+             }
+-            index += size;
++            mCblk->serverIndex += size;
+         }
+-        free(param);
+         mCblk->serverIndex = 0;
+         mCblk->clientIndex = 0;
+         return status;
++    } else if (cmdCode == EFFECT_CMD_ENABLE) {
++        *(int *)pReplyData = NO_ERROR;
++        return enable();
++    } else if (cmdCode == EFFECT_CMD_DISABLE) {
++        *(int *)pReplyData = NO_ERROR;
++        return disable();
+     }
+ 
+-    return effect->command(cmdCode, cmdSize, pCmdData, replySize, pReplyData);
++    return mEffect->command(cmdCode, cmdSize, pCmdData, replySize, pReplyData);
+ }
+ 
+ void AudioFlinger::EffectHandle::setControl(bool hasControl, bool signal, bool enabled)
+@@ -1492,6 +1391,7 @@ AudioFlinger::EffectChain::~EffectChain()
+     if (mOwnInBuffer) {
+         delete mInBuffer;
+     }
++
+ }
+ 
+ // getEffectFromDesc_l() must be called with ThreadBase::mLock held
+@@ -1605,38 +1505,13 @@ void AudioFlinger::EffectChain::process_l()
+     }
+ }
+ 
+-// createEffect_l() must be called with ThreadBase::mLock held
+-status_t AudioFlinger::EffectChain::createEffect_l(sp<EffectModule>& effect,
+-                                                   ThreadBase *thread,
+-                                                   effect_descriptor_t *desc,
+-                                                   int id,
+-                                                   audio_session_t sessionId,
+-                                                   bool pinned)
+-{
+-    Mutex::Autolock _l(mLock);
+-    effect = new EffectModule(thread, this, desc, id, sessionId, pinned);
+-    status_t lStatus = effect->status();
+-    if (lStatus == NO_ERROR) {
+-        lStatus = addEffect_ll(effect);
+-    }
+-    if (lStatus != NO_ERROR) {
+-        effect.clear();
+-    }
+-    return lStatus;
+-}
+-
+-// addEffect_l() must be called with ThreadBase::mLock held
++// addEffect_l() must be called with PlaybackThread::mLock held
+ status_t AudioFlinger::EffectChain::addEffect_l(const sp<EffectModule>& effect)
+ {
+-    Mutex::Autolock _l(mLock);
+-    return addEffect_ll(effect);
+-}
+-// addEffect_l() must be called with ThreadBase::mLock and EffectChain::mLock held
+-status_t AudioFlinger::EffectChain::addEffect_ll(const sp<EffectModule>& effect)
+-{
+     effect_descriptor_t desc = effect->desc();
+     uint32_t insertPref = desc.flags & EFFECT_FLAG_INSERT_MASK;
+ 
++    Mutex::Autolock _l(mLock);
+     effect->setChain(this);
+     sp<ThreadBase> thread = mThread.promote();
+     if (thread == 0) {
+@@ -1746,9 +1621,8 @@ status_t AudioFlinger::EffectChain::addEffect_ll(const sp<EffectModule>& effect)
+     return NO_ERROR;
+ }
+ 
+-// removeEffect_l() must be called with ThreadBase::mLock held
+-size_t AudioFlinger::EffectChain::removeEffect_l(const sp<EffectModule>& effect,
+-                                                 bool release)
++// removeEffect_l() must be called with PlaybackThread::mLock held
++size_t AudioFlinger::EffectChain::removeEffect_l(const sp<EffectModule>& effect)
+ {
+     Mutex::Autolock _l(mLock);
+     size_t size = mEffects.size();
+@@ -1763,10 +1637,6 @@ size_t AudioFlinger::EffectChain::removeEffect_l(const sp<EffectModule>& effect,
+                     mEffects[i]->state() == EffectModule::STOPPING) {
+                 mEffects[i]->stop();
+             }
+-            if (release) {
+-                mEffects[i]->release_l();
+-            }
+-
+             if (type == EFFECT_FLAG_TYPE_AUXILIARY) {
+                 delete[] effect->inBuffer();
+             } else {
+@@ -1785,7 +1655,7 @@ size_t AudioFlinger::EffectChain::removeEffect_l(const sp<EffectModule>& effect,
+     return mEffects.size();
+ }
+ 
+-// setDevice_l() must be called with ThreadBase::mLock held
++// setDevice_l() must be called with PlaybackThread::mLock held
+ void AudioFlinger::EffectChain::setDevice_l(audio_devices_t device)
+ {
+     size_t size = mEffects.size();
+@@ -1794,7 +1664,7 @@ void AudioFlinger::EffectChain::setDevice_l(audio_devices_t device)
+     }
+ }
+ 
+-// setMode_l() must be called with ThreadBase::mLock held
++// setMode_l() must be called with PlaybackThread::mLock held
+ void AudioFlinger::EffectChain::setMode_l(audio_mode_t mode)
+ {
+     size_t size = mEffects.size();
+@@ -1803,7 +1673,7 @@ void AudioFlinger::EffectChain::setMode_l(audio_mode_t mode)
+     }
+ }
+ 
+-// setAudioSource_l() must be called with ThreadBase::mLock held
++// setAudioSource_l() must be called with PlaybackThread::mLock held
+ void AudioFlinger::EffectChain::setAudioSource_l(audio_source_t source)
+ {
+     size_t size = mEffects.size();
+@@ -1812,7 +1682,7 @@ void AudioFlinger::EffectChain::setAudioSource_l(audio_source_t source)
+     }
+ }
+ 
+-// setVolume_l() must be called with ThreadBase::mLock held
++// setVolume_l() must be called with PlaybackThread::mLock held
+ bool AudioFlinger::EffectChain::setVolume_l(uint32_t *left, uint32_t *right)
+ {
+     uint32_t newLeft = *left;
+@@ -1964,7 +1834,7 @@ void AudioFlinger::EffectChain::setEffectSuspended_l(
+                     effect->setSuspended(false);
+                     effect->lock();
+                     EffectHandle *handle = effect->controlHandle_l();
+-                    if (handle != NULL && !handle->disconnected()) {
++                    if (handle != NULL && !handle->destroyed_l()) {
+                         effect->setEnabled_l(handle->enabled());
+                     }
+                     effect->unlock();
+diff --git a/services/audioflinger/Effects.h b/services/audioflinger/Effects.h
+index 4d53c0d..6f93f81 100644
+--- a/services/audioflinger/Effects.h
++++ b/services/audioflinger/Effects.h
+@@ -45,8 +45,7 @@ public:
+                     const wp<AudioFlinger::EffectChain>& chain,
+                     effect_descriptor_t *desc,
+                     int id,
+-                    audio_session_t sessionId,
+-                    bool pinned);
++                    int sessionId);
+     virtual ~EffectModule();
+ 
+     enum effect_state {
+@@ -94,9 +93,8 @@ public:
+     const wp<ThreadBase>& thread() { return mThread; }
+ 
+     status_t addHandle(EffectHandle *handle);
+-    ssize_t  disconnectHandle(EffectHandle *handle, bool unpinIfLast);
+-    ssize_t removeHandle(EffectHandle *handle);
+-    ssize_t removeHandle_l(EffectHandle *handle);
++    size_t disconnect(EffectHandle *handle, bool unpinIfLast);
++    size_t removeHandle(EffectHandle *handle);
+ 
+     const effect_descriptor_t& desc() const { return mDescriptor; }
+     wp<EffectChain>&     chain() { return mChain; }
+@@ -122,7 +120,6 @@ public:
+     status_t         setOffloaded(bool offloaded, audio_io_handle_t io);
+     bool             isOffloaded() const;
+     void             addEffectToHal_l();
+-    void             release_l();
+ 
+     void             dump(int fd, const Vector<String16>& args);
+ 
+@@ -207,17 +204,12 @@ public:
+     bool enabled() const { return mEnabled; }
+ 
+     // Getters
+-    wp<EffectModule> effect() const { return mEffect; }
+-    int id() const {
+-        sp<EffectModule> effect = mEffect.promote();
+-        if (effect == 0) {
+-            return 0;
+-        }
+-        return effect->id();
+-    }
++    int id() const { return mEffect->id(); }
+     int priority() const { return mPriority; }
+     bool hasControl() const { return mHasControl; }
+-    bool disconnected() const { return mDisconnected; }
++    sp<EffectModule> effect() const { return mEffect; }
++    // destroyed_l() must be called with the associated EffectModule mLock held
++    bool destroyed_l() const { return mDestroyed; }
+ 
+     void dumpToBuffer(char* buffer, size_t size);
+ 
+@@ -226,8 +218,7 @@ protected:
+     EffectHandle(const EffectHandle&);
+     EffectHandle& operator =(const EffectHandle&);
+ 
+-    Mutex mLock;                        // protects IEffect method calls
+-    wp<EffectModule> mEffect;           // pointer to controlled EffectModule
++    sp<EffectModule> mEffect;           // pointer to controlled EffectModule
+     sp<IEffectClient> mEffectClient;    // callback interface for client notifications
+     /*const*/ sp<Client> mClient;       // client for shared memory allocation, see disconnect()
+     sp<IMemory>         mCblkMemory;    // shared memory for control block
+@@ -238,7 +229,8 @@ protected:
+     bool mHasControl;                   // true if this handle is controlling the effect
+     bool mEnabled;                      // cached enable state: needed when the effect is
+                                         // restored after being suspended
+-    bool mDisconnected;                 // Set to true by disconnect()
++    bool mDestroyed;                    // Set to true by destructor. Access with EffectModule
++                                        // mLock held
+ };
+ 
+ // the EffectChain class represents a group of effects associated to one audio session.
+@@ -271,15 +263,8 @@ public:
+         mLock.unlock();
+     }
+ 
+-    status_t createEffect_l(sp<EffectModule>& effect,
+-                            ThreadBase *thread,
+-                            effect_descriptor_t *desc,
+-                            int id,
+-                            audio_session_t sessionId,
+-                            bool pinned);
+     status_t addEffect_l(const sp<EffectModule>& handle);
+-    status_t addEffect_ll(const sp<EffectModule>& handle);
+-    size_t removeEffect_l(const sp<EffectModule>& handle, bool release = false);
++    size_t removeEffect_l(const sp<EffectModule>& handle);
+ 
+     int sessionId() const { return mSessionId; }
+     void setSessionId(int sessionId) { mSessionId = sessionId; }
+diff --git a/services/audioflinger/Threads.cpp b/services/audioflinger/Threads.cpp
+index d7c9c47..e5e8bdb 100644
+--- a/services/audioflinger/Threads.cpp
++++ b/services/audioflinger/Threads.cpp
+@@ -1159,8 +1159,7 @@ sp<AudioFlinger::EffectHandle> AudioFlinger::ThreadBase::createEffect_l(
+         int sessionId,
+         effect_descriptor_t *desc,
+         int *enabled,
+-        status_t *status,
+-        bool pinned)
++        status_t *status)
+ {
+     sp<EffectModule> effect;
+     sp<EffectHandle> handle;
+@@ -1254,7 +1253,20 @@ sp<AudioFlinger::EffectHandle> AudioFlinger::ThreadBase::createEffect_l(
+             }
+             effectRegistered = true;
+             // create a new effect module if none present in the chain
+-            lStatus = chain->createEffect_l(effect, this, desc, id, (audio_session_t)sessionId, pinned);
++            effect = new EffectModule(this, chain, desc, id, sessionId);
++            lStatus = effect->status();
++            if (lStatus != NO_ERROR) {
++                goto Exit;
++            }
++
++            bool setVal = false;
++            if (mType == OFFLOAD || (mType == DIRECT && mIsDirectPcm)) {
++                setVal = true;
++            }
++
++            effect->setOffloaded(setVal, mId);
++
++            lStatus = chain->addEffect_l(effect);
+             if (lStatus != NO_ERROR) {
+                 goto Exit;
+             }
+@@ -1295,33 +1307,6 @@ Exit:
+     return handle;
+ }
+ 
+-void AudioFlinger::ThreadBase::disconnectEffectHandle(EffectHandle *handle,
+-                                                      bool unpinIfLast)
+-{
+-    bool remove = false;
+-    sp<EffectModule> effect;
+-    {
+-        Mutex::Autolock _l(mLock);
+-
+-        effect = handle->effect().promote();
+-        if (effect == 0) {
+-            return;
+-        }
+-        // restore suspended effects if the disconnected handle was enabled and the last one.
+-        remove = (effect->removeHandle(handle) == 0) && (!effect->isPinned() || unpinIfLast);
+-        if (remove) {
+-            removeEffect_l(effect, true);
+-        }
+-    }
+-    if (remove) {
+-        mAudioFlinger->updateOrphanEffectChains(effect);
+-        AudioSystem::unregisterEffect(effect->id());
+-        if (handle->enabled()) {
+-            checkSuspendOnEffectEnabled(effect, false, effect->sessionId());
+-        }
+-    }
+-}
+-
+ sp<AudioFlinger::EffectModule> AudioFlinger::ThreadBase::getEffect(int sessionId, int effectId)
+ {
+     Mutex::Autolock _l(mLock);
+@@ -1386,9 +1371,9 @@ status_t AudioFlinger::ThreadBase::addEffect_l(const sp<EffectModule>& effect)
+     return NO_ERROR;
+ }
+ 
+-void AudioFlinger::ThreadBase::removeEffect_l(const sp<EffectModule>& effect, bool release) {
++void AudioFlinger::ThreadBase::removeEffect_l(const sp<EffectModule>& effect) {
+ 
+-    ALOGV("%s %p effect %p", __FUNCTION__, this, effect.get());
++    ALOGV("removeEffect_l() %p effect %p", this, effect.get());
+     effect_descriptor_t desc = effect->desc();
+     if ((desc.flags & EFFECT_FLAG_TYPE_MASK) == EFFECT_FLAG_TYPE_AUXILIARY) {
+         detachAuxEffect_l(effect->id());
+@@ -1397,7 +1382,7 @@ void AudioFlinger::ThreadBase::removeEffect_l(const sp<EffectModule>& effect, bo
+     sp<EffectChain> chain = effect->chain().promote();
+     if (chain != 0) {
+         // remove effect chain if removing last effect
+-        if (chain->removeEffect_l(effect, release) == 0) {
++        if (chain->removeEffect_l(effect) == 0) {
+             removeEffectChain_l(chain);
+         }
+     } else {
+diff --git a/services/audioflinger/Threads.h b/services/audioflinger/Threads.h
+index 4009c18..8fab1e4 100644
+--- a/services/audioflinger/Threads.h
++++ b/services/audioflinger/Threads.h
+@@ -309,8 +309,7 @@ public:
+                                     int sessionId,
+                                     effect_descriptor_t *desc,
+                                     int *enabled,
+-                                    status_t *status /*non-NULL*/,
+-                                    bool pinned);
++                                    status_t *status /*non-NULL*/);
+ 
+                 // return values for hasAudioSession (bit field)
+                 enum effect_state {
+@@ -347,9 +346,7 @@ public:
+                 status_t addEffect_l(const sp< EffectModule>& effect);
+                 // remove and effect module. Also removes the effect chain is this was the last
+                 // effect
+-                void removeEffect_l(const sp< EffectModule>& effect, bool release = false);
+-                // disconnect an effect handle from module and destroy module if last handle
+-                void disconnectEffectHandle(EffectHandle *handle, bool unpinIfLast);
++                void removeEffect_l(const sp< EffectModule>& effect);
+                 // detach all tracks connected to an auxiliary effect
+     virtual     void detachAuxEffect_l(int effectId __unused) {}
+                 // returns either EFFECT_SESSION if effects on this audio session exist in one
+diff --git a/services/audioflinger/Tracks.cpp b/services/audioflinger/Tracks.cpp
+index b04de58..f3b5375 100644
+--- a/services/audioflinger/Tracks.cpp
++++ b/services/audioflinger/Tracks.cpp
+@@ -114,24 +114,9 @@ AudioFlinger::ThreadBase::TrackBase::TrackBase(
+     mUid = clientUid;
+ 
+     // ALOGD("Creating track with %d buffers @ %d bytes", bufferCount, bufferSize);
+-
+-    size_t bufferSize = buffer == NULL ? roundup(frameCount) : frameCount;
+-    // check overflow when computing bufferSize due to multiplication by mFrameSize.
+-    if (bufferSize < frameCount  // roundup rounds down for values above UINT_MAX / 2
+-            || mFrameSize == 0   // format needs to be correct
+-            || bufferSize > SIZE_MAX / mFrameSize) {
+-        android_errorWriteLog(0x534e4554, "34749571");
+-        return;
+-    }
+-    bufferSize *= mFrameSize;
+-
+     size_t size = sizeof(audio_track_cblk_t);
++    size_t bufferSize = (buffer == NULL ? roundup(frameCount) : frameCount) * mFrameSize;
+     if (buffer == NULL && alloc == ALLOC_CBLK) {
+-        // check overflow when computing allocation size for streaming tracks.
+-        if (size > SIZE_MAX - bufferSize) {
+-            android_errorWriteLog(0x534e4554, "34749571");
+-            return;
+-        }
+         size += bufferSize;
+     }
+ 
+@@ -145,11 +130,9 @@ AudioFlinger::ThreadBase::TrackBase::TrackBase(
+             return;
+         }
+     } else {
+-        mCblk = (audio_track_cblk_t *) malloc(size);
+-        if (mCblk == NULL) {
+-            ALOGE("not enough memory for AudioTrack size=%zu", size);
+-            return;
+-        }
++        // this syntax avoids calling the audio_track_cblk_t constructor twice
++        mCblk = (audio_track_cblk_t *) new uint8_t[size];
++        // assume mCblk != NULL
+     }
+ 
+     // construct the shared structure in-place.
+@@ -241,9 +224,10 @@ AudioFlinger::ThreadBase::TrackBase::~TrackBase()
+     // delete the proxy before deleting the shared memory it refers to, to avoid dangling reference
+     delete mServerProxy;
+     if (mCblk != NULL) {
+-        mCblk->~audio_track_cblk_t();   // destroy our shared-structure.
+         if (mClient == 0) {
+-            free(mCblk);
++            delete mCblk;
++        } else {
++            mCblk->~audio_track_cblk_t();   // destroy our shared-structure.
+         }
+     }
+     mCblkMemory.clear();    // free the shared memory before releasing the heap it belongs to
+@@ -437,21 +421,6 @@ AudioFlinger::PlaybackThread::Track::Track(
+         mAudioTrackServerProxy = new AudioTrackServerProxy(mCblk, mBuffer, frameCount,
+                 mFrameSize, !isExternalTrack(), sampleRate);
+     } else {
+-        // Is the shared buffer of sufficient size?
+-        // (frameCount * mFrameSize) is <= SIZE_MAX, checked in TrackBase.
+-        if (sharedBuffer->size() < frameCount * mFrameSize) {
+-            // Workaround: clear out mCblk to indicate track hasn't been properly created.
+-            mCblk->~audio_track_cblk_t();   // destroy our shared-structure.
+-            if (mClient == 0) {
+-                free(mCblk);
+-            }
+-            mCblk = NULL;
+-
+-            mSharedBuffer.clear(); // release shared buffer early
+-            android_errorWriteLog(0x534e4554, "38340117");
+-            return;
+-        }
+-
+         mAudioTrackServerProxy = new StaticAudioTrackServerProxy(mCblk, mBuffer, frameCount,
+                 mFrameSize);
+     }
+diff --git a/services/audiopolicy/service/AudioPolicyInterfaceImpl.cpp b/services/audiopolicy/service/AudioPolicyInterfaceImpl.cpp
+index 45b3bb0..b23c35e 100644
+--- a/services/audiopolicy/service/AudioPolicyInterfaceImpl.cpp
++++ b/services/audiopolicy/service/AudioPolicyInterfaceImpl.cpp
+@@ -417,6 +417,7 @@ void AudioPolicyService::releaseInput(audio_io_handle_t input,
+     sp<AudioPolicyEffects>audioPolicyEffects;
+     {
+         Mutex::Autolock _l(mLock);
++        mAudioPolicyManager->releaseInput(input, session);
+         audioPolicyEffects = mAudioPolicyEffects;
+     }
+     if (audioPolicyEffects != 0) {
+@@ -426,10 +427,6 @@ void AudioPolicyService::releaseInput(audio_io_handle_t input,
+             ALOGW("Failed to release effects on input %d", input);
+         }
+     }
+-    {
+-        Mutex::Autolock _l(mLock);
+-        mAudioPolicyManager->releaseInput(input, session);
+-    }
+ }
+ 
+ status_t AudioPolicyService::initStreamVolume(audio_stream_type_t stream,
+diff --git a/services/soundtrigger/SoundTriggerHwService.cpp b/services/soundtrigger/SoundTriggerHwService.cpp
+index a45d5f6..a1cc6ff 100644
+--- a/services/soundtrigger/SoundTriggerHwService.cpp
++++ b/services/soundtrigger/SoundTriggerHwService.cpp
+@@ -270,12 +270,12 @@ void SoundTriggerHwService::sendRecognitionEvent(struct sound_trigger_recognitio
+      if (module == NULL) {
+          return;
+      }
+-    struct sound_trigger_phrase_recognition_event newEvent;
+     if (event-> type == SOUND_MODEL_TYPE_KEYPHRASE && event->data_size != 0
+         && event->data_offset != sizeof(struct sound_trigger_phrase_recognition_event)) {
+         // set some defaults for the phrase if the recognition event won't be parsed properly
+         // TODO: read defaults from the config
+ 
++        struct sound_trigger_phrase_recognition_event newEvent;
+         memset(&newEvent, 0, sizeof(struct sound_trigger_phrase_recognition_event));
+ 
+         sp<Model> model = module->getModel(event->model);
+-- 
+2.7.4
+

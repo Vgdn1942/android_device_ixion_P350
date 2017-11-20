@@ -146,6 +146,10 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     Torch
 
+# MiraVision
+PRODUCT_PACKAGES += \
+    MiraVision
+
 # EngineerMode
 PRODUCT_PACKAGES += \
     EngineerMode

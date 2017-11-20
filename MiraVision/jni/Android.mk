@@ -11,7 +11,7 @@ LOCAL_C_INCLUDES := \
 LOCAL_C_INCLUDES += \
     $(TOP)/bionic \
     $(LOCAL_PATH)/inc \
-    $(LOCAL_PATH)/../../mtk/kernel-headers
+    #$(LOCAL_PATH)/../../mtk/kernel-headers
 
 LOCAL_SHARED_LIBRARIES := \
 	libcutils \
@@ -25,3 +25,4 @@ LOCAL_MODULE := libMiraVision_jni
 LOCAL_MULTILIB := both
 
 include $(BUILD_SHARED_LIBRARY)
+

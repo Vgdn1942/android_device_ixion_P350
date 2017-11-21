@@ -37,11 +37,11 @@
 # libgui_extra.so
 #
 
-LOCAL_PATH:= $(call my-dir)
+LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
-LOCAL_SRC_FILES:= \
+LOCAL_SRC_FILES := \
 	GraphicBufferUtil.cpp \
 	FpsCounter.cpp \
 	IDumpTunnel.cpp \
@@ -53,8 +53,6 @@ LOCAL_C_INCLUDES:= \
 	external/zlib \
 	external/skia/src/images \
 	external/skia/include/core
-
-#    $(TOP)/$(MTK_ROOT)/hardware/include \
 
 LOCAL_SHARED_LIBRARIES := \
 	libpng \

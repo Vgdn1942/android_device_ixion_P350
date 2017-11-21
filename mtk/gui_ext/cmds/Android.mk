@@ -8,7 +8,7 @@ LOCAL_SHARED_LIBRARIES := \
     libutils \
     libcutils \
     libbinder \
-    libgui_ext \
+    libgui_ext
 
 LOCAL_C_INCLUDES := \
     $(LOCAL_PATH)/../inc

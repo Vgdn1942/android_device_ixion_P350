@@ -58,12 +58,7 @@ typedef enum _VIDEO_DECODER_T {
  * @par Returns
  *   VIDEO_DEC_API_T,   the decoder API
  */
-VIDEO_DEC_API_T * GetDecoderAPI(
-	VIDEO_DECODER_T eDecType,
-	HANDLE hWrapper,
-	void **ppDrvModule,
-	unsigned int bUseMultiCoreCodec
-);
+VIDEO_DEC_API_T  *GetDecoderAPI(VIDEO_DECODER_T eDecType, HANDLE hWrapper, void **ppDrvModule, unsigned int bUseMultiCoreCodec);
 #else
 VIDEO_DEC_API_T  *GetDecoderAPI(VIDEO_DECODER_T, HANDLE); /* HANDLE : wrapper's handle */
 #endif
@@ -117,12 +112,7 @@ typedef enum _VIDEO_ENCODER_T {
  * @par Returns
  *   VIDEO_DEC_API_T,   the encoder API
  */
-VIDEO_ENC_API_T *GetEncoderAPI(
-	VIDEO_ENCODER_T eEncType,
-	HANDLE hWrapper,
-	void **ppDrvModule,
-	unsigned int bUseMultiCoreCodec
-);
+VIDEO_ENC_API_T *GetEncoderAPI(VIDEO_ENCODER_T eEncType, HANDLE hWrapper, void **ppDrvModule, unsigned int bUseMultiCoreCodec);
 /* VCODEC_ENC_API_T *GetMPEG4EncoderAPI(void); */
 /* VCODEC_ENC_API_T* GetH264EncoderAPI(void); */
 /* VIDEO_ENCODER_API_T *GetVP8EncoderAPI(void); */

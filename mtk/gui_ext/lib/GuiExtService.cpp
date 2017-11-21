@@ -1,5 +1,6 @@
 #define LOG_TAG "GuiExt"
 
+#define MTK_LOG_ENABLE 1
 #include <dlfcn.h>
 #include <fcntl.h>
 #include <math.h>
@@ -14,7 +15,7 @@
 #include <gui/SurfaceComposerClient.h>
 
 #include <ui/DisplayInfo.h>
-#include <ui/mediatek/IDumpTunnel.h>
+#include <IDumpTunnel.h>
 
 #include <cutils/memory.h>
 

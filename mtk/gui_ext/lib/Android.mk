@@ -50,14 +50,12 @@ LOCAL_SRC_FILES:= \
     GuiExtClientConsumer.cpp \
     GuiExtImpl.cpp
 
-MTK_HWC_CHIP = $(shell echo $(MTK_PLATFORM) | tr A-Z a-z )
+MTK_HWC_CHIP = MT6580
 
 LOCAL_C_INCLUDES:= \
     $(LOCAL_PATH)/../inc \
     $(LOCAL_PATH)/../../ui_ext/inc \
     $(TOP)/frameworks/base/include/ \
-#    $(TOP)/vendor/mediatek/proprietary/external/include \
-#    $(TOP)/vendor/mediatek/proprietary/hardware/include
 
 LOCAL_SHARED_LIBRARIES := \
     libutils \

@@ -17,7 +17,7 @@
 #include <cutils/log.h>
 #include <cutils/process_name.h>
 #include <cutils/properties.h>
-#include <ui/mediatek/RefBaseDump.h>
+#include <RefBaseDump.h>
 
 namespace android {
 

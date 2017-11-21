@@ -13,23 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-LOCAL_PATH:= $(call my-dir)
+LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES := ion.c
+
 LOCAL_MODULE := libion_mtk
+
 LOCAL_MODULE_TAGS := optional
 
-# xen0n: build in AOSP layout
-# ./include is MTK's $(TOP)/vendor/mediatek/proprietary/external/include
 LOCAL_C_INCLUDES += \
-    $(LOCAL_PATH)/include \
-    $(LOCAL_PATH)/kernel-headers \
-    $(TOP)/system/core/include
+        $(LOCAL_PATH)/include \
+        $(LOCAL_PATH)/../kernel-headers \
+        $(TOP)/system/core/include
 
 LOCAL_SHARED_LIBRARIES := libion liblog
 
 include $(BUILD_SHARED_LIBRARY)
 
-include $(call all-makefiles-under,$(LOCAL_PATH))

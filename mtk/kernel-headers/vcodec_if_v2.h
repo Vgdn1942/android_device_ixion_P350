@@ -969,6 +969,7 @@ typedef struct {
 	HANDLE                      hDriver;
 	VCODEC_BUFFER_T             rReleaseYUV;
 	VCODEC_ENC_BUFFER_INFO_T    rEncoderBuffInfoNC;
+	unsigned int	 			u4EncType;// for sw venc type
 } VIDEO_ENC_WRAP_HANDLE_T;
 
 typedef struct {

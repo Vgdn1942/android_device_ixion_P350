@@ -91,6 +91,9 @@ typedef struct __VENC_HANDLE_T {
 	VAL_UINT32_T            u4Bitrate;     /* /< Bitrate */
 	struct timeval          tStart;        /* /< Start time counting FPS and bitrate */
 	VENC_DRV_SCENARIO_T     eScenario;     /* /< VENC Senario */
+	VAL_INT32_T             nPerfServiceHandle; /* /< Used by performace service */
+	VAL_UINT32_T            u4RecFrmWidth;  /* /< Recoded frame width, (may not 16 byte-align) */
+	VAL_UINT32_T            u4RecFrmHeight; /* /< Recoded frame height, (may not 16 byte-align) */
 } VENC_HANDLE_T;
 
 VENC_DRV_MRESULT_T ParseConfig(const char *cfgFileName, const char *ParameterItem, VAL_UINT32_T *val);

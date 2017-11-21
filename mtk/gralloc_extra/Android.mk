@@ -7,8 +7,7 @@ LOCAL_SRC_FILES := \
 	GraphicBufferExtra_hal.cpp
 
 LOCAL_C_INCLUDES := \
-	$(LOCAL_PATH)/include \
-	$(LOCAL_PATH)/../include
+	$(LOCAL_PATH)/include
 
 LOCAL_SHARED_LIBRARIES := \
 	libhardware \

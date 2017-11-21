@@ -21,13 +21,14 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/types.h>
 
 #include <ion/ion.h>
 #include <linux/mtk_ion.h>
-#include <libion_mtk/ion.h>
+#include <ion.h>
 #include <linux/ion_drv.h>
 
 static int ion_set_client_name(int ion_fd, const char *name)
@@ -55,7 +56,7 @@ int mt_ion_open(const char *name)
     fd = ion_open();
     if(fd < 0)
     {
-        ALOGE("ion_open failed! name=%s\n", name);
+        ALOGE("ion_open failed!\n");
         return fd;
     }
 
@@ -154,4 +155,72 @@ int ion_custom_ioctl(int fd, unsigned int cmd, void* arg)
         return -errno;
     }
     return ret;
+}
+
+int ion_cache_sync_flush_all(int fd) {
+	int ret;
+	struct ion_sys_data sys_data;
+	sys_data.sys_cmd = ION_SYS_DMA_OP;
+
+	sys_data.dma_param.dma_type = ION_DMA_CACHE_FLUSH_ALL;
+	ret = ion_custom_ioctl(fd, ION_CMD_SYSTEM, &sys_data);
+	if (ret)
+		return -errno;
+	return ret;
+}
+
+int ion_dma_map_area(int fd, ion_user_handle_t handle, int dir) {
+	int ret;
+	struct ion_sys_data sys_data;
+	sys_data.sys_cmd = ION_SYS_DMA_OP;
+	sys_data.dma_param.handle = handle;
+
+	sys_data.dma_param.dma_type = ION_DMA_MAP_AREA;
+	sys_data.dma_param.dma_dir = dir;
+	ret = ion_custom_ioctl(fd, ION_CMD_SYSTEM, &sys_data);
+	if (ret)
+		return -errno;
+	return ret;
+}
+
+int ion_dma_unmap_area(int fd, ion_user_handle_t handle, int dir) {
+	int ret;
+	struct ion_sys_data sys_data;
+	sys_data.sys_cmd = ION_SYS_DMA_OP;
+	sys_data.dma_param.handle = handle;
+
+	sys_data.dma_param.dma_type = ION_DMA_UNMAP_AREA;
+	sys_data.dma_param.dma_dir = dir;
+	ret = ion_custom_ioctl(fd, ION_CMD_SYSTEM, &sys_data);
+	if (ret)
+		return -errno;
+	return ret;
+}
+
+int ion_dma_map_area_va(int fd, void *addr, size_t length, int dir) {
+	int ret;
+	struct ion_sys_data sys_data;
+	sys_data.sys_cmd = ION_SYS_DMA_OP;
+	sys_data.dma_param.va = addr;
+
+	sys_data.dma_param.dma_type = ION_DMA_MAP_AREA_VA;
+	sys_data.dma_param.dma_dir = dir;
+	ret = ion_custom_ioctl(fd, ION_CMD_SYSTEM, &sys_data);
+	if (ret)
+		return -errno;
+	return ret;
+}
+
+int ion_dma_unmap_area_va(int fd, void * addr, size_t length, int dir) {
+	int ret;
+	struct ion_sys_data sys_data;
+	sys_data.sys_cmd = ION_SYS_DMA_OP;
+	sys_data.dma_param.va = addr;
+
+	sys_data.dma_param.dma_type = ION_DMA_UNMAP_AREA_VA;
+	sys_data.dma_param.dma_dir = dir;
+	ret = ion_custom_ioctl(fd, ION_CMD_SYSTEM, &sys_data);
+	if (ret)
+		return -errno;
+	return ret;
 }

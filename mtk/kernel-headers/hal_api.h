@@ -57,6 +57,7 @@ typedef enum _HAL_CMD_T {
  * @par Description
  *   This is the item used for register group
  */
+ 
 typedef enum _REGISTER_GROUP_T {
 	VDEC_SYS,           /* /< VDEC_SYS */
 	VDEC_MISC,          /* /< VDEC_MISC */
@@ -73,7 +74,9 @@ typedef enum _REGISTER_GROUP_T {
 	VDEC_VP6_VLD,       /* /< VDEC_VP6_VLD */
 	VDEC_VP8_VLD2,      /* /< VDEC_VP8_VLD2 */
 	VENC_HW_BASE,       /* /< VENC_HW_BASE */
+	VENC_LT_HW_BASE,    /* /< VENC_HW_LT_BASE */
 	VENC_MP4_HW_BASE,   /* /< VENC_MP4_HW_BASE */
+	VDEC_VP9_VLD,       /*/< VDEC_VP9_VLD*/
 	VCODEC_MAX          /* /< VCODEC_MAX */
 } REGISTER_GROUP_T;
 

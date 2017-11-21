@@ -1,6 +1,7 @@
 #define LOG_TAG "GraphicBufferUtil"
 #define ATRACE_TAG ATRACE_TAG_GRAPHICS
 
+#define MTK_LOG_ENABLE 1
 #include <utils/String8.h>
 
 #include <cutils/log.h>
@@ -23,30 +24,38 @@ namespace android {
 
 ANDROID_SINGLETON_STATIC_INSTANCE( GraphicBufferUtil )
 
-class BufferInfo
+status_t BufferInfo::getInfo(const buffer_handle_t& handle)
 {
-private:
-    int mErr;
+    mHandle = handle;
+    int format = PIXEL_FORMAT_UNKNOWN;
+    int err = NO_ERROR;
+    mErr = gralloc_extra_query(handle, GRALLOC_EXTRA_GET_WIDTH, &mWidth);
+    mErr |= gralloc_extra_query(handle, GRALLOC_EXTRA_GET_HEIGHT, &mHeight);
+    mErr |= gralloc_extra_query(handle, GRALLOC_EXTRA_GET_STRIDE, &mStride);
+    mErr |= gralloc_extra_query(handle, GRALLOC_EXTRA_GET_FORMAT, &mFormat);
 
-public:    
-    int mWidth;
-    int mHeight;
-    int mStride;
-    int mFormat;
-
-    BufferInfo(buffer_handle_t handle) : mErr(0)
+    if ((err = getGraphicBufferUtil().getRealFormat(handle, &format)) == GRALLOC_EXTRA_OK)
     {
-        mErr = gralloc_extra_query(handle, GRALLOC_EXTRA_GET_WIDTH, &mWidth);
-        mErr |= gralloc_extra_query(handle, GRALLOC_EXTRA_GET_HEIGHT, &mHeight);
-        mErr |= gralloc_extra_query(handle, GRALLOC_EXTRA_GET_STRIDE, &mStride);
-        mErr |= gralloc_extra_query(handle, GRALLOC_EXTRA_GET_FORMAT, &mFormat);
+        mFormat = format;
     }
+    mErr |= err;
+    return mErr;
+}
 
-    int getError()
+status_t BufferInfo::getInfo(const sp<GraphicBuffer>& gb)
+{
+    if (NO_ERROR != getInfo(gb->handle))
     {
-        return mErr;
+        ALOGD("Can't gralloc_extra handle, fallback to get info from gb!");
+        mHandle = gb->handle;
+        mWidth = gb->width;
+        mHeight = gb->height;
+        mStride = gb->stride;
+        mFormat = gb->format;
+        mErr = NO_ERROR;
     }
-};
+    return mErr;
+}
 
 GraphicBufferUtil::GraphicBufferUtil()
 {
@@ -118,7 +127,11 @@ void GraphicBufferUtil::dump(const sp<GraphicBuffer>& gb,
         ALOGE("[%s] gb is NULL", __func__);
         return;
     }
-    dump(gb->handle, prefix, dir);
+
+    BufferInfo i;
+    i.getInfo(gb);
+
+    dump(i, prefix, dir);
 }
 
 void GraphicBufferUtil::dump(const buffer_handle_t &handle,
@@ -131,22 +144,21 @@ void GraphicBufferUtil::dump(const buffer_handle_t &handle,
         return;
     }
 
-    BufferInfo info(handle);
-    if(info.getError() != NO_ERROR)
-    {
-        ALOGD("getting info of handle failed");
-        return;
-    }
+    BufferInfo i;
+    i.getInfo(handle);
 
+    dump(i, prefix, dir);
+}
+
+void GraphicBufferUtil::dump( const BufferInfo &info,
+                              const char* prefix,
+                              const char* dir)
+{
     const uint32_t& width = info.mWidth;
     const uint32_t& height = info.mHeight;
     const uint32_t& stride = info.mStride;
-    PixelFormat inputFormat = PIXEL_FORMAT_UNKNOWN;
-    if (getRealFormat(handle, &inputFormat) != GRALLOC_EXTRA_OK)
-    {
-        ALOGE("Getting format of handle failed");
-        return;
-    }
+    const buffer_handle_t& handle = info.mHandle;
+    const PixelFormat& format = info.mFormat;
 
     ALOGD("[%s] handle:%p +", __func__, handle);
     ALOGD("    prefix: %s dir:%s", prefix, dir);
@@ -176,7 +188,7 @@ void GraphicBufferUtil::dump(const buffer_handle_t &handle,
 
     int dumpHeight = height;
 
-    uint32_t bits = getBitsPerPixel(info.mFormat);
+    uint32_t bits = getBitsPerPixel(format);
     bool isRaw = false;
     bool is565 = false;
     bool stripAlpha = false;
@@ -184,7 +196,7 @@ void GraphicBufferUtil::dump(const buffer_handle_t &handle,
     // switch case different pixel format process
     // only RGB? series will be saved into image file
     // others in RAW data only
-    switch (inputFormat)
+    switch (format)
     {
         case HAL_PIXEL_FORMAT_RGBA_8888:
             path += ".png";
@@ -232,7 +244,7 @@ void GraphicBufferUtil::dump(const buffer_handle_t &handle,
             path += ".RGB";
             break;
         default:
-            ALOGE("    CANNOT dump (format:0x%x)", inputFormat);
+            ALOGE("    CANNOT dump (format:0x%x)", format);
             return;
     }
     ALOGD("      path: %s", path.string());
@@ -265,7 +277,7 @@ void GraphicBufferUtil::dump(const buffer_handle_t &handle,
 
         if (isRaw)
         {
-            if (HAL_PIXEL_FORMAT_YV12 == inputFormat)
+            if (HAL_PIXEL_FORMAT_YV12 == format)
             {
                 // need correction for YV12 case, pending for VU planes should also pending to 16
                 uint32_t remainder = (stride / 2) % 16;
@@ -420,7 +432,11 @@ status_t GraphicBufferUtil::drawLine(const sp<GraphicBuffer>& gb, uint8_t val, i
         ALOGE("[%s] gb is NULL", __func__);
         return INVALID_OPERATION;
     }
-    return drawLine(gb->handle, val, ptn_w, ptn_h, pos);
+
+    BufferInfo i;
+    i.getInfo(gb);
+
+    return drawLine(i, val, ptn_w, ptn_h, pos);
 }
 
 status_t GraphicBufferUtil::drawLine(const buffer_handle_t& handle, uint8_t val, int ptn_w, int ptn_h, int pos)
@@ -431,22 +447,19 @@ status_t GraphicBufferUtil::drawLine(const buffer_handle_t& handle, uint8_t val,
         return INVALID_OPERATION;
     }
 
-    BufferInfo info(handle);
-    if(info.getError() != NO_ERROR)
-    {
-        ALOGD("getting info of handle failed");
-        return INVALID_OPERATION;
-    }
+    BufferInfo i;
+    i.getInfo(handle);
 
+    return drawLine(i, val, ptn_w, ptn_h, pos);
+}
+
+status_t GraphicBufferUtil::drawLine(const BufferInfo &info, uint8_t val, int ptn_w, int ptn_h, int pos)
+{
     const uint32_t& width = info.mWidth;
     const uint32_t& height = info.mHeight;
     const uint32_t& stride = info.mStride;
-    PixelFormat inputFormat = PIXEL_FORMAT_UNKNOWN;
-    if (getRealFormat(handle, &inputFormat) != GRALLOC_EXTRA_OK)
-    {
-        ALOGE("getting format of handle failed");
-        return INVALID_OPERATION;
-    }
+    const buffer_handle_t& handle = info.mHandle;
+    const PixelFormat& format = info.mFormat;
 
     if (ptn_w == 0)
         ptn_w = 1;
@@ -478,9 +491,9 @@ status_t GraphicBufferUtil::drawLine(const buffer_handle_t& handle, uint8_t val,
         // if custom format, just regard as one-byte-plane size
         // otherwise use accurate size aggressively
         uint32_t bits = 8;
-        if (inputFormat < 0x100)
+        if (format < 0x100)
         {
-            bits = getBitsPerPixel(inputFormat);
+            bits = getBitsPerPixel(format);
         }
 
         if (ptn_w == 1)

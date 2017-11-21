@@ -44,12 +44,14 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 #-----------------------------------------------------------
-LOCAL_SRC_FILES += MtkCameraParameters.cpp
-LOCAL_SRC_FILES += MtkCamera.cpp
+LOCAL_SRC_FILES += \
+    MtkCameraParameters.cpp \
+    MtkCamera.cpp
 
 #-----------------------------------------------------------
-LOCAL_C_INCLUDES += $(TOP)/frameworks/av/include
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/include
+LOCAL_C_INCLUDES += \
+    $(TOP)/frameworks/av/include \
+    $(LOCAL_PATH)/include
 #
 
 #-----------------------------------------------------------
@@ -74,11 +76,12 @@ LOCAL_WHOLE_STATIC_LIBRARIES += libcamera_client_mtk
 LOCAL_STATIC_LIBRARIES += 
 
 #-----------------------------------------------------------
-LOCAL_SHARED_LIBRARIES += liblog
-LOCAL_SHARED_LIBRARIES += libcutils
-LOCAL_SHARED_LIBRARIES += libutils
-LOCAL_SHARED_LIBRARIES += libbinder
-LOCAL_SHARED_LIBRARIES += libcamera_client
+LOCAL_SHARED_LIBRARIES += \
+        liblog \
+        libcutils \
+        libutils \
+        libbinder \
+        libcamera_client
 #
 
 #-----------------------------------------------------------

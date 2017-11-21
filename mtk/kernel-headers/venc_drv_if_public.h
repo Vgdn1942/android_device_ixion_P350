@@ -23,10 +23,7 @@ typedef enum __VENC_DRV_QUERY_TYPE_T {
 	VENC_DRV_QUERY_TYPE_MCI_SUPPORTED,          /* /< Query if the codec support MCI */
 	VENC_DRV_QUERY_TYPE_CHIP_NAME,              /* /< Query chip name */
 	VENC_DRV_QUERY_TYPE_INPUT_BUF_LIMIT,        /* /< Query input buffer stride and sliceheight */
-
-	/* /< Query if recorder scenario adjust to normal priority, for 6571. */
-	VENC_DRV_QUERY_TYPE_NORMAL_PRIO,
-
+	VENC_DRV_QUERY_TYPE_NORMAL_PRIO,            /* /< Query if recorder scenario adjust to normal priority, for 6571. */
 	VENC_DRV_QUERY_TYPE_VIDEO_CAMCORDER_CAP,    /* /< Query spec. for MediaProfile */
 	VENC_DRV_QUERY_TYPE_CHIP_VARIANT,           /* /< Query chip variant */
 	VENC_DRV_QUERY_TYPE_MAX = 0xFFFFFFFF        /* /< Max VENC_DRV_QUERY_TYPE_T value */
@@ -340,21 +337,13 @@ typedef enum __VENC_DRV_SET_TYPE_T {
 	VENC_DRV_SET_TYPE_SKIP_FRAME,           /* /< Set skip one frame */
 	VENC_DRV_SET_TYPE_SCENARIO,             /* /< Set VENC Scenario */
 	VENC_DRV_SET_TYPE_PREPEND_HEADER,       /* /< Set prepend SPS/PPS before IDR */
-
-	/* /< Set to Slow Motion Video Recording for header or frame */
-	VENC_DRV_SET_TYPE_SLOW_MOTION_ENCODE,
-
-	/* /< Set to Slow Motion Video Recording for encoded bs with post processing */
-	VENC_DRV_SET_TYPE_SLOW_MOTION_POST_PROC,
-
-	/* /< Set to Slow Motion Video Recording for Lock HW */
-	VENC_DRV_SET_TYPE_SLOW_MOTION_LOCK_HW,
-
-	/* /< Set to Slow Motion Video Recording for UnLock HW */
-	VENC_DRV_SET_TYPE_SLOW_MOTION_UNLOCK_HW,
-
+	VENC_DRV_SET_TYPE_SLOW_MOTION_ENCODE,       /* /< Set to Slow Motion Video Recording for header or frame */
+	VENC_DRV_SET_TYPE_SLOW_MOTION_POST_PROC,    /* /< Set to Slow Motion Video Recording for encoded bs with post processing */
+	VENC_DRV_SET_TYPE_SLOW_MOTION_LOCK_HW,      /* /< Set to Slow Motion Video Recording for Lock HW */
+	VENC_DRV_SET_TYPE_SLOW_MOTION_UNLOCK_HW,    /* /< Set to Slow Motion Video Recording for UnLock HW */
 	VENC_DRV_SET_TYPE_NONREFP,              /* /< Set Enable/Disable Non reference P frame */
 	VENC_DRV_SET_TYPE_CONFIG_QP,            /* /< Set init QP */
+        VENC_DRV_SET_TYPE_RFS_ON,
 	VENC_DRV_SET_TYPE_MAX = 0xFFFFFFFF      /* /< Max VENC_DRV_SET_TYPE_T value */
 } VENC_DRV_SET_TYPE_T;
 
@@ -378,9 +367,7 @@ typedef enum __VENC_DRV_GET_TYPE_T {
 	/* for DirectLink Meta Mode + */
 	VENC_DRV_GET_TYPE_ALLOC_META_HANDLE_LIST,           /* /< Alloc a handle to store meta handle list */
 	VENC_DRV_GET_TYPE_GET_BUF_INFO_FROM_META_HANDLE,    /* /< Get buffer virtual address from meta buffer handle */
-
-	/* /< free a handle allocated from VENC_DRV_GET_TYPE_ALLOC_META_HANDLE_LIST */
-	VENC_DRV_GET_TYPE_FREE_META_HANDLE_LIST,
+	VENC_DRV_GET_TYPE_FREE_META_HANDLE_LIST,            /* /< free a handle allocated from VENC_DRV_GET_TYPE_ALLOC_META_HANDLE_LIST */
 	/* for DirectLink Meta Mode - */
 	VENC_DRV_GET_TYPE_MAX = 0xFFFFFFFF          /* /< Max VENC_DRV_GET_TYPE_MAX value */
 } VENC_DRV_GET_TYPE_T;
@@ -411,6 +398,7 @@ typedef enum __VENC_DRV_SCENARIO_T {
 	VENC_DRV_SCENARIO_LIVEPHOTO_EFFECT      = (1 << 2), /* /< LivePhoto effect transcoding */
 	VENC_DRV_SCENARIO_CAMERA_REC_SLOW_MOTION = (1 << 3), /* /< Camera recording with slow motion */
 	VENC_DRV_SCENARIO_SCREEN_REC            = (1 << 4), /* /< Screen recording */
+        VENC_DRV_SCENARIO_VILTE_REC            = (1 << 5), /* /< VILTE recording */
 } VENC_DRV_SCENARIO_T;
 
 
@@ -422,10 +410,7 @@ typedef enum __VENC_DRV_SCENARIO_T {
  */
 typedef struct __VENC_DRV_QUERY_VIDEO_FORMAT_T {
 	VENC_DRV_VIDEO_FORMAT_T eVideoFormat;       /* /< [OUT] video format capability */
-
-	/* /< [OUT] video profile capability
-	(VENC_DRV_H264_VIDEO_PROFILE_T, VENC_DRV_MPEG_VIDEO_PROFILE_T, VENC_DRV_MS_VIDEO_PROFILE_T) */
-	VAL_UINT32_T            u4Profile;
+	VAL_UINT32_T            u4Profile;          /* /< [OUT] video profile capability (VENC_DRV_H264_VIDEO_PROFILE_T, VENC_DRV_MPEG_VIDEO_PROFILE_T, VENC_DRV_MS_VIDEO_PROFILE_T) */
 	VENC_DRV_VIDEO_LEVEL_T  eLevel;             /* /< [OUT] video level capability */
 	VENC_DRV_RESOLUTION_T   eResolution;        /* /< [OUT] video resolution capability */
 	VAL_UINT32_T            u4Width;            /* /< [OUT] video width capability */
@@ -465,7 +450,7 @@ typedef struct __VENC_DRV_QUERY_INPUT_BUF_LIMIT {
  * @par Description
  *   This is the encoder settings and used as input or output parameter for eVEncDrvSetParam() or eVEncDrvGetParam()
  */
-typedef struct __VENC_DRV_PARAM_ENC_T {
+typedef struct __VENC_DRV_PARAM_ENC_T {      /*union extend 64bits for TEE*/
 	VENC_DRV_YUV_FORMAT_T   eVEncFormat;        /* /< [IN/OUT] YUV format */
 	VAL_UINT32_T            u4Profile;          /* /< [IN/OUT] Profile */
 	VAL_UINT32_T            u4Level;            /* /< [IN/OUT] Level */
@@ -477,7 +462,10 @@ typedef struct __VENC_DRV_PARAM_ENC_T {
 	VAL_UINT32_T            u4NumBFrm;          /* /< [IN/OUT] The number of B frame between two reference frame. */
 	VENC_DRV_FRAME_RATE_T   eFrameRate;         /* /< [IN/OUT] Frame rate */
 	VAL_BOOL_T              fgInterlace;        /* /< [IN/OUT] Interlace coding. */
-	VAL_VOID_T *pvExtraEnc;
+	union {
+		VAL_VOID_T          *pvExtraEnc;
+		VAL_UINT64_T        pvExtraEnc_ext64;
+	};
 	VAL_MEMORY_T            rExtraEncMem;       /* /< [IN/OUT] Extra Encoder Memory Info */
 	VAL_BOOL_T              fgUseMCI;           /* /< [IN/OUT] Use MCI */
 	VAL_BOOL_T              fgMultiSlice;       /* /< [IN/OUT] Is multi-slice bitstream ? */
@@ -610,10 +598,16 @@ typedef VENC_DRV_PARAM_FRM_BUF_T * P_VENC_DRV_PARAM_FRM_BUF_T;
  *   This is bitstream buffer information and used as input parameter for\n
  *   eVEncDrvEncode()\n
  */
-typedef struct __VENC_DRV_PARAM_BS_BUF_T {
+typedef struct __VENC_DRV_PARAM_BS_BUF_T {/*union extend 64bits for TEE */
 	VAL_MEM_ADDR_T          rBSAddr;        /* /< [IN] Bitstream buffer address */
-	VAL_ULONG_T             u4BSStartVA;    /* /< [IN] Bitstream fill start address */
-	VAL_ULONG_T             u4BSSize;       /* /< [IN] Bitstream size (filled bitstream in bytes) */
+	union {
+		VAL_ULONG_T         u4BSStartVA;    /* /< [IN] Bitstream fill start address */
+		VAL_UINT64_T        u4BSStartVA_ext64;
+	};
+	union {
+		VAL_ULONG_T         u4BSSize;       /* /< [IN] Bitstream size (filled bitstream in bytes) */
+		VAL_UINT64_T        u4BSSize_ext64;
+	};
 	VENC_DRV_TIMESTAMP_T    rTimeStamp;     /* /< [IN] Time stamp information */
 	VAL_UINT32_T            rSecMemHandle;  /* /< [IN/OUT] security memory handle for SVP */
 } VENC_DRV_PARAM_BS_BUF_T;
@@ -633,12 +627,16 @@ typedef VENC_DRV_PARAM_BS_BUF_T * P_VENC_DRV_PARAM_BS_BUF_T;
  * @par Description
  *   This is callback and return information and used as output parameter for eVEncDrvEncode()
  */
-typedef struct __VENC_DRV_DONE_RESULT_T {
+typedef struct __VENC_DRV_DONE_RESULT_T {        /*union extend 64bits for TEE */
 	VENC_DRV_MESSAGE_T          eMessage;           /* /< [OUT] Message, such as success or error code */
-	P_VENC_DRV_PARAM_BS_BUF_T   prBSBuf;            /* /< [OUT] Bitstream information */
-
-	/* /< [OUT] Input frame buffer information. if address is null, don't use this buffer, else reuse */
-	P_VENC_DRV_PARAM_FRM_BUF_T  prFrmBuf;
+	union {
+		P_VENC_DRV_PARAM_BS_BUF_T  prBSBuf;         /* /< [OUT] Bitstream information */
+		VAL_UINT64_T               prBSBuf_ext64;
+	};
+	union {
+		P_VENC_DRV_PARAM_FRM_BUF_T prFrmBuf;        /* /< [OUT] Input frame buffer information. if address is null, don't use this buffer, else reuse */
+		VAL_UINT64_T               prFrmBuf_ext64;
+	};
 	VAL_BOOL_T                  fgIsKeyFrm;         /* /< [OUT] output is key frame or not */
 	VAL_UINT32_T                u4HWEncodeTime;     /* /< [OUT] HW encode Time */
 } VENC_DRV_DONE_RESULT_T;
@@ -660,9 +658,7 @@ typedef VENC_DRV_DONE_RESULT_T * P_VENC_DRV_DONE_RESULT_T;
  */
 typedef struct __VENC_DRV_PROPERTY_T {
 	VAL_UINT32_T    u4BufAlign;             /* /< [OUT] Buffer alignment requirement */
-
-	/* /< [OUT] Buffer unit size is N bytes (e.g., 8, 16, or 64 bytes per unit.) */
-	VAL_UINT32_T    u4BufUnitSize;
+	VAL_UINT32_T    u4BufUnitSize;          /* /< [OUT] Buffer unit size is N bytes (e.g., 8, 16, or 64 bytes per unit.) */
 	VAL_UINT32_T    u4ExtraBufSize;         /* /< [OUT] Extra buffer size in initial stage */
 	VAL_BOOL_T      fgOutputRingBuf;        /* /< [OUT] Output is ring buffer */
 	VAL_BOOL_T      fgCoarseMESupport;      /* /< [OUT] Support ME coarse search */
@@ -740,10 +736,8 @@ VENC_DRV_MRESULT_T  eVEncDrvQueryCapability(
  * @par Returns
  *   VENC_DRV_MRESULT_T     [OUT] VENC_DRV_MRESULT_OK for success, VENC_DRV_MRESULT_FAIL for fail
  */
-VENC_DRV_MRESULT_T  eVEncDrvCreate(
-	VAL_HANDLE_T * a_phHandle,
-	VENC_DRV_VIDEO_FORMAT_T a_eVideoFormat
-);
+VENC_DRV_MRESULT_T  eVEncDrvCreate(VAL_HANDLE_T *a_phHandle, VENC_DRV_VIDEO_FORMAT_T a_eVideoFormat
+				  );
 
 
 /**
@@ -859,13 +853,7 @@ VENC_DRV_MRESULT_T  eVEncDrvGetParam(
  * @par Returns
  *   VENC_DRV_MRESULT_T     [OUT] VENC_DRV_MRESULT_OK for success, VENC_DRV_MRESULT_FAIL for fail
  */
-VENC_DRV_MRESULT_T  eVEncDrvEncode(
-	VAL_HANDLE_T a_hHandle,
-	VENC_DRV_START_OPT_T a_eOpt,
-	VENC_DRV_PARAM_FRM_BUF_T *a_prFrmBuf,
-	VENC_DRV_PARAM_BS_BUF_T *a_prBSBuf,
-	VENC_DRV_DONE_RESULT_T * a_prResult
-);
+VENC_DRV_MRESULT_T  eVEncDrvEncode(VAL_HANDLE_T a_hHandle, VENC_DRV_START_OPT_T a_eOpt, VENC_DRV_PARAM_FRM_BUF_T *a_prFrmBuf, VENC_DRV_PARAM_BS_BUF_T *a_prBSBuf, VENC_DRV_DONE_RESULT_T *a_prResult);
 
 
 #ifdef __cplusplus

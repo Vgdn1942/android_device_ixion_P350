@@ -29,12 +29,6 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     libboringssl-compat
 
-# be a chinese
-EXTENDED_FONT_FOOTPRINT := true
-
-PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
-    persist.sys.timezone=Europe/Minsk
-
 # init
 #PRODUCT_PACKAGES += \
 #    proj-dev-setup
@@ -162,9 +156,9 @@ PRODUCT_COPY_FILES += \
 
 # Thermal
 PRODUCT_COPY_FILES += \
-     $(LOCAL_PATH)/configs/.ht120.mtc:system/etc/.tp/.ht120.mtc \
-     $(LOCAL_PATH)/configs/thermal.conf:system/etc/.tp/thermal.conf \
-     $(LOCAL_PATH)/configs/thermal.off.conf:system/etc/.tp/thermal.off.conf
+    $(LOCAL_PATH)/configs/.ht120.mtc:system/etc/.tp/.ht120.mtc \
+    $(LOCAL_PATH)/configs/thermal.conf:system/etc/.tp/thermal.conf \
+    $(LOCAL_PATH)/configs/thermal.off.conf:system/etc/.tp/thermal.off.conf
 
 # Ramdisk
 PRODUCT_COPY_FILES += \
@@ -228,9 +222,11 @@ ADDITIONAL_DEFAULT_PROPERTIES += \
 	persist.service.acm.enable=0 \
 	ro.oem_unlock_supported=1
 
-PRODUCT_PROPERTY_OVERRIDES += ro.product.locale=ru-RU
-PRODUCT_PROPERTY_OVERRIDES += ro.product.locale.region=RU
-PRODUCT_PROPERTY_OVERRIDES += ro.product.locale.language=ru
+PRODUCT_PROPERTY_OVERRIDES += \
+    persist.sys.timezone=Europe/Minsk \
+    ro.product.locale=ru-RU \
+    ro.product.locale.region=RU \
+    ro.product.locale.language=ru
 
 # Screen density
 PRODUCT_AAPT_CONFIG := normal

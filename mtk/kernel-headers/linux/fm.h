@@ -19,18 +19,18 @@ typedef enum fm_bool {
     fm_true  = 1
 } fm_bool;
 
-//scan sort algorithm 
-enum{
+// scan sort algorithm
+enum {
     FM_SCAN_SORT_NON = 0,
     FM_SCAN_SORT_UP,
     FM_SCAN_SORT_DOWN,
     FM_SCAN_SORT_MAX
 };
 
-//scan methods
-enum{
-    FM_SCAN_SEL_HW = 0, //select hardware scan, advantage: fast
-    FM_SCAN_SEL_SW,     //select software scan, advantage: more accurate
+// scan methods
+enum {
+    FM_SCAN_SEL_HW = 0, // select hardware scan, advantage: fast
+    FM_SCAN_SEL_SW, // select software scan, advantage: more accurate
     FM_SCAN_SEL_MAX
 };
 
@@ -48,7 +48,7 @@ enum{
 #define FMR_BAND_FREQ_H     1080        //FM radio special band high freq(Default 108.0MHz)
 #define FM_SCAN_SORT_SELECT FM_SCAN_SORT_NON
 #define FM_SCAN_SELECT      FM_SCAN_SEL_HW
-#define FM_SCAN_SOFT_MUTE_GAIN_TH  3    //soft-mute threshold when software scan, rang: 0~3, 0 means better audio quality but less channel 
+#define FM_SCAN_SOFT_MUTE_GAIN_TH  3    //soft-mute threshold when software scan, rang: 0~3, 0 means better audio quality but less channel
 #define FM_CHIP_DESE_RSSI_TH (-102)      // rang: -102 ~ -72
 
 //TX
@@ -66,7 +66,7 @@ enum{
 #define FMTX_SCAN_HOLE_LOW  923         //92.3MHz~95.4MHz should not show to user
 #define FMTX_SCAN_HOLE_HIGH 954         //92.3MHz~95.4MHz should not show to user
 //*****************************************************************************************
- 
+
 #define FM_NAME             "fm"
 #define FM_DEVICE_NAME      "/dev/fm"
 
@@ -81,7 +81,6 @@ enum{
 #define FM_SCAN_FAILED  7
 
 // band
-
 #define FM_BAND_UNKNOWN 0
 #define FM_BAND_UE      1 // US/Europe band  87.5MHz ~ 108MHz (DEFAULT)
 #define FM_BAND_JAPAN   2 // Japan band      76MHz   ~ 90MHz
@@ -105,7 +104,7 @@ enum{
 
 #define FM_SEEK_SPACE FMR_SEEK_SPACE
 
-//max scan chl num
+// max scan channel num
 #define FM_MAX_CHL_SIZE FMR_SCAN_CH_SIZE
 // auto HiLo
 #define FM_AUTO_HILO_OFF    0
@@ -159,7 +158,7 @@ struct fm_scan_parm {
     uint16_t ScanTBLSize; //IN/OUT parameter
 };
 
-struct fm_ch_rssi{
+struct fm_ch_rssi {
     uint16_t freq;
     int rssi;
 };
@@ -175,22 +174,22 @@ enum fm_scan_cmd_t {
 };
 
 struct fm_scan_t {
-    enum fm_scan_cmd_t cmd;    
+    enum fm_scan_cmd_t cmd;
     int ret;    // 0, success; else error code
     uint16_t lower;             // lower band, Eg, 7600 -> 76.0Mhz
     uint16_t upper;             // upper band, Eg, 10800 -> 108.0Mhz
     int space;                  // 5: 50KHz, 10: 100Khz, 20: 200Khz
-    int num;                    // valid channel number 
+    int num;                    // valid channel number
     void *priv;
     int sr_size;                // scan result buffer size in bytes
     union {
         uint16_t *ch_buf;       // channel buffer
         int *rssi_buf;          // rssi buffer
-        struct fm_ch_rssi *ch_rssi_buf;  //channel and RSSI buffer 
-    } sr;    
+        struct fm_ch_rssi *ch_rssi_buf;  //channel and RSSI buffer
+    } sr;
 };
 
-struct fm_seek_t {  
+struct fm_seek_t {
     int ret;                    // 0, success; else error code
     uint16_t freq;
     uint16_t lower;             // lower band, Eg, 7600 -> 76.0Mhz
@@ -201,7 +200,7 @@ struct fm_seek_t {
     void *priv;
 };
 
-struct fm_tune_t {  
+struct fm_tune_t {
     int ret;                    // 0, success; else error code
     uint16_t freq;
     uint16_t lower;             // lower band, Eg, 7600 -> 76.0Mhz
@@ -209,20 +208,20 @@ struct fm_tune_t {
     int space;                  // 5: 50KHz, 10: 100Khz, 20: 200Khz
     void *priv;
 };
-struct fm_softmute_tune_t 
-{  
-	fm_s32 rssi;              // RSSI of current channel
-	fm_u16 freq;				//current frequency
-	fm_bool valid;				    //current channel is valid(true) or not(false)
+
+struct fm_softmute_tune_t {
+    fm_s32 rssi;            // RSSI of current channel
+    fm_u16 freq;            // current frequency
+    fm_bool valid;          // current channel is valid(true) or not(false)
 };
 
-struct fm_rssi_req{
+struct fm_rssi_req {
     uint16_t num;
     uint16_t read_cnt;
     struct fm_ch_rssi cr[26*16];
 };
 
-struct fm_hw_info{
+struct fm_hw_info {
     int chip_id; //chip ID, eg. 6620
     int eco_ver; //chip ECO version, eg. E3
     int rom_ver; //FM DSP rom code version, eg. V2
@@ -230,8 +229,7 @@ struct fm_hw_info{
     int reserve;
 };
 
-struct fm_search_threshold_t 
-{  
+struct fm_search_threshold_t {
 	fm_s32 th_type;// 0, RSSI. 1,desense RSSI. 2,SMG.
 	fm_s32 th_val; //threshold value
 	fm_s32 reserve;
@@ -245,8 +243,7 @@ struct fm_search_threshold_t
 
 #if NEED_DEF_RDS
 //For RDS feature
-typedef struct
-{
+typedef struct {
    uint8_t TP;
    uint8_t TA;
    uint8_t Music;
@@ -256,10 +253,9 @@ typedef struct
    uint8_t Dynamic_PTY;
    uint8_t Text_AB;
    uint32_t flag_status;
-}RDSFlag_Struct;
+} RDSFlag_Struct;
 
-typedef struct
-{
+typedef struct {
    uint16_t Month;
    uint16_t Day;
    uint16_t Year;
@@ -267,25 +263,22 @@ typedef struct
    uint16_t Minute;
    uint8_t Local_Time_offset_signbit;
    uint8_t Local_Time_offset_half_hour;
-}CT_Struct;
+} CT_Struct;
 
-typedef struct
-{
+typedef struct {
    int16_t AF_Num;
    int16_t AF[2][25];  //100KHz
    uint8_t Addr_Cnt;
    uint8_t isMethod_A;
    uint8_t isAFNum_Get;
-}AF_Info;
+} AF_Info;
 
-typedef struct
-{
+typedef struct {
    uint8_t PS[4][8];
    uint8_t Addr_Cnt;
-}PS_Info;
+} PS_Info;
 
-typedef struct
-{
+typedef struct {
    uint8_t TextData[4][64];
    uint8_t GetLength;
    uint8_t isRTDisplay;
@@ -293,55 +286,49 @@ typedef struct
    uint8_t isTypeA;
    uint8_t BufCnt;
    uint16_t Addr_Cnt;
-}RT_Info;
+} RT_Info;
 
-struct rds_raw_data
-{
+struct rds_raw_data {
     int dirty; //indicate if the data changed or not
     int len; //the data len form chip
     uint8_t data[146];
 };
 
-struct rds_group_cnt
-{
+struct rds_group_cnt {
     unsigned int total;
-    unsigned int groupA[16]; //RDS groupA counter
-    unsigned int groupB[16]; //RDS groupB counter
+    unsigned int groupA[16]; // RDS groupA counter
+    unsigned int groupB[16]; // RDS groupB counter
 };
 
-enum rds_group_cnt_opcode
-{
+enum rds_group_cnt_opcode {
     RDS_GROUP_CNT_READ = 0,
     RDS_GROUP_CNT_WRITE,
     RDS_GROUP_CNT_RESET,
     RDS_GROUP_CNT_MAX
 };
 
-struct rds_group_cnt_req
-{
+struct rds_group_cnt_req {
     int err;
     enum rds_group_cnt_opcode op;
     struct rds_group_cnt gc;
 };
 
-typedef struct
-{
+typedef struct {
    CT_Struct CT;
    RDSFlag_Struct RDSFlag;
    uint16_t PI;
    uint8_t Switch_TP;
    uint8_t PTY;
    AF_Info AF_Data;
-   uint8_t Radio_Page_Code;
-   uint16_t Program_Item_Number_Code; 
    AF_Info AFON_Data;
+   uint8_t Radio_Page_Code;
+   uint16_t Program_Item_Number_Code;
    uint8_t Extend_Country_Code;
    uint16_t Language_Code;
    PS_Info PS_Data;
-   uint8_t PS_ON[8];    
-   uint16_t event_status; //will use RDSFlag_Struct RDSFlag->flag_status to check which event, is that ok? 
+   uint8_t PS_ON[8];
    RT_Info RT_Data;
-   uint8_t PAD1;	//padding for data aligh
+   uint16_t event_status; //will use RDSFlag_Struct RDSFlag->flag_status to check which event, is that ok?
    struct rds_group_cnt gc;
 } RDSData_Struct;
 
@@ -355,7 +342,7 @@ typedef enum {
    RDS_FLAG_IS_STEREO          = 0x0008, // Program is transmitted in stereo
    RDS_FLAG_IS_ARTIFICIAL_HEAD = 0x0010, // Program is an artificial head recording
    RDS_FLAG_IS_COMPRESSED      = 0x0020, // Program content is compressed
-   RDS_FLAG_IS_DYNAMIC_PTY     = 0x0040, // Program type can change 
+   RDS_FLAG_IS_DYNAMIC_PTY     = 0x0040, // Program type can change
    RDS_FLAG_TEXT_AB            = 0x0080  // If this flag changes state, a new radio text 					 string begins
 } RdsFlag;
 
@@ -367,13 +354,13 @@ typedef enum {
    RDS_EVENT_UTCDATETIME    = 0x0010, // A new UTC date/time is available
    RDS_EVENT_LOCDATETIME    = 0x0020, // A new local date/time is available
    RDS_EVENT_LAST_RADIOTEXT = 0x0040, // A radio text string was completed
-   RDS_EVENT_AF             = 0x0080, // Current Channel RF signal strength too weak, need do AF switch  
+   RDS_EVENT_AF             = 0x0080, // Current Channel RF signal strength too weak, need do AF switch
    RDS_EVENT_AF_LIST        = 0x0100, // An alternative frequency list is ready
    RDS_EVENT_AFON_LIST      = 0x0200, // An alternative frequency list is ready
    RDS_EVENT_TAON           = 0x0400,  // Other Network traffic announcement start
    RDS_EVENT_TAON_OFF       = 0x0800, // Other Network traffic announcement finished.
-   RDS_EVENT_RDS            = 0x2000, // RDS Interrupt had arrived durint timer period  
-   RDS_EVENT_NO_RDS         = 0x4000, // RDS Interrupt not arrived durint timer period  
+   RDS_EVENT_RDS            = 0x2000, // RDS Interrupt had arrived durint timer period
+   RDS_EVENT_NO_RDS         = 0x4000, // RDS Interrupt not arrived durint timer period
    RDS_EVENT_RDS_TIMER      = 0x8000 // Timer for RDS Bler Check. ---- BLER  block error rate
 } RdsEvent;
 #endif
@@ -386,7 +373,7 @@ struct fm_rds_tx_parm {
     uint8_t other_rds_cnt; // # of other group
 };
 
-typedef struct fm_rds_tx_req{
+typedef struct fm_rds_tx_req {
     unsigned char pty;         // 0~31 integer
     unsigned char rds_rbds;    // 0:RDS, 1:RBDS
     unsigned char dyn_pty;     // 0:static, 1:dynamic
@@ -400,7 +387,7 @@ typedef struct fm_rds_tx_req{
     unsigned char tp;          // traffic program, 0:no, 1:yes
     unsigned char ta;          // traffic announcement, 0:no, 1:yes
     unsigned char speech;      // 0:music, 1:speech
-}fm_rds_tx_req;
+} fm_rds_tx_req;
 
 #define TX_SCAN_MAX 10
 #define TX_SCAN_MIN 1
@@ -412,10 +399,10 @@ struct fm_tx_scan_parm {
     uint16_t freq; 	// start freq, if less than band min freq, then will use band min freq
     uint8_t	 scandir;
     uint16_t ScanTBL[TX_SCAN_MAX]; 	//need no less than the chip
-    uint16_t ScanTBLSize; //IN: desired size, OUT: scan result size 
+    uint16_t ScanTBLSize; //IN: desired size, OUT: scan result size
 };
 
-struct fm_gps_rtc_info{
+struct fm_gps_rtc_info {
     int             err;            //error number, 0: success, other: err code
     int             retryCnt;       //GPS mnl can decide retry times
     int             ageThd;         //GPS 3D fix time diff threshold
@@ -430,187 +417,175 @@ struct fm_gps_rtc_info{
     int             flag;           //rw flag
 };
 
-typedef enum
-{
+typedef enum {
 	FM_I2S_ON = 0,
 	FM_I2S_OFF,
     FM_I2S_STATE_ERR
-}fm_i2s_state_e;
+} fm_i2s_state_e;
 
-typedef enum
-{
+typedef enum {
 	FM_I2S_MASTER = 0,
 	FM_I2S_SLAVE,
     FM_I2S_MODE_ERR
-}fm_i2s_mode_e;
+} fm_i2s_mode_e;
 
-typedef enum
-{
+typedef enum {
 	FM_I2S_32K = 0,
 	FM_I2S_44K,
 	FM_I2S_48K,
     FM_I2S_SR_ERR
-}fm_i2s_sample_e;
+} fm_i2s_sample_e;
 
-struct fm_i2s_setting{
+struct fm_i2s_setting {
     int onoff;
     int mode;
     int sample;
 };
 
-typedef enum{
+typedef enum {
     FM_RX = 0,
     FM_TX = 1
-}FM_PWR_T;
+} FM_PWR_T;
 
-typedef struct fm_i2s_info
-{
+typedef struct fm_i2s_info {
     int status; /*0:FM_I2S_ON, 1:FM_I2S_OFF,2:error*/
     int mode;   /*0:FM_I2S_MASTER, 1:FM_I2S_SLAVE,2:error*/
     int rate;   /*0:FM_I2S_32K:32000,1:FM_I2S_44K:44100,2:FM_I2S_48K:48000,3:error*/
 } fm_i2s_info_t;
 
-typedef enum 
-{
+typedef enum {
     FM_AUD_ANALOG = 0,
-    FM_AUD_I2S = 1,    
+    FM_AUD_I2S = 1,
     FM_AUD_MRGIF = 2,
     FM_AUD_ERR
-}fm_audio_path_e;
+} fm_audio_path_e;
 
-typedef enum 
-{
+typedef enum {
     FM_I2S_PAD_CONN = 0, //sco fm chip: e.g.6627
     FM_I2S_PAD_IO = 1,   //combo fm chip: e.g.6628
     FM_I2S_PAD_ERR
-}fm_i2s_pad_sel_e;
+} fm_i2s_pad_sel_e;
 
-typedef struct fm_audio_info
-{
+typedef struct fm_audio_info {
     fm_audio_path_e aud_path;
     fm_i2s_info_t i2s_info;
     fm_i2s_pad_sel_e i2s_pad;
 } fm_audio_info_t;
 
-struct fm_cqi 
-{
+struct fm_cqi {
     int ch;
     int rssi;
     int reserve;
 };
 
-struct fm_cqi_req 
-{
+struct fm_cqi_req {
     uint16_t ch_num;
     int buf_size;
     char *cqi_buf;
 };
-typedef struct
-{
+
+typedef struct {
 	int freq;
 	int rssi;
-}fm_desense_check_t;
+} fm_desense_check_t;
 
-typedef struct 
-{
+typedef struct {
     uint16_t lower;             // lower band, Eg, 7600 -> 76.0Mhz
     uint16_t upper;             // upper band, Eg, 10800 -> 108.0Mhz
     int space;                  // 0x1: 50KHz, 0x2: 100Khz, 0x4: 200Khz
-    int cycle;                  // repeat times 
-}fm_full_cqi_log_t;
+    int cycle;                  // repeat times
+} fm_full_cqi_log_t;
 
-typedef struct
-{
+typedef struct {
 	int which;
 	bool stat;
-}fm_status_t;
+} fm_status_t;
 
 // ********** ***********FM IOCTL define start *******************************
 
 #define FM_IOC_MAGIC        0xf5 // FIXME: any conflict?
-
-#define FM_IOCTL_POWERUP       _IOWR(FM_IOC_MAGIC, 0, struct fm_tune_parm)
-#define FM_IOCTL_POWERDOWN     _IOWR(FM_IOC_MAGIC, 1, int32_t)
-#define FM_IOCTL_TUNE          _IOWR(FM_IOC_MAGIC, 2, struct fm_tune_parm)
-#define FM_IOCTL_SEEK          _IOWR(FM_IOC_MAGIC, 3, struct fm_seek_parm)
-#define FM_IOCTL_SETVOL        _IOWR(FM_IOC_MAGIC, 4, uint32_t)
-#define FM_IOCTL_GETVOL        _IOWR(FM_IOC_MAGIC, 5, uint32_t)
-#define FM_IOCTL_MUTE          _IOWR(FM_IOC_MAGIC, 6, uint32_t)
-#define FM_IOCTL_GETRSSI       _IOWR(FM_IOC_MAGIC, 7, int32_t)
-#define FM_IOCTL_SCAN          _IOWR(FM_IOC_MAGIC, 8, struct fm_scan_parm)
+#define FM_IOCTL_POWERUP       _IOWR(FM_IOC_MAGIC, 0, struct fm_tune_parm*)
+#define FM_IOCTL_POWERDOWN     _IOWR(FM_IOC_MAGIC, 1, int32_t*)
+#define FM_IOCTL_TUNE          _IOWR(FM_IOC_MAGIC, 2, struct fm_tune_parm*)
+#define FM_IOCTL_SEEK          _IOWR(FM_IOC_MAGIC, 3, struct fm_seek_parm*)
+#define FM_IOCTL_SETVOL        _IOWR(FM_IOC_MAGIC, 4, uint32_t*)
+#define FM_IOCTL_GETVOL        _IOWR(FM_IOC_MAGIC, 5, uint32_t*)
+#define FM_IOCTL_MUTE          _IOWR(FM_IOC_MAGIC, 6, uint32_t*)
+#define FM_IOCTL_GETRSSI       _IOWR(FM_IOC_MAGIC, 7, int32_t*)
+#define FM_IOCTL_SCAN          _IOWR(FM_IOC_MAGIC, 8, struct fm_scan_parm*)
 #define FM_IOCTL_STOP_SCAN     _IO(FM_IOC_MAGIC,   9)
 
 //IOCTL and struct for test
-#define FM_IOCTL_GETCHIPID     _IOWR(FM_IOC_MAGIC, 10, uint16_t)
-#define FM_IOCTL_EM_TEST       _IOWR(FM_IOC_MAGIC, 11, struct fm_em_parm)
-#define FM_IOCTL_RW_REG        _IOWR(FM_IOC_MAGIC, 12, struct fm_ctl_parm)
-#define FM_IOCTL_GETMONOSTERO  _IOWR(FM_IOC_MAGIC, 13, uint16_t)
-#define FM_IOCTL_GETCURPAMD    _IOWR(FM_IOC_MAGIC, 14, uint16_t)
-#define FM_IOCTL_GETGOODBCNT   _IOWR(FM_IOC_MAGIC, 15, uint16_t)
-#define FM_IOCTL_GETBADBNT     _IOWR(FM_IOC_MAGIC, 16, uint16_t)
-#define FM_IOCTL_GETBLERRATIO  _IOWR(FM_IOC_MAGIC, 17, uint16_t)
+#define FM_IOCTL_GETCHIPID     _IOWR(FM_IOC_MAGIC, 10, uint16_t*)
+#define FM_IOCTL_EM_TEST       _IOWR(FM_IOC_MAGIC, 11, struct fm_em_parm*)
+#define FM_IOCTL_RW_REG        _IOWR(FM_IOC_MAGIC, 12, struct fm_ctl_parm*)
+#define FM_IOCTL_GETMONOSTERO  _IOWR(FM_IOC_MAGIC, 13, uint16_t*)
+#define FM_IOCTL_GETCURPAMD    _IOWR(FM_IOC_MAGIC, 14, uint16_t*)
+#define FM_IOCTL_GETGOODBCNT   _IOWR(FM_IOC_MAGIC, 15, uint16_t*)
+#define FM_IOCTL_GETBADBNT     _IOWR(FM_IOC_MAGIC, 16, uint16_t*)
+#define FM_IOCTL_GETBLERRATIO  _IOWR(FM_IOC_MAGIC, 17, uint16_t*)
 
-//IOCTL for RDS 
-#define FM_IOCTL_RDS_ONOFF     _IOWR(FM_IOC_MAGIC, 18, uint16_t)
-#define FM_IOCTL_RDS_SUPPORT   _IOWR(FM_IOC_MAGIC, 19, int32_t)
+//IOCTL for RDS
+#define FM_IOCTL_RDS_ONOFF     _IOWR(FM_IOC_MAGIC, 18, uint16_t*)
+#define FM_IOCTL_RDS_SUPPORT   _IOWR(FM_IOC_MAGIC, 19, int32_t*)
 
-#define FM_IOCTL_POWERUP_TX    _IOWR(FM_IOC_MAGIC, 20, struct fm_tune_parm)
-#define FM_IOCTL_TUNE_TX       _IOWR(FM_IOC_MAGIC, 21, struct fm_tune_parm)
-#define FM_IOCTL_RDS_TX        _IOWR(FM_IOC_MAGIC, 22, struct fm_rds_tx_parm)
+#define FM_IOCTL_POWERUP_TX    _IOWR(FM_IOC_MAGIC, 20, struct fm_tune_parm*)
+#define FM_IOCTL_TUNE_TX       _IOWR(FM_IOC_MAGIC, 21, struct fm_tune_parm*)
+#define FM_IOCTL_RDS_TX        _IOWR(FM_IOC_MAGIC, 22, struct fm_rds_tx_parm*)
 
-#define FM_IOCTL_RDS_SIM_DATA  _IOWR(FM_IOC_MAGIC, 23, uint32_t)
-#define FM_IOCTL_IS_FM_POWERED_UP  _IOWR(FM_IOC_MAGIC, 24, uint32_t)
+#define FM_IOCTL_RDS_SIM_DATA  _IOWR(FM_IOC_MAGIC, 23, uint32_t*)
+#define FM_IOCTL_IS_FM_POWERED_UP  _IOWR(FM_IOC_MAGIC, 24, uint32_t*)
 
 //IOCTL for FM Tx
-#define FM_IOCTL_TX_SUPPORT    _IOWR(FM_IOC_MAGIC, 25, int32_t)
-#define FM_IOCTL_RDSTX_SUPPORT _IOWR(FM_IOC_MAGIC, 26, int32_t)
-#define FM_IOCTL_RDSTX_ENABLE  _IOWR(FM_IOC_MAGIC, 27, int32_t)
-#define FM_IOCTL_TX_SCAN       _IOWR(FM_IOC_MAGIC, 28, struct fm_tx_scan_parm)
+#define FM_IOCTL_TX_SUPPORT    _IOWR(FM_IOC_MAGIC, 25, int32_t*)
+#define FM_IOCTL_RDSTX_SUPPORT _IOWR(FM_IOC_MAGIC, 26, int32_t*)
+#define FM_IOCTL_RDSTX_ENABLE  _IOWR(FM_IOC_MAGIC, 27, int32_t*)
+#define FM_IOCTL_TX_SCAN       _IOWR(FM_IOC_MAGIC, 28, struct fm_tx_scan_parm*)
 
 //IOCTL for FM over BT
-#define FM_IOCTL_OVER_BT_ENABLE  _IOWR(FM_IOC_MAGIC, 29, int32_t)
+#define FM_IOCTL_OVER_BT_ENABLE  _IOWR(FM_IOC_MAGIC, 29, int32_t*)
 
 //IOCTL for FM ANTENNA SWITCH
-#define FM_IOCTL_ANA_SWITCH     _IOWR(FM_IOC_MAGIC, 30, int32_t)
-#define FM_IOCTL_GETCAPARRAY  	_IOWR(FM_IOC_MAGIC, 31, int32_t)
+#define FM_IOCTL_ANA_SWITCH     _IOWR(FM_IOC_MAGIC, 30, int32_t*)
+#define FM_IOCTL_GETCAPARRAY      _IOWR(FM_IOC_MAGIC, 31, int32_t*)
 
 //IOCTL for FM compensation by GPS RTC
-#define FM_IOCTL_GPS_RTC_DRIFT  _IOWR(FM_IOC_MAGIC, 32, struct fm_gps_rtc_info)
+#define FM_IOCTL_GPS_RTC_DRIFT  _IOWR(FM_IOC_MAGIC, 32, struct fm_gps_rtc_info*)
 
 //IOCTL for FM I2S Setting
-#define FM_IOCTL_I2S_SETTING  _IOWR(FM_IOC_MAGIC, 33, struct fm_i2s_setting)
+#define FM_IOCTL_I2S_SETTING  _IOWR(FM_IOC_MAGIC, 33, struct fm_i2s_setting*)
 
-#define FM_IOCTL_RDS_GROUPCNT   _IOWR(FM_IOC_MAGIC, 34, struct rds_group_cnt_req)
-#define FM_IOCTL_RDS_GET_LOG    _IOWR(FM_IOC_MAGIC, 35, struct rds_raw_data)
+#define FM_IOCTL_RDS_GROUPCNT   _IOWR(FM_IOC_MAGIC, 34, struct rds_group_cnt_req*)
+#define FM_IOCTL_RDS_GET_LOG    _IOWR(FM_IOC_MAGIC, 35, struct rds_raw_data*)
 
-#define FM_IOCTL_SCAN_GETRSSI   _IOWR(FM_IOC_MAGIC, 36, struct fm_rssi_req)
+#define FM_IOCTL_SCAN_GETRSSI   _IOWR(FM_IOC_MAGIC, 36, struct fm_rssi_req*)
 #define FM_IOCTL_SETMONOSTERO   _IOWR(FM_IOC_MAGIC, 37, int32_t)
-#define FM_IOCTL_RDS_BC_RST     _IOWR(FM_IOC_MAGIC, 38, int32_t)
-#define FM_IOCTL_CQI_GET     _IOWR(FM_IOC_MAGIC, 39, struct fm_cqi_req)
-#define FM_IOCTL_GET_HW_INFO    _IOWR(FM_IOC_MAGIC, 40, struct fm_hw_info)
-#define FM_IOCTL_GET_I2S_INFO   _IOWR(FM_IOC_MAGIC, 41, fm_i2s_info_t)
-#define FM_IOCTL_IS_DESE_CHAN   _IOWR(FM_IOC_MAGIC, 42, int32_t)
-#define FM_IOCTL_TOP_RDWR _IOWR(FM_IOC_MAGIC, 43, struct fm_top_rw_parm)
-#define FM_IOCTL_HOST_RDWR  _IOWR(FM_IOC_MAGIC, 44, struct fm_host_rw_parm)
+#define FM_IOCTL_RDS_BC_RST     _IOWR(FM_IOC_MAGIC, 38, int32_t*)
+#define FM_IOCTL_CQI_GET     _IOWR(FM_IOC_MAGIC, 39, struct fm_cqi_req*)
+#define FM_IOCTL_GET_HW_INFO    _IOWR(FM_IOC_MAGIC, 40, struct fm_hw_info*)
+#define FM_IOCTL_GET_I2S_INFO   _IOWR(FM_IOC_MAGIC, 41, fm_i2s_info_t*)
+#define FM_IOCTL_IS_DESE_CHAN   _IOWR(FM_IOC_MAGIC, 42, int32_t*)
+#define FM_IOCTL_TOP_RDWR _IOWR(FM_IOC_MAGIC, 43, struct fm_top_rw_parm*)
+#define FM_IOCTL_HOST_RDWR  _IOWR(FM_IOC_MAGIC, 44, struct fm_host_rw_parm*)
 
 #define FM_IOCTL_PRE_SEARCH _IOWR(FM_IOC_MAGIC, 45,int32_t)
 #define FM_IOCTL_RESTORE_SEARCH _IOWR(FM_IOC_MAGIC, 46,int32_t)
 
-#define FM_IOCTL_SET_SEARCH_THRESHOLD   _IOWR(FM_IOC_MAGIC, 47, fm_search_threshold_t)
+#define FM_IOCTL_SET_SEARCH_THRESHOLD   _IOWR(FM_IOC_MAGIC, 47, fm_search_threshold_t*)
 
-#define FM_IOCTL_GET_AUDIO_INFO _IOWR(FM_IOC_MAGIC, 48, fm_audio_info_t)
+#define FM_IOCTL_GET_AUDIO_INFO _IOWR(FM_IOC_MAGIC, 48, fm_audio_info_t*)
 #define FM_IOCTL_FM_SET_STATUS _IOWR(FM_IOC_MAGIC, 49, fm_status_t)
 #define FM_IOCTL_FM_GET_STATUS _IOWR(FM_IOC_MAGIC, 50, fm_status_t)
 
-#define FM_IOCTL_SCAN_NEW       _IOWR(FM_IOC_MAGIC, 60, struct fm_scan_t)
-#define FM_IOCTL_SEEK_NEW       _IOWR(FM_IOC_MAGIC, 61, struct fm_seek_t)
-#define FM_IOCTL_TUNE_NEW       _IOWR(FM_IOC_MAGIC, 62, struct fm_tune_t)
+#define FM_IOCTL_SCAN_NEW       _IOWR(FM_IOC_MAGIC, 60, struct fm_scan_t*)
+#define FM_IOCTL_SEEK_NEW       _IOWR(FM_IOC_MAGIC, 61, struct fm_seek_t*)
+#define FM_IOCTL_TUNE_NEW       _IOWR(FM_IOC_MAGIC, 62, struct fm_tune_t*)
 
-#define FM_IOCTL_SOFT_MUTE_TUNE _IOWR(FM_IOC_MAGIC, 63, struct fm_softmute_tune_t)/*for soft mute tune*/
-#define FM_IOCTL_DESENSE_CHECK   _IOWR(FM_IOC_MAGIC, 64, fm_desense_check_t)
+#define FM_IOCTL_SOFT_MUTE_TUNE _IOWR(FM_IOC_MAGIC, 63, struct fm_softmute_tune_t*)/*for soft mute tune*/
+#define FM_IOCTL_DESENSE_CHECK   _IOWR(FM_IOC_MAGIC, 64, fm_desense_check_t*)
 
 //IOCTL for EM
-#define FM_IOCTL_FULL_CQI_LOG _IOWR(FM_IOC_MAGIC, 70, fm_full_cqi_log_t )
+#define FM_IOCTL_FULL_CQI_LOG _IOWR(FM_IOC_MAGIC, 70, fm_full_cqi_log_t *)
 
 #define FM_IOCTL_DUMP_REG   _IO(FM_IOC_MAGIC, 0xFF)
 
@@ -618,7 +593,7 @@ typedef struct
 
 
 enum group_idx {
-    mono=0,
+    mono = 0,
     stereo,
     RSSI_threshold,
     HCC_Enable,
@@ -634,10 +609,10 @@ enum group_idx {
     Analog_Volume,
     GROUP_TOTAL_NUMS
 };
-	
+
 enum item_idx {
-    Sblend_OFF=0,
-    Sblend_ON,  
+    Sblend_OFF = 0,
+    Sblend_ON,
     ITEM_TOTAL_NUMS
 };
 
@@ -651,6 +626,6 @@ struct fm_ctl_parm {
 struct fm_em_parm {
 	uint16_t group_idx;
 	uint16_t item_idx;
-	uint32_t item_value;	
+	uint32_t item_value;
 };
 #endif // __FM_H__

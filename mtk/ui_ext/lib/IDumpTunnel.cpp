@@ -1,10 +1,11 @@
 #define LOG_TAG "DumpTunnel"
 
+#define MTK_LOG_ENABLE 1
 #include <dlfcn.h>
 #include <utils/String8.h>
 #include <binder/Parcel.h>
 #include <cutils/log.h>
-#include <ui/mediatek/IDumpTunnel.h>
+#include <IDumpTunnel.h>
 
 namespace android {
 

@@ -1,5 +1,6 @@
 #define LOG_TAG "GuiExt"
 
+#define MTK_LOG_ENABLE 1
 #include <cutils/log.h>
 #include <binder/IServiceManager.h>
 #include <binder/ProcessState.h>

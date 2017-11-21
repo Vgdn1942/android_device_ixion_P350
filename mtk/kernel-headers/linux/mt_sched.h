@@ -1,7 +1,7 @@
 #ifndef _MTK_SCHED_H
 #define _MTK_SCHED_H
 
-#define _GNU_SOURCE
+#define __USE_GNU
 #include <linux/ioctl.h>
 #include <sched.h>
 #include <linux/mt_sched_ioctl.h>

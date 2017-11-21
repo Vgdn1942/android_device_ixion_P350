@@ -36,6 +36,7 @@
 #define SENSOR_TYPE_GRAVITY             9
 #define SENSOR_TYPE_LINEAR_ACCELERATION 10
 #define SENSOR_TYPE_ROTATION_VECTOR     11
+#define SENSOR_TYPE_HUMIDITY            12
 #define SENSOR_TYPE_GAME_ROTATION_VECTOR 15
 #define SENSOR_TYPE_SIGNIFICANT_MOTION  17
 #define SENSOR_TYPE_STEP_DETECTOR       18
@@ -76,6 +77,7 @@
 #define ID_LIGHT						(ID_BASE+SENSOR_TYPE_LIGHT-1)
 #define ID_PRESSURE						(ID_BASE+SENSOR_TYPE_PRESSURE-1)
 #define ID_TEMPRERATURE					(ID_BASE+SENSOR_TYPE_TEMPERATURE-1)
+#define ID_HUMIDITY                     (ID_BASE+SENSOR_TYPE_HUMIDITY-1)
 #define ID_SIGNIFICANT_MOTION			(ID_BASE+SENSOR_TYPE_SIGNIFICANT_MOTION-1)  
 #define ID_STEP_DETECTOR				(ID_BASE+SENSOR_TYPE_STEP_DETECTOR-1)  
 #define ID_STEP_COUNTER					(ID_BASE+SENSOR_TYPE_STEP_COUNTER-1) 
@@ -91,16 +93,13 @@
 #define ID_FACE_DOWN                                    (ID_BASE+SENSOR_TYPE_FACE_DOWN-1)
 #define ID_SHAKE                                        (ID_BASE+SENSOR_TYPE_SHAKE-1)
 #define ID_BRINGTOSEE                                   (ID_BASE+SENSOR_TYPE_BRINGTOSEE-1)
-#define ID_SENSOR_MAX_HANDLE	  (ID_BASE+31)
-#define ID_NONE							    (ID_BASE+32)
+#define ID_SENSOR_MAX_HANDLE	  (ID_BASE+SENSOR_TYPE_BRINGTOSEE)
+#define ID_NONE							    (ID_SENSOR_MAX_HANDLE+1)
 
 #define ID_OFFSET                           (1)
 
-//#define MAX_ANDROID_SENSOR_NUM	(ID_SENSOR_MAX_HANDLE + 1)
-//alps\kernel-3.10\drivers\misc\mediatek\hwmon\hwmsen\hwmsen_dev.c
-//hwmsen_unlocked_ioctl copy from user only limit 1400 bytes
-#define MAX_ANDROID_SENSOR_NUM	(ID_TILT_DETECTOR +1) //not support MTK virtual sensor (all of them are one shot), otherwise fail at copy_form_user, size too large
-
+#define MAX_ANDROID_SENSOR_NUM	(ID_SENSOR_MAX_HANDLE +1)
+#define MAX_SENSOR_DATA_UPDATE_ONCE         (20)
 
 /*---------------------------------------------------------------------------*/
 #define SENSOR_ORIENTATION				(1 << ID_ORIENTATION)
@@ -232,6 +231,7 @@
 #define RV_MISC_DEV_NAME             	"m_rv_misc"
 
 #define EVENT_TYPE_SENSOR				0x01
+#define EVENT_TYPE_SENSOR_EXT			0x02
 #define EVENT_SENSOR_ACCELERATION		SENSOR_ACCELEROMETER
 #define EVENT_SENSOR_MAGNETIC			SENSOR_MAGNETIC
 #define EVENT_SENSOR_ORIENTATION		SENSOR_ORIENTATION
@@ -269,8 +269,8 @@ typedef struct {
 }hwm_sensor_data;
 
 typedef struct {
-	hwm_sensor_data data[MAX_ANDROID_SENSOR_NUM];
-	int date_type;
+	hwm_sensor_data data[MAX_SENSOR_DATA_UPDATE_ONCE];
+	uint64_t data_type;
 }hwm_trans_data;
 
 #define MAX_BATCH_DATA_PER_QUREY    18

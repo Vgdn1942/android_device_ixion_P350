@@ -1,5 +1,6 @@
 #define LOG_TAG "GuiExt"
 
+#define MTK_LOG_ENABLE 1
 #include <utils/Errors.h>
 #include <utils/RefBase.h>
 #include <utils/Vector.h>
@@ -12,7 +13,7 @@
 #include <cutils/log.h>
 
 #include <ui/GraphicBuffer.h>
-#include <ui/mediatek/IDumpTunnel.h>
+#include <IDumpTunnel.h>
 
 #include "IGuiExtService.h"
 

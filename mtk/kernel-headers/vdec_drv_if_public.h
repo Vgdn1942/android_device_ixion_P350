@@ -7,6 +7,9 @@ extern "C" {
 
 #include "val_types_public.h"
 
+#define MTK_VDEC_PROP_WAITKEYFRAME                 "mtk.vdec.waitkeyframeforplayback"
+#define MTK_VDEC_VALUE_WAITKEYFRAME_AT_START       (1)
+#define MTK_VDEC_VALUE_WAITKEYFRAME_FOR_SEEK       (1 << 1)
 
 /**
  * @par Enumeration
@@ -19,6 +22,7 @@ typedef enum _VDEC_DRV_FBSTSTUS {
 	VDEC_DRV_FBSTSTUS_REPEAT_LAST = (1 << 0),   /* /< repeat last frame */
 	VDEC_DRV_FBSTSTUS_NOT_DISPLAY = (1 << 1),   /* /< not displayed */
 	VDEC_DRV_FBSTSTUS_NOT_USED    = (1 << 2),   /* /< not used */
+	VDEC_DRV_FBSTSTUS_INVALID_TIMESTAMP    = (1 << 3),   /* /< invalid timestamp */
 }
 VDEC_DRV_FBSTSTUS;
 
@@ -29,6 +33,7 @@ VDEC_DRV_FBSTSTUS;
  * @par Description
  *  video_format of VDecDrvCreate()
  */
+ 
 typedef enum _VDEC_DRV_VIDEO_FORMAT_T {
 	VDEC_DRV_VIDEO_FORMAT_UNKNOWN_VIDEO_FORMAT  = 0,            /* /< Unknown video format */
 	VDEC_DRV_VIDEO_FORMAT_DIVX311               = (1 << 0),     /* /< Divix 3.11 */
@@ -59,7 +64,8 @@ typedef enum _VDEC_DRV_VIDEO_FORMAT_T {
 	VDEC_DRV_VIDEO_FORMAT_MJPEG                 = (1 << 25),    /* /< Motion JPEG */
 	VDEC_DRV_VIDEO_FORMAT_S263                  = (1 << 26),    /* /< Sorenson Spark */
 	VDEC_DRV_VIDEO_FORMAT_H264HP                = (1 << 27),
-	VDEC_DRV_VIDEO_FORMAT_H264SEC               = (1 << 28)
+	VDEC_DRV_VIDEO_FORMAT_H264SEC               = (1 << 28),	
+	VDEC_DRV_VIDEO_FORMAT_H265SEC               = (1 << 29)
 } VDEC_DRV_VIDEO_FORMAT_T;
 
 
@@ -309,8 +315,15 @@ typedef enum _VDEC_DRV_GET_TYPE_T {
 	VDEC_DRV_GET_TYPE_GET_FRAME_INTERVAL,           /* /< query frame interval from the codec lib */
 	VDEC_DRV_GET_TYPE_FREE_INPUT_BUFFER,            /* /< free input buffer */
 	VDEC_DRV_GET_TYPE_QUERY_VIDEO_INTERLACING,      /* /< query video interlace information */
-	VDEC_DRV_GET_TYPE_QUERY_VIDEO_DPB_SIZE          /* /< query video DPB size */
+	VDEC_DRV_GET_TYPE_QUERY_VIDEO_DPB_SIZE,         /* /< query video DPB size */
+        VDEC_DRV_SET_TYPE_SET_WAIT_KEYFRAME,            ///< set wait keyframe mode, default 0, 1 = wait at start/flush, 2 = wait at seek mode, 3 = always wait
+	VDEC_DRV_GET_TYPE_CODEC_PROPERTY                /* /< get teh codec specific property for decode flow*/
 } VDEC_DRV_GET_TYPE_T;
+
+typedef enum _VDEC_DRV_CODEC_PROPERTY_T {
+    VDEC_CODEC_NONE                                 = 0x00000000,
+    VDEC_CODEC_SUPPORT_DPB_SIZE                     = 0x00000001,
+} VDEC_DRV_CODEC_PROPERTY_T;
 
 
 /**
@@ -377,6 +390,8 @@ typedef enum _VDEC_DRV_SET_TYPE_T {
 	/* /< use the max suppoerted size as output buffer size. for smooth */
 	VDEC_DRV_SET_TYPE_SET_FIXEDMAXOUTPUTBUFFER,
 	VDEC_DRV_SET_TYPE_SET_UFO_DECODE,
+	VDEC_DRV_SET_TYPE_SET_CALLBACK,
+    VDEC_DRV_SET_TYPE_SET_FULL_SPEED,
 } VDEC_DRV_SET_TYPE_T;
 
 
@@ -418,6 +433,18 @@ typedef enum __VDEC_DRV_MRESULT_T {
 	VDEC_DRV_MRESULT_MAX = 0x0FFFFFFF               /* /< Max Value */
 } VDEC_DRV_MRESULT_T;
 
+/**
+ * @par Enumeration
+ *  VDEC_DRV_INPUTBUF_T
+ * @par Description
+ *  Description the input buffer property
+ */
+
+typedef enum _VDEC_DRV_INPUTBUF_T {
+	VDEC_DRV_INPUT_BUF_INIT_CONFIG_DATA                 = (1 << 0), /*/ < init data, most case this is video header only*/
+	VDEC_DRV_INPUT_BUF_EOS                              = (1 << 1), /*/ < input buffer with EOS flag*/
+	VDEC_DRV_INPUT_BUF_INVALID_TIMESTAMP                = (1 << 2), /*/ < input buffer with invalid timestamp flag*/
+} VDEC_DRV_INPUTBUF_T;
 
 /**
  * @par Structure
@@ -427,12 +454,19 @@ typedef enum __VDEC_DRV_MRESULT_T {
  *  - Store buffer base address
  *  - Store read/write pointer address
  */
-typedef struct __VDEC_DRV_RINGBUF_T {
+typedef struct __VDEC_DRV_RINGBUF_T { // union extend 64bits for TEE
 	VAL_MEM_ADDR_T  rBase;         /* /< [IN]     Base address of ring buffer */
-	VAL_ULONG_T     u4Read;        /* /< [IN/OUT] Virtual address of read pointer */
-	VAL_ULONG_T     u4Write;       /* /< [IN]     Virtual address of write pointer */
+    union {
+        VAL_ULONG_T u4Read;        /* /< [IN/OUT] Virtual address of read pointer */
+        VAL_UINT64_T u4Read_ext64;
+    };
+    union {
+        VAL_ULONG_T u4Write;       /* /< [IN]     Virtual address of write pointer */
+        VAL_UINT64_T u4Write_ext64;
+    };
 	VAL_UINT32_T    u4Timestamp;   /* /< [IN/OUT] store timestamp */
 	VAL_UINT32_T    rSecMemHandle; /* /< [IN/OUT] security memory handle    // MTK_SEC_VIDEO_PATH_SUPPORT */
+    VAL_UINT32_T    u4InputFlag;   /*/ < [IN]     the property of input buffer */
 } VDEC_DRV_RINGBUF_T;
 
 /**
@@ -525,6 +559,9 @@ typedef struct __VDEC_DRV_PICINFO_T {
 	VAL_UINT32_T    u4FrameRate;                /* /< [OUT] One of VDEC_DRV_FRAME_RATE */
 	VAL_UINT32_T    u4PictureStructure;         /* /< [OUT] One of VDEC_DRV_PIC_STRUCT */
 	VAL_UINT32_T    u4IsProgressiveOnly;        /* /< [OUT] 1: Progressive only. 0: Not progressive only. */
+	VAL_INT32_T     u4BitDepthLuma;             /* /< [OUT] Sequence luma bitdepth */
+	VAL_INT32_T     u4BitDepthChroma;           /* /< [OUT] Sequence chroma bitdepth */
+	VAL_BOOL_T      bIsHorizontalScaninLSB;     /* /< [OUT] Scan direction in 10bit LSB 2 bit */
 } VDEC_DRV_PICINFO_T;
 
 /**
@@ -551,6 +588,9 @@ typedef struct __VDEC_DRV_SEQINFO_T {
 	VAL_INT32_T     i4AspectRatioWidth;         /* /< [OUT] Sequence aspect ratio width */
 	VAL_INT32_T     i4AspectRatioHeight;        /* /< [OUT] Sequence aspect ratio height */
 	VAL_BOOL_T      bIsThumbnail;               /* /< [OUT] check thumbnail */
+	VAL_INT32_T     u4BitDepthLuma;             /* /< [OUT] Sequence luma bitdepth */
+	VAL_INT32_T     u4BitDepthChroma;           /* /< [OUT] Sequence chroma bitdepth */
+	VAL_BOOL_T      bIsHorizontalScaninLSB;     /* /< [OUT] Scan direction in 10bit LSB 2 bit */
 } VDEC_DRV_SEQINFO_T;
 
 /**
@@ -667,6 +707,25 @@ typedef struct __VDEC_DRV_PROPERTY_T {
  *  Pointer of VDEC_DRV_PROPERTY_T
  */
 typedef VDEC_DRV_PROPERTY_T * P_VDEC_DRV_PROPERTY_T;
+
+/**
+* @par Structure
+* VDEC_DRV_CALLBACK_T
+* @par Description
+* VDEC callback function
+*/
+typedef struct __VDEC_DRV_CALLBACK_T_ { // union extend 64bits for TEE
+    union {
+        VAL_HANDLE_T u4hHandle;
+        VAL_UINT64_T u4hHandle_ext64;
+    };
+    union {
+        VAL_UINT32_T (*pfnGetOutputBuffer)(VAL_HANDLE_T, P_VDEC_DRV_FRAMEBUF_T *, VAL_UINT32_T, VAL_BOOL_T, VAL_VOID_T *);
+        VAL_UINT64_T pfnGetOutputBuffer_ext64;
+    };
+} VDEC_DRV_CALLBACK_T;
+
+typedef VDEC_DRV_CALLBACK_T * P_VDEC_DRV_CALLBACK_T;
 
 
 /**
@@ -851,6 +910,31 @@ VDEC_DRV_MRESULT_T  eVDecDrvDecode(
 	VDEC_DRV_FRAMEBUF_T * a_prFramebuf
 );
 
+/**
+ * @par Function:
+ *  eVDecDrvDecodeEx
+ * @par Description:
+ *    - Trigger Decode
+ *      - Need to Provide frame buffer to store unused buffer
+ *    - The procedure of decode including:
+ *      - Header parsing
+ *      - trigger hw decode
+ *    - While we want to decode the last frame,
+ *       we need to set input bitstream as VAL_NULL and still give free frame buffer.
+ * @param
+ *   a_hHandle          [IN] driver handle
+ * @param
+ *   a_prBitstream      [IN] input bitstream
+ * @par Returns:
+ *    - VDEC_DRV_MRESULT_OK:   Decode successfully.
+ *    - VDEC_DRV_MRESULT_FAIL: Failed to decode.
+ */
+VDEC_DRV_MRESULT_T eVDecDrvDecodeEx(
+    VAL_HANDLE_T a_hHandle,
+    VDEC_DRV_RINGBUF_T *a_prBitstream,
+    VAL_UINT32_T u4Flag,
+    VAL_VOID_T * pExtra
+);
 
 #ifdef __cplusplus
 }

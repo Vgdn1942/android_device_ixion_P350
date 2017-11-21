@@ -1,6 +1,7 @@
 #define LOG_TAG "GuiExt"
 #define ATRACE_TAG ATRACE_TAG_GRAPHICS
 
+#define MTK_LOG_ENABLE 1
 #include <dlfcn.h>
 #include <stdlib.h>
 #include <utils/Timers.h>
@@ -149,6 +150,8 @@ status_t DispDevice::setOverlaySessionMode(DISP_MODE mode)
 GuiExtPool::GuiExtPool()
     : mPoolId(0)
     , mPoolList(NULL)
+    , mDefaultDisplayWidth(0)
+    , mDefaultDisplayHeight(0)
 {
     GUIEXT_LOGI("GuiExtPool ctor");
 }

@@ -38,8 +38,7 @@ typedef struct __VDEC_DRV_BASE_T {
 	);
 	VAL_UINT32_T(*Decode)(
 		VAL_HANDLE_T handle,
-		P_VDEC_DRV_RINGBUF_T
-		pBitstream,
+		P_VDEC_DRV_RINGBUF_T pBitstream,
 		P_VDEC_DRV_FRAMEBUF_T pFrame
 	); /* /< Driver Decode Main Funciton */
 	P_VDEC_DRV_FRAMEBUF_T(*GetDisplayBuffer)(
@@ -75,6 +74,14 @@ typedef struct __VDEC_DRV_BASE_T {
 		VDEC_DRV_VIDEO_FORMAT_T eFormat,
 		VAL_VOID_T * pConfig
 	);
+	VAL_UINT32_T(*DecodeEx)(
+        VAL_HANDLE_T handle,
+        P_VDEC_DRV_RINGBUF_T pBitstream,
+        VAL_UINT32_T u4Flag,
+        VAL_VOID_T * pExtra
+    ); /* /< Driver Decode Main Funciton */
+
+
 } VDEC_DRV_BASE_T;
 
 typedef struct __VDEC_DRV_BUF_STATUS_T {
@@ -112,8 +119,10 @@ typedef struct __VDEC_HANDLE_T {
 	VAL_INT32_T             nPerfServiceHandle;
 #ifdef DumpInput__
 	FILE *pf_out;
+	VAL_MEM_ADDR_T          rDumpBase;
 #endif
 	VAL_UINT32_T            nOmxTids;
+    VDEC_DRV_CALLBACK_T     rCallbackHook;
 } VDEC_HANDLE_T;
 
 #endif

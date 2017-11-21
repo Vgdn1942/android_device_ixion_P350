@@ -97,6 +97,7 @@ on charger
     start fuelgauged
     start kpoc_charger
     start servicemanager
+    start charger
 
     # disable USB
     write /sys/devices/platform/mt_usb/cmode 0
@@ -1108,15 +1109,12 @@ service autokd /system/bin/autokd
 # MTK Wi-Fi related services (End)
 #
 
-
 service dhcpcd_bt-pan /system/bin/dhcpcd -BK -dd
     class main
     user dhcp
     group net_admin net_raw
     disabled
     oneshot
-
-
 
 service dhcpcd_wlan0 /system/bin/dhcpcd -BK -dd
     class main
@@ -1597,6 +1595,13 @@ on property:persist.service.operamax=0
 
 service kpoc_charger /system/bin/kpoc_charger
     class charger
+
+service charger /sbin/healthd -c
+    class charger
+    critical
+    user root
+    group graphics
+    seclabel u:r:healthd:s0
 
 service sbchk /system/bin/sbchk 
     class core

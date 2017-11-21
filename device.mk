@@ -48,7 +48,7 @@ PRODUCT_PACKAGES += \
     guiext-server \
     libmtk_drvb
 
-# Charge
+# Offline charge
 PRODUCT_PACKAGES += \
     charger \
     charger_res_images \

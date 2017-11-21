@@ -51,7 +51,9 @@ PRODUCT_PACKAGES += \
 # Charge
 PRODUCT_PACKAGES += \
     charger \
-    charger_res_images
+    charger_res_images \
+    kpoc_charger \
+    libshowlogo
 
 # Power
 #PRODUCT_PACKAGES += \

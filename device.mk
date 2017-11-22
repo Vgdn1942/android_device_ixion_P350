@@ -152,6 +152,14 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     EngineerMode
 
+# Keyhandler & Gestures
+PRODUCT_PACKAGES += \
+    com.cyanogenmod.keyhandler \
+    Gestures
+
+PRODUCT_SYSTEM_SERVER_JARS += \
+    com.cyanogenmod.keyhandler
+
 # Keylayout
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/configs/mtk-kpd.kl:system/usr/keylayout/mtk-kpd.kl
@@ -235,7 +243,7 @@ PRODUCT_AAPT_CONFIG := normal
 PRODUCT_AAPT_PREF_CONFIG := xhdpi
 PRODUCT_CHARACTERISTICS := default
 
-$(call inherit-product, build/target/product/full.mk)
-
 $(call inherit-product, frameworks/native/build/phone-xhdpi-1024-dalvik-heap.mk)
+# never dexopt the keyhandler
+$(call add-product-dex-preopt-module-config,com.cyanogenmod.keyhandler,disable)
 

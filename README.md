@@ -33,10 +33,10 @@ Working:
 - GPS
 - Wi-Fi tethering
 - Second SIM
+- Poweroff charge
 
 Not working/Bugs:
 - Video recording
-- Poweroff charge
 
 # Acknowledgements
 

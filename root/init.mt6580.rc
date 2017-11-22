@@ -93,10 +93,10 @@ on charger
     # simplest way to fix libshowlogo.so reading from legacy path
     symlink /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/logo /dev/logo
     #mount ubifs ...
-    start spm_script
-    start fuelgauged
-    start kpoc_charger
-    start servicemanager
+    #start spm_script
+    #start fuelgauged
+    #start kpoc_charger
+    #start servicemanager
     start charger
 
     # disable USB

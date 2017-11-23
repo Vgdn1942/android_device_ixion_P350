@@ -18,7 +18,7 @@
     <string name="app_name">Gestures</string>
 
     <!-- Gesture shortcuts -->
-    <string name="screen_gestures_panel_title">Gesture shortcuts</string>
+    <string name="screen_gestures_panel_title">Gestures</string>
     <string name="touchscreen_enable_gesture_title">Enable gestures</string>
     <string name="screen_gestures_panel_summary">Use gestures while the screen is off</string>
 

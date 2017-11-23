@@ -19,7 +19,7 @@
   <string name="app_name">Жести</string>
 
   <!-- Gesture shortcuts -->
-  <string name="screen_gestures_panel_title">Включити жести</string>
+  <string name="screen_gestures_panel_title">Жести</string>
   <string name="touchscreen_enable_gesture_title">Включити жести</string>
   <string name="screen_gestures_panel_summary">Дозволити використання жестів при вимкненому екрані</string>
 

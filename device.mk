@@ -64,7 +64,7 @@ PRODUCT_PACKAGES += \
 
 # Camera
 PRODUCT_PACKAGES += \
-    Snap \
+    OpenCamera \
     libnvramagentclient \
     libcamera_client_mtk
 
@@ -144,8 +144,7 @@ PRODUCT_PACKAGES += \
 
 # MiraVision
 PRODUCT_PACKAGES += \
-    MiraVision \
-    libjni_pq
+    MiraVision
 
 # EngineerMode
 PRODUCT_PACKAGES += \

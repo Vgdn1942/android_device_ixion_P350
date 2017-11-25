@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 The CyanogenMod Project
+ * Copyright (C) 2015-2016 The CyanogenMod Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,42 +16,34 @@
 
 package com.cyanogenmod.settings.device;
 
-import android.app.ActivityManagerNative;
-import android.app.KeyguardManager;
-import android.content.ActivityNotFoundException;
-import android.content.ContentResolver;
+import android.Manifest;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.res.Resources;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.hardware.camera2.CameraManager;
-import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraManager;
 import android.media.session.MediaSessionLegacyHelper;
-import android.net.Uri;
 import android.os.Handler;
 import android.os.Message;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
-import android.os.RemoteException;
-import android.os.ServiceManager;
 import android.os.SystemClock;
-import android.os.UserHandle;
 import android.os.Vibrator;
-import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Log;
+import android.util.SparseIntArray;
 import android.view.KeyEvent;
-import android.view.WindowManagerGlobal;
-
-import cyanogenmod.providers.CMSettings;
 
 import com.android.internal.os.DeviceKeyHandler;
 import com.android.internal.util.ArrayUtils;
+
+import cyanogenmod.providers.CMSettings;
 
 public class KeyHandler implements DeviceKeyHandler {
 
@@ -75,9 +67,6 @@ public class KeyHandler implements DeviceKeyHandler {
 
     private static final String KEY_GESTURE_HAPTIC_FEEDBACK =
             "touchscreen_gesture_haptic_feedback";
-
-    private static final String ACTION_DISMISS_KEYGUARD =
-            "com.android.keyguard.action.DISMISS_KEYGUARD_SECURELY";
 
     /*
     Supported scancodes
@@ -103,6 +92,11 @@ public class KeyHandler implements DeviceKeyHandler {
     private static final int GESTURE_RIGHT_SCANCODE = 19;
     private static final int GESTURE_LEFT_SCANCODE = 38;
 
+    private static final int MODE_TOTAL_SILENCE = 600;
+    private static final int MODE_ALARMS_ONLY = 601;
+    private static final int MODE_PRIORITY_ONLY = 602;
+    private static final int MODE_NONE = 603;
+
     private static final int GESTURE_WAKELOCK_DURATION = 3000;
 
     private static final int[] sSupportedGestures = new int[] {
@@ -117,10 +111,19 @@ public class KeyHandler implements DeviceKeyHandler {
         GESTURE_LEFT_SCANCODE
     };
 
+    private static final SparseIntArray sSupportedSliderModes = new SparseIntArray();
+    static {
+        sSupportedSliderModes.put(MODE_TOTAL_SILENCE, Settings.Global.ZEN_MODE_NO_INTERRUPTIONS);
+        sSupportedSliderModes.put(MODE_ALARMS_ONLY, Settings.Global.ZEN_MODE_ALARMS);
+        sSupportedSliderModes.put(MODE_PRIORITY_ONLY,
+                Settings.Global.ZEN_MODE_IMPORTANT_INTERRUPTIONS);
+        sSupportedSliderModes.put(MODE_NONE, Settings.Global.ZEN_MODE_OFF);
+    }
+
     private final Context mContext;
     private final PowerManager mPowerManager;
-    private KeyguardManager mKeyguardManager;
-    private Handler mHandler;
+    private final NotificationManager mNotificationManager;
+    private EventHandler mEventHandler;
     private SensorManager mSensorManager;
     private CameraManager mCameraManager;
     private String mRearCameraId;
@@ -135,7 +138,9 @@ public class KeyHandler implements DeviceKeyHandler {
     public KeyHandler(Context context) {
         mContext = context;
         mPowerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
-        mHandler = new Handler();
+        mNotificationManager
+                = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        mEventHandler = new EventHandler();
         mGestureWakeLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
                 "GestureWakeLock");
 
@@ -158,22 +163,7 @@ public class KeyHandler implements DeviceKeyHandler {
         }
 
         mCameraManager = (CameraManager) mContext.getSystemService(Context.CAMERA_SERVICE);
-        mCameraManager.registerTorchCallback(new MyTorchCallback(), mHandler);
-
-        // Get first rear camera id
-        try {
-            for (final String cameraId : mCameraManager.getCameraIdList()) {
-                CameraCharacteristics characteristics =
-                        mCameraManager.getCameraCharacteristics(cameraId);
-                int cOrientation = characteristics.get(CameraCharacteristics.LENS_FACING);
-                if (cOrientation == CameraCharacteristics.LENS_FACING_BACK) {
-                    mRearCameraId = cameraId;
-                    break;
-                }
-            }
-        } catch (CameraAccessException e) {
-            // Ignore
-        }
+        mCameraManager.registerTorchCallback(new MyTorchCallback(), mEventHandler);
     }
 
     private class MyTorchCallback extends CameraManager.TorchCallback {
@@ -192,96 +182,73 @@ public class KeyHandler implements DeviceKeyHandler {
         }
     }
 
-    private void ensureKeyguardManager() {
-        if (mKeyguardManager == null) {
-            mKeyguardManager =
-                    (KeyguardManager) mContext.getSystemService(Context.KEYGUARD_SERVICE);
+    private String getRearCameraId() {
+        if (mRearCameraId == null) {
+            try {
+                for (final String cameraId : mCameraManager.getCameraIdList()) {
+                    CameraCharacteristics characteristics =
+                            mCameraManager.getCameraCharacteristics(cameraId);
+                    int cOrientation = characteristics.get(CameraCharacteristics.LENS_FACING);
+                    if (cOrientation == CameraCharacteristics.LENS_FACING_BACK) {
+                        mRearCameraId = cameraId;
+                        break;
+                    }
+                }
+            } catch (CameraAccessException e) {
+                // Ignore
+            }
         }
+        return mRearCameraId;
     }
 
-    public boolean handleKeyEvent(KeyEvent event) {
-        if (event.getAction() != KeyEvent.ACTION_UP) {
-            return false;
-        }
-        boolean isKeySupported = ArrayUtils.contains(sSupportedGestures, event.getScanCode());
-        if (isKeySupported) {
-            switch (event.getScanCode()) {
+    private class EventHandler extends Handler {
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.arg1) {
             case GESTURE_DOUBLE_TAP:
-            if (!mPowerManager.isScreenOn()) {
-                boolean enabled_doubletap = Settings.System.getInt(mContext.getContentResolver(),
-                    KEY_GESTURE_DOUBLE_TAP, 1) != 0;
-                if (enabled_doubletap) {
-                    mPowerManager.wakeUpWithProximityCheck(SystemClock.uptimeMillis(), "wakeup-gesture-proximity");
-                    doHapticFeedback();
-                    return true;
+                if (!mPowerManager.isScreenOn()) {
+                    boolean enabled_doubletap = Settings.System.getInt(mContext.getContentResolver(),
+                        KEY_GESTURE_DOUBLE_TAP, 1) != 0;
+                    if (enabled_doubletap) {
+                        mPowerManager.wakeUpWithProximityCheck(SystemClock.uptimeMillis(), "wakeup-gesture-proximity");
+                        doHapticFeedback();
+                    }
                 }
-            }
+                break;
             case GESTURE_O_SCANCODE:
                 boolean enabled_camera = Settings.System.getInt(mContext.getContentResolver(),
                     KEY_GESTURE_CAMERA, 1) != 0;
                 if (enabled_camera) {
-                    ensureKeyguardManager();
-                    final String action;
-                    mGestureWakeLock.acquire(GESTURE_WAKELOCK_DURATION);
-                    if (mKeyguardManager.isKeyguardSecure() && mKeyguardManager.isKeyguardLocked()) {
-                        action = MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA_SECURE;
-                    } else {
-                        mContext.sendBroadcastAsUser(new Intent(ACTION_DISMISS_KEYGUARD),
-                              UserHandle.CURRENT);
-                        action = MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA;
-                    }
-                    mPowerManager.wakeUpWithProximityCheck(SystemClock.uptimeMillis(), "wakeup-gesture-proximity");
-                    Intent intent = new Intent(action, null);
-                    startActivitySafely(intent);
-                    doHapticFeedback();
-                    return true;
-                }
-                break;
-            case GESTURE_W_SCANCODE:
-                boolean enabled_dialer = Settings.System.getInt(mContext.getContentResolver(),
-                    KEY_GESTURE_DIALER, 1) != 0;
-                if (enabled_dialer) {
-                    ensureKeyguardManager();
-                    final String action;
-                    mGestureWakeLock.acquire(GESTURE_WAKELOCK_DURATION);
-                    if (mKeyguardManager.isKeyguardSecure() && mKeyguardManager.isKeyguardLocked()) {
-                        action = Intent.ACTION_DIAL;
-                    } else {
-                        mContext.sendBroadcastAsUser(new Intent(ACTION_DISMISS_KEYGUARD),
-                              UserHandle.CURRENT);
-                        action = Intent.ACTION_DIAL;
-                    }
-                    mPowerManager.wakeUpWithProximityCheck(SystemClock.uptimeMillis(), "wakeup-gesture-proximity");
-                    Intent intent = new Intent(action, null);
-                    startActivitySafely(intent);
-                    doHapticFeedback();
-                    return true;
+                mGestureWakeLock.acquire(GESTURE_WAKELOCK_DURATION);
+
+                Intent intent = new Intent(cyanogenmod.content.Intent.ACTION_SCREEN_CAMERA_GESTURE);
+                mContext.sendBroadcast(intent, Manifest.permission.STATUS_BAR_SERVICE);
+                doHapticFeedback();
                 }
                 break;
             case GESTURE_C_SCANCODE:
                 boolean enabled_flashlight = Settings.System.getInt(mContext.getContentResolver(),
                     KEY_GESTURE_FLASHLIGHT, 1) != 0;
                 if (enabled_flashlight) {
-                    if (mRearCameraId != null) {
+                    String rearCameraId = getRearCameraId();
+                    if (rearCameraId != null) {
                         mGestureWakeLock.acquire(GESTURE_WAKELOCK_DURATION);
-                        try {
-                            mCameraManager.setTorchMode(mRearCameraId, !mTorchEnabled);
-                            mTorchEnabled = !mTorchEnabled;
-                        } catch (CameraAccessException e) {
-                            // Ignore
-                        }
-                        doHapticFeedback();
+                    try {
+                        mCameraManager.setTorchMode(rearCameraId, !mTorchEnabled);
+                        mTorchEnabled = !mTorchEnabled;
+                    } catch (CameraAccessException e) {
+                    // Ignore
                     }
-                    return true;
+                    doHapticFeedback();
+                    }
                 }
                 break;
             case GESTURE_UP_SCANCODE:
                 boolean enabled_music_up = Settings.System.getInt(mContext.getContentResolver(),
                     KEY_GESTURE_MUSIC, 1) != 0;
                 if (enabled_music_up) {
-                    dispatchMediaKeyWithWakeLockToMediaSession(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE);
+                    dispatchMediaKeyWithWakeLockToMediaSession(KeyEvent.KEYCODE_MEDIA_STOP);
                     doHapticFeedback();
-                    return true;
                 }
                 break;
             case GESTURE_DOWN_SCANCODE:
@@ -290,7 +257,6 @@ public class KeyHandler implements DeviceKeyHandler {
                 if (enabled_music_down) {
                     dispatchMediaKeyWithWakeLockToMediaSession(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE);
                     doHapticFeedback();
-                    return true;
                 }
                 break;
             case GESTURE_RIGHT_SCANCODE:
@@ -299,7 +265,6 @@ public class KeyHandler implements DeviceKeyHandler {
                 if (enabled_music_right) {
                     dispatchMediaKeyWithWakeLockToMediaSession(KeyEvent.KEYCODE_MEDIA_NEXT);
                     doHapticFeedback();
-                    return true;
                 }
                 break;
             case GESTURE_LEFT_SCANCODE:
@@ -308,46 +273,69 @@ public class KeyHandler implements DeviceKeyHandler {
                 if (enabled_music_left) {
                     dispatchMediaKeyWithWakeLockToMediaSession(KeyEvent.KEYCODE_MEDIA_PREVIOUS);
                     doHapticFeedback();
-                    return true;
                 }
                 break;
             }
-            Message msg = getMessageForKeyEvent(event);
+        }
+    }
+
+    private boolean hasSetupCompleted() {
+        return CMSettings.Secure.getInt(mContext.getContentResolver(),
+            CMSettings.Secure.CM_SETUP_WIZARD_COMPLETED, 0) != 0;
+    }
+
+    public boolean handleKeyEvent(KeyEvent event) {
+        int scanCode = event.getScanCode();
+        boolean isKeySupported = ArrayUtils.contains(sSupportedGestures, scanCode);
+        boolean isSliderModeSupported = sSupportedSliderModes.indexOfKey(scanCode) >= 0;
+        if (!isKeySupported && !isSliderModeSupported) {
+            return false;
+        }
+
+        if (!hasSetupCompleted()) {
+            return false;
+        }
+
+        if (isSliderModeSupported) {
+            mNotificationManager.setZenMode(sSupportedSliderModes.get(scanCode), null, TAG);
+            doHapticFeedback();
+        } else if (!mEventHandler.hasMessages(GESTURE_REQUEST)) {
+            Message msg = getMessageForKeyEvent(scanCode);
             boolean defaultProximity = mContext.getResources().getBoolean(
                 org.cyanogenmod.platform.internal.R.bool.config_proximityCheckOnWakeEnabledByDefault);
             boolean proximityWakeCheckEnabled = CMSettings.System.getInt(mContext.getContentResolver(),
                     CMSettings.System.PROXIMITY_ON_WAKE, defaultProximity ? 1 : 0) == 1;
             if (mProximityWakeSupported && proximityWakeCheckEnabled && mProximitySensor != null) {
-                mHandler.sendMessageDelayed(msg, mProximityTimeOut);
-                processEvent(event);
+                mEventHandler.sendMessageDelayed(msg, mProximityTimeOut);
+                processEvent(scanCode);
             } else {
-                mHandler.sendMessage(msg);
+                mEventHandler.sendMessage(msg);
             }
         }
-        return isKeySupported;
+        return true;
     }
 
-    private Message getMessageForKeyEvent(KeyEvent keyEvent) {
-        Message msg = mHandler.obtainMessage(GESTURE_REQUEST);
-        msg.obj = keyEvent;
+    private Message getMessageForKeyEvent(int scancode) {
+        Message msg = mEventHandler.obtainMessage(GESTURE_REQUEST);
+        msg.arg1 = scancode;
         return msg;
     }
 
-    private void processEvent(final KeyEvent keyEvent) {
+    private void processEvent(final int scancode) {
         mProximityWakeLock.acquire();
         mSensorManager.registerListener(new SensorEventListener() {
             @Override
             public void onSensorChanged(SensorEvent event) {
                 mProximityWakeLock.release();
                 mSensorManager.unregisterListener(this);
-                if (!mHandler.hasMessages(GESTURE_REQUEST)) {
-                    /* The sensor took to long, ignoring. */
+                if (!mEventHandler.hasMessages(GESTURE_REQUEST)) {
+                    // The sensor took to long, ignoring.
                     return;
                 }
-                mHandler.removeMessages(GESTURE_REQUEST);
+                mEventHandler.removeMessages(GESTURE_REQUEST);
                 if (event.values[0] == mProximitySensor.getMaximumRange()) {
-                    Message msg = getMessageForKeyEvent(keyEvent);
-                    mHandler.sendMessage(msg);
+                    Message msg = getMessageForKeyEvent(scancode);
+                    mEventHandler.sendMessage(msg);
                 }
             }
 
@@ -370,19 +358,6 @@ public class KeyHandler implements DeviceKeyHandler {
         }
     }
 
-    private void startActivitySafely(Intent intent) {
-        intent.addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK
-                | Intent.FLAG_ACTIVITY_SINGLE_TOP
-                | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        try {
-            UserHandle user = new UserHandle(UserHandle.USER_CURRENT);
-            mContext.startActivityAsUser(intent, null, user);
-        } catch (ActivityNotFoundException e) {
-            /* Ignore */
-        }
-    }
-
     private void doHapticFeedback() {
         if (mVibrator == null) {
             return;
@@ -390,7 +365,7 @@ public class KeyHandler implements DeviceKeyHandler {
         boolean enabled_haptic = Settings.System.getInt(mContext.getContentResolver(),
                 KEY_GESTURE_HAPTIC_FEEDBACK, 1) != 0;
         if (enabled_haptic) {
-            mVibrator.vibrate(50);
+            mVibrator.vibrate(100);
         }
     }
 }

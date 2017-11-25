@@ -151,16 +151,17 @@ PRODUCT_PACKAGES += \
     EngineerMode
 
 # Keyhandler & Gestures
-PRODUCT_PACKAGES += \
-    com.cyanogenmod.keyhandler \
-    Gestures
+#PRODUCT_PACKAGES += \
+#    com.cyanogenmod.keyhandler \
+#    Gestures
 
-PRODUCT_SYSTEM_SERVER_JARS += \
-    com.cyanogenmod.keyhandler
+#PRODUCT_SYSTEM_SERVER_JARS += \
+#    com.cyanogenmod.keyhandler
 
 # Keylayout
 PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/configs/mtk-kpd.kl:system/usr/keylayout/mtk-kpd.kl
+    $(LOCAL_PATH)/configs/mtk-kpd.kl:system/usr/keylayout/mtk-kpd.kl \
+    $(LOCAL_PATH)/configs/mtk-kpd.kl:system/usr/keylayout/mtk-tpd.kl
 
 # Thermal
 PRODUCT_COPY_FILES += \
@@ -244,5 +245,5 @@ PRODUCT_CHARACTERISTICS := default
 $(call inherit-product, build/target/product/full.mk)
 $(call inherit-product, frameworks/native/build/phone-xhdpi-1024-dalvik-heap.mk)
 # never dexopt the keyhandler
-$(call add-product-dex-preopt-module-config,com.cyanogenmod.keyhandler,disable)
+#$(call add-product-dex-preopt-module-config,com.cyanogenmod.keyhandler,disable)
 

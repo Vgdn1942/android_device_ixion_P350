@@ -16,8 +16,9 @@
 
 package org.cyanogenmod.hardware;
 
+import java.io.File;
 import android.os.SystemProperties;
-
+import cyanogenmod.providers.CMSettings;
 import org.cyanogenmod.hardware.util.FileUtils;
 
 /**
@@ -38,7 +39,8 @@ public class TapToWake {
      * @return boolean Supported devices must return always true
      */
     public static boolean isSupported() {
-        return Utils.fileExists(CONTROL_PATH);
+        File patch = new File(CONTROL_PATH);
+        return patch.exists();
         //return true;
     }
 

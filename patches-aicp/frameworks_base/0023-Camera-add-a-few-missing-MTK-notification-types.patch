@@ -1,0 +1,45 @@
+From 517e58c25ea6c3c56543889f3d87755dd7ee312e Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Thu, 23 Jun 2016 20:01:59 +0800
+Subject: [PATCH] Camera: add a few missing MTK notification types
+
+Change-Id: If125e4c6502d84cdfd2490e0bbdfff55e88df3f7
+---
+ core/java/android/hardware/Camera.java | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/core/java/android/hardware/Camera.java b/core/java/android/hardware/Camera.java
+index d6f96af3ab0ca..3f2e523b780a8 100644
+--- a/core/java/android/hardware/Camera.java
++++ b/core/java/android/hardware/Camera.java
+@@ -7141,16 +7141,30 @@ public String getDistanceMode() {
+     // Auto Scene Detection
+     private static final int MTK_CAMERA_MSG_EXT_NOTIFY_ASD              = 0x00000002;
+     //
++    //  Multi Angle View
++    private static final int MTK_CAMERA_MSG_EXT_NOTIFY_MAV               = 0x00000003;  // xen0n
++    //
+     // Burst Shutter Callback
+     //  ext2: 0:not the last one, 1:the last one
+     private static final int MTK_CAMERA_MSG_EXT_NOTIFY_BURST_SHUTTER    = 0x00000004;
+     //
++    // Continuous Shutter Callback
++    //  ext2: current continuous shutter number.
++    private static final int MTK_CAMERA_MSG_EXT_NOTIFY_CONTINUOUS_SHUTTER= 0x00000005;  // xen0n
++    //
+     // End notify for Continuous shot
+     private static final int MTK_CAMERA_MSG_EXT_NOTIFY_CONTINUOUS_END   = 0x00000006;
+     //
+     // Last preview frame showed when capture in ZSD mode
+     private static final int MTK_CAMERA_MSG_EXT_NOTIFY_ZSD_PREVIEW_DONE = 0x00000007;
+     //
++    // Capture done (disable CAMERA_MSG_SHUTTER / CAMERA_MSG_COMPRESSED_IMAGE)
++    private static final int MTK_CAMERA_MSG_EXT_NOTIFY_CAPTURE_DONE      = 0x00000010;  // xen0n
++    //
++    // Shutter Callback (not disable CAMERA_MSG_SHUTTER)
++    //  ext2: 1: CameraService will play shutter sound.
++    private static final int MTK_CAMERA_MSG_EXT_NOTIFY_SHUTTER           = 0x00000011;  // xen0n
++    //
+     // Raw Dump mode Stopped
+     private static final int MTK_CAMERA_MSG_EXT_NOTIFY_RAW_DUMP_STOPPED  = 0x00000012;
+     //

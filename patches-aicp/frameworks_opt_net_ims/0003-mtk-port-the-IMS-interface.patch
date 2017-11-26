@@ -1,0 +1,854 @@
+From acf63b21ae897384225cb8a21f57ca94003df2b9 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Sun, 27 Mar 2016 15:22:19 +0800
+Subject: [PATCH] mtk: port the IMS interface
+
+Change-Id: Id961dcfb12cfde8b0e8c215ce20a231b1740e530
+---
+ src/java/com/android/ims/ImsManager.java           | 336 ++++++++++++++++++++-
+ src/java/com/android/ims/ImsServiceBase.java       |  66 ++++
+ src/java/com/android/ims/ImsUt.java                |  85 ++++++
+ src/java/com/android/ims/ImsUtInterface.java       |  16 +
+ .../com/android/ims/internal/ImsCallSession.java   |  65 ++++
+ .../android/ims/internal/ImsVideoCallProvider.java |  26 ++
+ .../ims/internal/ImsVideoCallProviderWrapper.java  |  50 +++
+ 7 files changed, 643 insertions(+), 1 deletion(-)
+
+diff --git a/src/java/com/android/ims/ImsManager.java b/src/java/com/android/ims/ImsManager.java
+index cc71c86e6a1..4a19b3a73d2 100644
+--- a/src/java/com/android/ims/ImsManager.java
++++ b/src/java/com/android/ims/ImsManager.java
+@@ -44,8 +44,20 @@
+ import com.android.ims.internal.ImsCallSession;
+ import com.android.ims.internal.IImsConfig;
+ 
++import com.android.internal.telephony.PhoneConstants;
+ import com.android.internal.telephony.TelephonyProperties;
+ 
++import com.mediatek.ims.WfcReasonInfo;
++
++import org.gsma.joyn.JoynServiceListener;
++import org.gsma.joyn.capability.CapabilityService;
++import org.gsma.joyn.chat.ChatService;
++import org.gsma.joyn.contacts.ContactsService;
++import org.gsma.joyn.ft.FileTransferService;
++import org.gsma.joyn.gsh.GeolocSharingService;
++import org.gsma.joyn.ish.ImageSharingService;
++import org.gsma.joyn.vsh.VideoSharingService;
++
+ import java.util.HashMap;
+ 
+ /**
+@@ -73,7 +85,7 @@
+      * Internal use only.
+      * @hide
+      */
+-    private static final String IMS_SERVICE = "ims";
++    public /* MTK */ static final String IMS_SERVICE = "ims";
+ 
+     /**
+      * The result code to be sent back with the incoming call {@link PendingIntent}.
+@@ -658,6 +670,8 @@ private ImsManager(Context context, int phoneId) {
+         mContext = context;
+         mPhoneId = phoneId;
+         createImsService(true);
++        // MTK
++        createTerminalApiServices();
+     }
+ 
+     /*
+@@ -703,6 +717,8 @@ public int open(int serviceClass, PendingIntent incomingCallPendingIntent,
+             ImsConnectionStateListener listener) throws ImsException {
+         checkAndThrowExceptionIfServiceUnavailable();
+ 
++        if (DBG) log("ImsManager: open");  // MTK
++
+         if (incomingCallPendingIntent == null) {
+             throw new NullPointerException("incomingCallPendingIntent can't be null");
+         }
+@@ -741,6 +757,8 @@ public int open(int serviceClass, PendingIntent incomingCallPendingIntent,
+     public void close(int serviceId) throws ImsException {
+         checkAndThrowExceptionIfServiceUnavailable();
+ 
++        if (DBG) log("ImsManager: close");  // MTK
++
+         try {
+             mImsService.close(serviceId);
+         } catch (RemoteException e) {
+@@ -890,6 +908,7 @@ public ImsCall makeCall(int serviceId, ImsCallProfile profile, String[] callees,
+         boolean isConferenceUri = profile.getCallExtraBoolean(
+                 TelephonyProperties.EXTRAS_IS_CONFERENCE_URI, false);
+         if (!isConferenceUri && (callees != null) && (callees.length == 1)) {
++            // MTK TODO: !profile.getCallExtraBoolean(ImsCallProfile.EXTRA_CONFERENCE)
+             call.start(session, callees[0]);
+         } else {
+             call.start(session, callees);
+@@ -1078,6 +1097,8 @@ private void createImsService(boolean checkService) {
+             IBinder binder = ServiceManager.checkService(getImsServiceName(mPhoneId));
+ 
+             if (binder == null) {
++                if (DBG) log("ImsManager: createImsService binder is null");  // MTK
++
+                 return;
+             }
+         }
+@@ -1092,6 +1113,8 @@ private void createImsService(boolean checkService) {
+         }
+ 
+         mImsService = IImsService.Stub.asInterface(b);
++
++        if (DBG) log("ImsManager: mImsService = " + mImsService);  // MTK
+     }
+ 
+     /**
+@@ -1404,4 +1427,315 @@ public static void factoryReset(Context context) {
+         ImsManager.updateImsServiceConfig(context,
+                 SubscriptionManager.getDefaultVoicePhoneId(), true);
+     }
++
++    // MTK
++
++    /// M: IMS VoLTE refactoring. @{
++    /**
++     * Key to retrieve the sequence number from an incoming call intent.
++     * @see #open(PendingIntent, ImsConnectionStateListener)
++     * @hide
++     */
++    public static final String EXTRA_SEQ_NUM = "android:imsSeqNum";
++
++    /*
++     * Key to retrieve the sequence number from an incoming call intent.
++     * @see #open(PendingIntent, ImsConnectionStateListener)
++     * @hide
++     */
++    public static final String EXTRA_DIAL_STRING = "android:imsDialString";
++    /// @}
++
++    /// M: ALPS02261962. For IMS registration state and capability informaion. @{
++    public static final String ACTION_IMS_STATE_CHANGED =
++            "com.android.ims.IMS_STATE_CHANGED";
++    /// @}
++
++    /**
++     * Action for the incoming call indication intent for the Phone app.
++     * Internal use only.
++     * @hide
++     */
++    public static final String ACTION_IMS_INCOMING_CALL_INDICATION =
++            "com.android.ims.IMS_INCOMING_CALL_INDICATION";
++
++    /* M WFC */
++    public static final String EXTRA_IMS_REG_STATE_KEY = "android:regState";
++    public static final String EXTRA_IMS_ENABLE_CAP_KEY = "android:enablecap";
++    public static final String EXTRA_IMS_DISABLE_CAP_KEY = "android:disablecap";
++    public static final String EXTRA_IMS_REG_ERROR_KEY = "android:regError";
++
++    // RCS Terminal API Services
++    private CapabilityService mCapabilitiesApi;
++    private ChatService mChatApi;
++    private ContactsService mContactsApi;
++    private FileTransferService mFileTransferApi;
++    private GeolocSharingService mGeolocSharingApi;
++    private VideoSharingService mVideoSharingApi;
++    private ImageSharingService mImageSharingApi;
++
++    private void createTerminalApiServices()
++    {
++        Rlog.d(TAG, "createTerminalApiServices entry");
++        mCapabilitiesApi = new CapabilityService(mContext,
++                new MyServiceListener());
++        mCapabilitiesApi.connect();
++        mChatApi = new ChatService(mContext,
++                new MyServiceListener());
++        mChatApi.connect();
++        mContactsApi = new ContactsService(mContext,
++                new MyServiceListener());
++        mContactsApi.connect();
++        mFileTransferApi = new FileTransferService(mContext,
++                new MyServiceListener());
++        mFileTransferApi.connect();
++        mGeolocSharingApi = new GeolocSharingService(mContext,
++                new MyServiceListener());
++        mGeolocSharingApi.connect();
++        mImageSharingApi = new ImageSharingService(mContext,
++                new MyServiceListener());
++        mImageSharingApi.connect();
++        mVideoSharingApi = new VideoSharingService(mContext,
++                new MyServiceListener());
++        mVideoSharingApi.connect();
++    }
++
++    /**
++     * Returns a Capabilities Service Terminal API to client.
++     */
++    public CapabilityService getCapabilitiesService() {
++        return mCapabilitiesApi;
++    }
++
++    /**
++     * Returns a Chat Service Terminal API to client.
++     */
++    public ChatService getChatService() {
++        return mChatApi;
++    }
++
++    /**
++     * Returns a File Sharing Terminal API to client.
++     */
++    public FileTransferService getFileTransferService() {
++        return mFileTransferApi;
++    }
++
++    /**
++     * Returns a Contacts Service Terminal API to client.
++     */
++    public ContactsService getContactsService() {
++        return mContactsApi;
++    }
++
++    /**
++     * Returns a Geoloc Sharing Terminal API to client.
++     */
++    public GeolocSharingService getGeolocSharingService() {
++        return mGeolocSharingApi;
++    }
++
++    /**
++     * Returns a Image Sharing Terminal API to client.
++     */
++    public ImageSharingService getImageSharingService() {
++        return mImageSharingApi;
++    }
++
++    /**
++     * Returns a Video Sharing Terminal API to client.
++     */
++    public VideoSharingService getVideoSharingService() {
++        return mVideoSharingApi;
++    }
++
++    /**
++     * MyServiceListener listen to connect/disconnect service events.
++     */
++    public class MyServiceListener implements JoynServiceListener {
++
++        /**
++         * On service connected.
++         */
++        @Override
++        public void onServiceConnected() {
++            Rlog.d(TAG, "onServiceConnected entry ");
++        }
++
++        /**
++         * On service disconnected.
++         *
++         * @param error the error
++         */
++        @Override
++        public void onServiceDisconnected(int error) {
++            Rlog.d(TAG, "onServiceDisconnected entry " + error);
++        }
++
++    }
++
++    /**
++     * Gets the sequence number from the specified incoming call broadcast intent.
++     *
++     * @param incomingCallIntent the incoming call broadcast intent
++     * @return the sequence number or null if the intent does not contain it
++     * @hide
++     */
++    private static int getSeqNum(Intent incomingCallIntent) {
++        if (incomingCallIntent == null) {
++            return (-1);
++        }
++
++        return incomingCallIntent.getIntExtra(EXTRA_SEQ_NUM, -1);
++    }
++
++    /**
++     * To Allow or refuse incoming call indication to send to App.
++     *
++     * @param serviceId a service id which is obtained from {@link ImsManager#open}
++     * @param incomingCallIndication the incoming call broadcast intent.
++     * @param isAllow to indication to allow or refuse the incoming call indication.
++     * @throws ImsException if set call indication results in an error.
++     * @hide
++     */
++    public void setCallIndication(int serviceId, Intent incomingCallIndication,
++            boolean isAllow) throws ImsException {
++        if (DBG) {
++            log("setCallIndication :: serviceId=" + serviceId
++                    + ", incomingCallIndication=" + incomingCallIndication);
++        }
++
++        checkAndThrowExceptionIfServiceUnavailable();
++
++        if (incomingCallIndication == null) {
++            throw new ImsException("Can't retrieve session with null intent",
++                    ImsReasonInfo.CODE_LOCAL_ILLEGAL_ARGUMENT);
++        }
++
++        int incomingServiceId = getServiceId(incomingCallIndication);
++
++        if (serviceId != incomingServiceId) {
++            throw new ImsException("Service id is mismatched in the incoming call intent",
++                    ImsReasonInfo.CODE_LOCAL_ILLEGAL_ARGUMENT);
++        }
++
++        String callId = getCallId(incomingCallIndication);
++
++        if (callId == null) {
++            throw new ImsException("Call ID missing in the incoming call intent",
++                    ImsReasonInfo.CODE_LOCAL_ILLEGAL_ARGUMENT);
++        }
++
++        int seqNum = getSeqNum(incomingCallIndication);
++
++        if (seqNum == -1) {
++            throw new ImsException("seqNum missing in the incoming call intent",
++                    ImsReasonInfo.CODE_LOCAL_ILLEGAL_ARGUMENT);
++        }
++
++        try {
++            mImsService.setCallIndication(callId, seqNum, isAllow);
++        } catch (RemoteException e) {
++            throw new ImsException("setCallIndication()", e,
++                    ImsReasonInfo.CODE_LOCAL_IMS_SERVICE_DOWN);
++        }
++    }
++
++    /**
++     * To get IMS state.
++     *
++     * @return ims state - disabled, enabling, enable, disabling.
++     * @throws ImsException if getting the ims status result in an error.
++     * @hide
++     */
++    public int getImsState() throws ImsException {
++        int imsState = PhoneConstants.IMS_STATE_DISABLED;
++
++        checkAndThrowExceptionIfServiceUnavailable();
++
++        try {
++            imsState = mImsService.getImsState();
++        } catch (RemoteException e) {
++            throw new ImsException("getImsState()", e, ImsReasonInfo.CODE_LOCAL_IMS_SERVICE_DOWN);
++        }
++        return imsState;
++    }
++
++    /**
++    * To get IMS registration status.
++    *
++    * @return true if ims is registered or false if ims is unregistered.
++    * @throws ImsException if getting the ims registration result in an error.
++    * @hide
++    */
++    public boolean getImsRegInfo() throws ImsException {
++        boolean isImsReg = false;
++
++        checkAndThrowExceptionIfServiceUnavailable();
++
++        try {
++            isImsReg = mImsService.getImsRegInfo(mPhoneId);
++        } catch (RemoteException e) {
++            throw new ImsException("getImsRegInfo", e, ImsReasonInfo.CODE_LOCAL_IMS_SERVICE_DOWN);
++        }
++        return isImsReg;
++    }
++
++    /**
++    * To get IMS registration extension information.
++    *
++    * @return a string which is converted from the value of ims feature capability.
++    * @throws ImsException if getting the ims extension information result in an error.
++    * @hide
++    */
++    public String getImsExtInfo() throws ImsException {
++        String imsExtInfo = "0";
++
++        checkAndThrowExceptionIfServiceUnavailable();
++
++        try {
++            imsExtInfo = mImsService.getImsExtInfo();
++        } catch (RemoteException e) {
++            throw new ImsException("getImsExtInfo()", e, ImsReasonInfo.CODE_LOCAL_IMS_SERVICE_DOWN);
++        }
++        return imsExtInfo;
++    }
++
++    /**
++    * To hangup all calls.
++    * @throws ImsException if getting the ims status result in an error.
++    * @hide
++    */
++    public void hangupAllCall() throws ImsException {
++
++        checkAndThrowExceptionIfServiceUnavailable();
++
++        try {
++            mImsService.hangupAllCall();
++        } catch (RemoteException e) {
++            throw new ImsException("hangupAll()", e, ImsReasonInfo.CODE_LOCAL_IMS_SERVICE_DOWN);
++        }
++    }
++
++    /**
++    * To get WFC stat.
++    *
++    * @return a value for wfc status.
++    * @throws ImsException if getting the ims status result in an error.
++    * @hide
++    */
++    public int getWfcStatusCode() /*throws RemoteException*/ {
++        /*if (mImsNotificationController == null) {
++            throw new RemoteException ("getWfcStatusCode:ImsNotificationController not ready");
++            }
++            return mImsNotificationController.getRegistrationStatus(); */
++        if (mImsService == null) {
++            return WfcReasonInfo.CODE_WFC_DEFAULT;
++        }
++        try {
++            return mImsService.getRegistrationStatus();
++        } catch (RemoteException e) {
++            return WfcReasonInfo.CODE_WFC_DEFAULT;
++        }
++    }
+ }
+diff --git a/src/java/com/android/ims/ImsServiceBase.java b/src/java/com/android/ims/ImsServiceBase.java
+index 0fdde8e751f..0dd68511a29 100644
+--- a/src/java/com/android/ims/ImsServiceBase.java
++++ b/src/java/com/android/ims/ImsServiceBase.java
+@@ -110,6 +110,38 @@ public IImsEcbm getEcbmInterface(int serviceId) {
+         public void setUiTTYMode(int serviceId, int uiTtyMode, Message onComplete) {
+             onSetUiTTYMode(serviceId, uiTtyMode, onComplete);
+         }
++
++        // xen0n
++
++        @Override
++        public void setCallIndication(String callId, int seqNum, boolean isAllow) {
++            onSetCallIndication(callId, seqNum, isAllow);
++        }
++
++        @Override
++        public int getImsState() {
++            return onGetImsState();
++        }
++
++        @Override
++        public boolean getImsRegInfo(int phoneId) {
++            return onGetImsRegInfo(phoneId);
++        }
++
++        @Override
++        public String getImsExtInfo() {
++            return onGetImsExtInfo();
++        }
++
++        @Override
++        public void hangupAllCall() {
++            onHangupAllCall();
++        }
++
++        @Override
++        public int getRegistrationStatus() {
++            return onGetRegistrationStatus();
++        }
+     }
+ 
+     private ImsServiceBinder mBinder;
+@@ -197,5 +229,39 @@ protected IImsEcbm onGetEcbmInterface(int serviceId) {
+     protected void onSetUiTTYMode(int serviceId, int uiTtyMode, Message onComplete) {
+         // no-op
+     }
++
++    // xen0n
++
++    protected void onSetCallIndication(String callId, int seqNum, boolean isAllow) {
++        // no-op
++    }
++
++    protected int onGetImsState() {
++        // no-op
++
++        return 0;  // DUMMY VALUE
++    }
++
++    protected boolean onGetImsRegInfo(int phoneId) {
++        // no-op
++
++        return false;  // DUMMY VALUE
++    }
++
++    protected String onGetImsExtInfo() {
++        // no-op
++
++        return "";  // DUMMY VALUE
++    }
++
++    protected void onHangupAllCall() {
++        // no-op
++    }
++
++    protected int onGetRegistrationStatus() {
++        // no-op
++
++        return 0;  // DUMMY VALUE
++    }
+ }
+ 
+diff --git a/src/java/com/android/ims/ImsUt.java b/src/java/com/android/ims/ImsUt.java
+index d72e5fd54b7..6becd9d3849 100644
+--- a/src/java/com/android/ims/ImsUt.java
++++ b/src/java/com/android/ims/ImsUt.java
+@@ -28,6 +28,9 @@
+ import com.android.ims.internal.IImsUt;
+ import com.android.ims.internal.IImsUtListener;
+ 
++/// M: SS OP01 Ut
++import java.util.Arrays;
++
+ /**
+  * Provides APIs for the supplementary service settings using IMS (Ut interface).
+  * It is created from 3GPP TS 24.623 (XCAP(XML Configuration Access Protocol)
+@@ -669,5 +672,87 @@ public void utConfigurationCallWaitingQueried(IImsUt ut,
+                 mPendingCmds.remove(key);
+             }
+         }
++
++        // MTK
++
++        /// M: SS OP01 Ut @{
++        /**
++         * Notifies the status of the call forwarding in a time slot supplementary service.
++         */
++        @Override
++        public void utConfigurationCallForwardInTimeSlotQueried(IImsUt ut,
++                int id, ImsCallForwardInfoEx[] cfInfo) {
++            Integer key = Integer.valueOf(id);
++
++            synchronized (mLockObj) {
++                sendSuccessReport(mPendingCmds.get(key), cfInfo);
++                mPendingCmds.remove(key);
++            }
++        }
++        /// @}
++    }
++
++    // MTK
++
++    /// M: SS OP01 Ut @{
++    /**
++     * Retrieves the configuration of the call forward in a time slot.
++     * The return value of ((AsyncResult)result.obj) is an array of {@link ImsCallForwardInfoEx}.
++     */
++    @Override
++    public void queryCallForwardInTimeSlot(int condition, Message result) {
++        if (DBG) {
++            log("queryCallForwardInTimeSlot :: Ut = " + miUt + ", condition = " + condition);
++        }
++
++        synchronized (mLockObj) {
++            try {
++                int id = miUt.queryCallForwardInTimeSlot(condition);
++
++                if (id < 0) {
++                    sendFailureReport(result,
++                            new ImsReasonInfo(ImsReasonInfo.CODE_UT_SERVICE_UNAVAILABLE, 0));
++                    return;
++                }
++
++                mPendingCmds.put(Integer.valueOf(id), result);
++            } catch (RemoteException e) {
++                sendFailureReport(result,
++                        new ImsReasonInfo(ImsReasonInfo.CODE_UT_SERVICE_UNAVAILABLE, 0));
++            }
++        }
++    }
++
++    /**
++     * Modifies the configuration of the call forward in a time slot.
++     */
++    @Override
++    public void updateCallForwardInTimeSlot(int action, int condition, String number,
++            int timeSeconds, long[] timeSlot, Message result) {
++        if (DBG) {
++            log("updateCallForwardInTimeSlot :: Ut = " + miUt + ", action = " + action
++                    + ", condition = " + condition + ", number = " + number
++                    + ", timeSeconds = " + timeSeconds
++                    + ", timeSlot = " + Arrays.toString(timeSlot));
++        }
++
++        synchronized (mLockObj) {
++            try {
++                int id = miUt.updateCallForwardInTimeSlot(action,
++                        condition, number, timeSeconds, timeSlot);
++
++                if (id < 0) {
++                    sendFailureReport(result,
++                            new ImsReasonInfo(ImsReasonInfo.CODE_UT_SERVICE_UNAVAILABLE, 0));
++                    return;
++                }
++
++                mPendingCmds.put(Integer.valueOf(id), result);
++            } catch (RemoteException e) {
++                sendFailureReport(result,
++                        new ImsReasonInfo(ImsReasonInfo.CODE_UT_SERVICE_UNAVAILABLE, 0));
++            }
++        }
+     }
++    /// @}
+ }
+diff --git a/src/java/com/android/ims/ImsUtInterface.java b/src/java/com/android/ims/ImsUtInterface.java
+index 5984e789a36..62de33030d6 100644
+--- a/src/java/com/android/ims/ImsUtInterface.java
++++ b/src/java/com/android/ims/ImsUtInterface.java
+@@ -176,4 +176,20 @@ public void updateCallForward(int action, int condition, String number,
+      * Updates the configuration of the COLP supplementary service.
+      */
+     public void updateCOLP(boolean enable, Message result);
++
++    // MTK
++
++    /// M: SS OP01 Ut @{
++    /**
++     * Retrieves the configuration of the call forward in a time slot.
++     * The return value of ((AsyncResult)result.obj) is an array of {@link ImsCallForwardInfoEx}.
++     */
++    public void queryCallForwardInTimeSlot(int condition, Message result);
++
++    /**
++     * Modifies the configuration of the call forward in a time slot.
++     */
++    public void updateCallForwardInTimeSlot(int action, int condition, String number,
++            int timeSeconds, long[] timeSlot, Message result);
++    /// @}
+ }
+diff --git a/src/java/com/android/ims/internal/ImsCallSession.java b/src/java/com/android/ims/internal/ImsCallSession.java
+index d8614e3cadf..f462a71ccea 100644
+--- a/src/java/com/android/ims/internal/ImsCallSession.java
++++ b/src/java/com/android/ims/internal/ImsCallSession.java
+@@ -17,6 +17,7 @@
+ package com.android.ims.internal;
+ 
+ import android.os.Message;
++import android.os.Messenger;
+ import android.os.RemoteException;
+ import android.telecom.Connection;
+ 
+@@ -402,6 +403,21 @@ public void callSessionMultipartyStateChanged(ImsCallSession session,
+         public void callSessionSuppServiceReceived(ImsCallSession session,
+                 ImsSuppServiceNotification suppServiceInfo) {
+         }
++
++        // MTK
++
++        /// M: ALPS02256671. For PAU information changed. @{
++        /**
++         * Notifies of a change to the PAU information.
++         *
++         * @param session The call session.
++         * @param profile The call profile.
++         * @hide
++         */
++        public void callSessionPauInfoChanged(ImsCallSession session, ImsCallProfile profile) {
++            // no-op
++        }
++        /// @}
+     }
+ 
+     private final IImsCallSession miSession;
+@@ -871,7 +887,17 @@ public void sendDtmf(char c, Message result) {
+         }
+ 
+         try {
++            // MTK
++            /// M: ALPS02321477 @{
++            /// Google issue. Original sendDtmf could not pass Message.target to another process,
++            /// because Message.writeToParcel didn't write target. Workaround this issue by adding
++            /// a new API which passes target by Messenger.
++            if (result != null && result.getTarget() != null) {
++                Messenger target = new Messenger(result.getTarget());
++                miSession.sendDtmfbyTarget(c, result, target);
++            } else {
+             miSession.sendDtmf(c, result);
++            }  // MTK
+         } catch (RemoteException e) {
+         }
+     }
+@@ -1265,6 +1291,23 @@ public void callSessionSuppServiceReceived(IImsCallSession session,
+             }
+         }
+ 
++        // MTK
++
++        /// M: ALPS02256671. For PAU information changed. @{
++        /**
++         * Notifies of a change to the PAU information.
++         *
++         * @param session The call session.
++         * @param profile The call profile.
++         * @hide
++         */
++        public void callSessionPauInfoChanged(IImsCallSession session, ImsCallProfile profile) {
++            if (mListener != null) {
++                mListener.callSessionPauInfoChanged(ImsCallSession.this, profile);
++            }
++        }
++        /// @}
++
+     }
+ 
+     /**
+@@ -1285,4 +1328,26 @@ public String toString() {
+         sb.append("]");
+         return sb.toString();
+     }
++
++    // MTK
++
++    /// M: For one-key conference MT displayed as incoming conference call. @{
++    /**
++     * Determines if the incoming session is multiparty.
++     *
++     * @return {@code True} if the incoming session is multiparty.
++     * @hide
++     */
++    public boolean isIncomingCallMultiparty() {
++        if (mClosed) {
++            return false;
++        }
++
++        try {
++            return miSession.isIncomingCallMultiparty();
++        } catch (RemoteException e) {
++            return false;
++        }
++    }
++    /// @}
+ }
+diff --git a/src/java/com/android/ims/internal/ImsVideoCallProvider.java b/src/java/com/android/ims/internal/ImsVideoCallProvider.java
+index 7050631d37b..b0bdd92b362 100644
+--- a/src/java/com/android/ims/internal/ImsVideoCallProvider.java
++++ b/src/java/com/android/ims/internal/ImsVideoCallProvider.java
+@@ -94,6 +94,12 @@ public void handleMessage(Message msg) {
+                 case MSG_SET_PAUSE_IMAGE:
+                     onSetPauseImage((Uri) msg.obj);
+                     break;
++                // MTK
++                /* M: ViLTE part start */
++                case MSG_SET_UI_MODE:
++                    onSetUIMode((int) msg.obj);
++                    break;
++                /* M: ViLTE part end */
+                 default:
+                     break;
+             }
+@@ -151,6 +157,14 @@ public void requestCallDataUsage() {
+         public void setPauseImage(Uri uri) {
+             mProviderHandler.obtainMessage(MSG_SET_PAUSE_IMAGE, uri).sendToTarget();
+         }
++
++        // MTK
++
++        /* M: ViLTE part start */
++        public void setUIMode(int mode) {
++            mProviderHandler.obtainMessage(MSG_SET_UI_MODE, mode).sendToTarget();
++        }
++        /* M: ViLTE part end */
+     }
+ 
+     public ImsVideoCallProvider() {
+@@ -265,4 +279,16 @@ public void changeVideoQuality(int videoQuality) {
+             }
+         }
+     }
++
++    // MTK
++
++    /* M: ViLTE part start */
++    private static final int MSG_MTK_BASE = 100;
++    private static final int MSG_SET_UI_MODE = MSG_MTK_BASE;
++    /* M: ViLTE part end */
++
++    /* M: ViLTE part start */
++    /** @see Connection.VideoProvider#onSetUIMode */
++    public abstract void onSetUIMode(int mode);
++    /* M: ViLTE part end */
+ }
+diff --git a/src/java/com/android/ims/internal/ImsVideoCallProviderWrapper.java b/src/java/com/android/ims/internal/ImsVideoCallProviderWrapper.java
+index 57f74fa0f6f..9b277a1b077 100644
+--- a/src/java/com/android/ims/internal/ImsVideoCallProviderWrapper.java
++++ b/src/java/com/android/ims/internal/ImsVideoCallProviderWrapper.java
+@@ -108,6 +108,20 @@ public void changeCameraCapabilities(
+             mHandler.obtainMessage(MSG_CHANGE_CAMERA_CAPABILITIES,
+                     cameraCapabilities).sendToTarget();
+         }
++
++        // MTK
++
++        /* M: ViLTE part start */
++        /* Different from AOSP, additional parameter "rotation" is added. */
++        @Override
++        public void changePeerDimensionsWithAngle(int width, int height, int rotation) {
++            SomeArgs args = SomeArgs.obtain();
++            args.arg1 = width;
++            args.arg2 = height;
++            args.arg3 = rotation;
++            mHandler.obtainMessage(MSG_CHANGE_PEER_DIMENSIONS_WITH_ANGLE, args).sendToTarget();
++        }
++        /* M: ViLTE part end */
+     }
+ 
+     /** Default handler used to consolidate binder method calls onto a single thread. */
+@@ -153,6 +167,22 @@ public void handleMessage(Message msg) {
+                 case MSG_CHANGE_VIDEO_QUALITY:
+                     changeVideoQuality(msg.arg1);
+                     break;
++                // MTK
++                /* M: ViLTE part start */
++                /* Different from AOSP, additional parameter "rotation" is added. */
++                case MSG_CHANGE_PEER_DIMENSIONS_WITH_ANGLE:
++                    args = (SomeArgs) msg.obj;
++                    try {
++                        int width = (int) args.arg1;
++                        int height = (int) args.arg2;
++                        int rotation = (int) args.arg3;
++                        // MTK TODO: wow this is wonderfully-hidden intrusive modification...
++                        // changePeerDimensionsWithAngle(width, height, rotation);
++                    } finally {
++                        args.recycle();
++                    }
++                    break;
++                /* M: ViLTE part end */
+                 default:
+                     break;
+             }
+@@ -253,4 +283,24 @@ public void onSetPauseImage(Uri uri) {
+         } catch (RemoteException e) {
+         }
+     }
++
++    // MTK
++
++    private static final int MSG_MTK_BASE = 100;
++    private static final int MSG_CHANGE_PEER_DIMENSIONS_WITH_ANGLE = MSG_MTK_BASE;
++
++    /* M: ViLTE part start */
++    /** @inheritDoc */
++    public void onSetUIMode(int mode) {
++        try {
++            mVideoCallProvider.setUIMode(mode);
++        } catch (RemoteException e) {
++        }
++    }
++
++    public IImsVideoCallProvider getProvider() {
++        return mVideoCallProvider;
++    }
++    /* M: ViLTE part end */
++
+ }

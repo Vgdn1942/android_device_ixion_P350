@@ -1,0 +1,662 @@
+From 6fe80627a85bab65ac195be306e4d75394109479 Mon Sep 17 00:00:00 2001
+From: vgdn1942 <vgdn1942@gmail.com>
+Date: Sun, 12 Nov 2017 18:17:08 +0300
+Subject: [PATCH] Revert: Camera1 API Support SW encoders for new camera HALs
+
+Change-Id: If1d67682b575a0b1bfb4c6ffc9d5fcf003f5aadf
+---
+ include/media/stagefright/CameraSource.h           |   4 +-
+ .../libmediaplayerservice/StagefrightRecorder.cpp  |  12 +-
+ media/libmediaplayerservice/StagefrightRecorder.h  |   3 +-
+ media/libstagefright/CameraSource.cpp              |  23 ----
+ services/camera/libcameraservice/Android.mk        |   1 -
+ .../camera/libcameraservice/api1/Camera2Client.cpp |  14 ---
+ .../camera/libcameraservice/api1/Camera2Client.h   |   1 -
+ .../api1/client2/CallbackProcessor.cpp             |   2 +-
+ .../api1/client2/JpegProcessor.cpp                 |   2 +-
+ .../api1/client2/StreamingProcessor.cpp            | 135 ++++++---------------
+ .../api1/client2/StreamingProcessor.h              |  14 ---
+ .../libcameraservice/api1/client2/ZslProcessor.cpp |   2 +-
+ .../api1/client2/ZslProcessor3.cpp                 |   2 +-
+ .../libcameraservice/common/CameraDeviceBase.h     |   3 +-
+ .../libcameraservice/device2/Camera2Device.cpp     |   4 +-
+ .../libcameraservice/device2/Camera2Device.h       |   3 +-
+ .../libcameraservice/device3/Camera3Device.cpp     |   5 +-
+ .../libcameraservice/device3/Camera3Device.h       |   3 +-
+ .../device3/Camera3StreamInterface.h               |   1 -
+ 19 files changed, 60 insertions(+), 174 deletions(-)
+
+diff --git a/include/media/stagefright/CameraSource.h b/include/media/stagefright/CameraSource.h
+index 3dcfe4e..dda3c10 100644
+--- a/include/media/stagefright/CameraSource.h
++++ b/include/media/stagefright/CameraSource.h
+@@ -83,7 +83,7 @@ public:
+                                           Size videoSize,
+                                           int32_t frameRate,
+                                           const sp<IGraphicBufferProducer>& surface,
+-                                          bool storeMetaDataInVideoBuffers = true);
++                                          bool storeMetaDataInVideoBuffers = false);
+ 
+     virtual ~CameraSource();
+ 
+@@ -151,8 +151,6 @@ protected:
+     int32_t  mNumInputBuffers;
+     int32_t  mVideoFrameRate;
+     int32_t  mColorFormat;
+-    int32_t  mEncoderFormat;
+-    int32_t  mEncoderDataSpace;
+     status_t mInitCheck;
+ 
+     sp<Camera>   mCamera;
+diff --git a/media/libmediaplayerservice/StagefrightRecorder.cpp b/media/libmediaplayerservice/StagefrightRecorder.cpp
+index 442dba1..d36f1ff 100644
+--- a/media/libmediaplayerservice/StagefrightRecorder.cpp
++++ b/media/libmediaplayerservice/StagefrightRecorder.cpp
+@@ -1293,7 +1293,8 @@ void StagefrightRecorder::clipVideoFrameWidth() {
+     }
+ }
+ 
+-status_t StagefrightRecorder::checkVideoEncoderCapabilities() {
++status_t StagefrightRecorder::checkVideoEncoderCapabilities(
++        bool *supportsCameraSourceMetaDataMode) {
+     /* hardware codecs must support camera source meta data mode */
+     Vector<CodecCapabilities> codecs;
+     OMXClient client;
+@@ -1306,6 +1307,9 @@ status_t StagefrightRecorder::checkVideoEncoderCapabilities() {
+              mVideoEncoder == VIDEO_ENCODER_H264 ? MEDIA_MIMETYPE_VIDEO_AVC :
+              mVideoEncoder == VIDEO_ENCODER_H265 ? MEDIA_MIMETYPE_VIDEO_HEVC : ""),
+             false /* decoder */, true /* hwCodec */, &codecs);
++    *supportsCameraSourceMetaDataMode = codecs.size() > 0;
++    ALOGV("encoder %s camera source meta-data mode",
++            *supportsCameraSourceMetaDataMode ? "supports" : "DOES NOT SUPPORT");
+ 
+     if (!mCaptureFpsEnable) {
+         // Dont clip for time lapse capture as encoder will have enough
+@@ -1516,7 +1520,9 @@ status_t StagefrightRecorder::setupMediaSource(
+ status_t StagefrightRecorder::setupCameraSource(
+         sp<CameraSource> *cameraSource) {
+     status_t err = OK;
+-    if ((err = checkVideoEncoderCapabilities()) != OK) {
++    bool encoderSupportsCameraSourceMetaDataMode;
++    if ((err = checkVideoEncoderCapabilities(
++                &encoderSupportsCameraSourceMetaDataMode)) != OK) {
+         return err;
+     }
+     Size videoSize;
+@@ -1538,7 +1544,7 @@ status_t StagefrightRecorder::setupCameraSource(
+         *cameraSource = AVFactory::get()->CreateCameraSourceFromCamera(
+                 mCamera, mCameraProxy, mCameraId, mClientName, mClientUid,
+                 videoSize, mFrameRate,
+-                mPreviewSurface);
++                mPreviewSurface, encoderSupportsCameraSourceMetaDataMode);
+     }
+     AVUtils::get()->cacheCaptureBuffers(mCamera, mVideoEncoder);
+     mCamera.clear();
+diff --git a/media/libmediaplayerservice/StagefrightRecorder.h b/media/libmediaplayerservice/StagefrightRecorder.h
+index d93fc3b..7f6298d 100644
+--- a/media/libmediaplayerservice/StagefrightRecorder.h
++++ b/media/libmediaplayerservice/StagefrightRecorder.h
+@@ -145,7 +145,8 @@ protected:
+     status_t setupRTPRecording();
+     status_t setupMPEG2TSRecording();
+     virtual sp<MediaSource> createAudioSource();
+-    virtual status_t checkVideoEncoderCapabilities();
++    virtual status_t checkVideoEncoderCapabilities(
++            bool *supportsCameraSourceMetaDataMode);
+     status_t checkAudioEncoderCapabilities();
+     // Generic MediaSource set-up. Returns the appropriate
+     // source (CameraSource or SurfaceMediaSource)
+diff --git a/media/libstagefright/CameraSource.cpp b/media/libstagefright/CameraSource.cpp
+index f6b4741..dd8f6fe 100644
+--- a/media/libstagefright/CameraSource.cpp
++++ b/media/libstagefright/CameraSource.cpp
+@@ -639,18 +639,6 @@ status_t CameraSource::startCameraRecording() {
+         }
+     }
+ 
+-#ifndef USE_LEGACY_MTK_AV_BLOB
+-    err = mCamera->sendCommand(
+-        CAMERA_CMD_SET_VIDEO_FORMAT, mEncoderFormat, mEncoderDataSpace);
+-
+-    // This could happen for CameraHAL1 clients; thus the failure is
+-    // not a fatal error
+-    if (err != OK) {
+-        ALOGW("Failed to set video encoder format/dataspace to %d, %d due to %d",
+-                mEncoderFormat, mEncoderDataSpace, err);
+-    }
+-#endif
+-
+     err = OK;
+     if (mCameraFlags & FLAGS_HOT_CAMERA) {
+         mCamera->unlock();
+@@ -698,9 +688,6 @@ status_t CameraSource::start(MetaData *meta) {
+     mPauseStartTimeUs = 0;
+     mPauseEndTimeUs = 0;
+     mNumInputBuffers = 0;
+-    mEncoderFormat = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
+-    mEncoderDataSpace = HAL_DATASPACE_BT709;
+-
+     if (meta) {
+         int64_t startTimeUs;
+ 
+@@ -718,14 +705,6 @@ status_t CameraSource::start(MetaData *meta) {
+             CHECK_GT(nBuffers, 0);
+             mNumInputBuffers = nBuffers;
+         }
+-
+-        // apply encoder color format if specified
+-        if (meta->findInt32(kKeyPixelFormat, &mEncoderFormat)) {
+-            ALOGV("Using encoder format: %#x", mEncoderFormat);
+-        }
+-        if (meta->findInt32(kKeyColorSpace, &mEncoderDataSpace)) {
+-            ALOGV("Using encoder data space: %#x", mEncoderDataSpace);
+-        }
+     }
+ 
+     status_t err;
+diff --git a/services/camera/libcameraservice/Android.mk b/services/camera/libcameraservice/Android.mk
+index ab09cb3..8af1354 100644
+--- a/services/camera/libcameraservice/Android.mk
++++ b/services/camera/libcameraservice/Android.mk
+@@ -73,7 +73,6 @@ LOCAL_SHARED_LIBRARIES:= \
+ LOCAL_C_INCLUDES += \
+     system/media/camera/include \
+     system/media/private/camera/include \
+-    frameworks/native/include/media/openmax \
+     external/jpeg
+ 
+ 
+diff --git a/services/camera/libcameraservice/api1/Camera2Client.cpp b/services/camera/libcameraservice/api1/Camera2Client.cpp
+index 96266ed..c0328d7 100644
+--- a/services/camera/libcameraservice/api1/Camera2Client.cpp
++++ b/services/camera/libcameraservice/api1/Camera2Client.cpp
+@@ -1572,9 +1572,6 @@ status_t Camera2Client::sendCommand(int32_t cmd, int32_t arg1, int32_t arg2) {
+             return commandPingL();
+         case CAMERA_CMD_SET_VIDEO_BUFFER_COUNT:
+             return commandSetVideoBufferCountL(arg1);
+-        case CAMERA_CMD_SET_VIDEO_FORMAT:
+-            return commandSetVideoFormatL(arg1,
+-                    static_cast<android_dataspace>(arg2));
+         default:
+             ALOGE("%s: Unknown command %d (arguments %d, %d)",
+                     __FUNCTION__, cmd, arg1, arg2);
+@@ -1726,17 +1723,6 @@ status_t Camera2Client::commandSetVideoBufferCountL(size_t count) {
+     return mStreamingProcessor->setRecordingBufferCount(count);
+ }
+ 
+-status_t Camera2Client::commandSetVideoFormatL(int format,
+-        android_dataspace dataspace) {
+-    if (recordingEnabledL()) {
+-        ALOGE("%s: Camera %d: Error setting video format after "
+-                "recording was started", __FUNCTION__, mCameraId);
+-        return INVALID_OPERATION;
+-    }
+-
+-    return mStreamingProcessor->setRecordingFormat(format, dataspace);
+-}
+-
+ void Camera2Client::notifyError(ICameraDeviceCallbacks::CameraErrorCode errorCode,
+         const CaptureResultExtras& resultExtras) {
+     int32_t err = CAMERA_ERROR_UNKNOWN;
+diff --git a/services/camera/libcameraservice/api1/Camera2Client.h b/services/camera/libcameraservice/api1/Camera2Client.h
+index 7e7a284..6d5f8c0 100644
+--- a/services/camera/libcameraservice/api1/Camera2Client.h
++++ b/services/camera/libcameraservice/api1/Camera2Client.h
+@@ -175,7 +175,6 @@ private:
+     status_t commandEnableFocusMoveMsgL(bool enable);
+     status_t commandPingL();
+     status_t commandSetVideoBufferCountL(size_t count);
+-    status_t commandSetVideoFormatL(int format, android_dataspace dataSpace);
+ 
+     // Current camera device configuration
+     camera2::SharedParameters mParameters;
+diff --git a/services/camera/libcameraservice/api1/client2/CallbackProcessor.cpp b/services/camera/libcameraservice/api1/client2/CallbackProcessor.cpp
+index 5f4fb22..b0a07aa 100644
+--- a/services/camera/libcameraservice/api1/client2/CallbackProcessor.cpp
++++ b/services/camera/libcameraservice/api1/client2/CallbackProcessor.cpp
+@@ -123,7 +123,7 @@ status_t CallbackProcessor::updateStream(const Parameters &params) {
+         // Check if stream parameters have to change
+         uint32_t currentWidth, currentHeight, currentFormat;
+         res = device->getStreamInfo(mCallbackStreamId,
+-                &currentWidth, &currentHeight, &currentFormat, 0);
++                &currentWidth, &currentHeight, &currentFormat);
+         if (res != OK) {
+             ALOGE("%s: Camera %d: Error querying callback output stream info: "
+                     "%s (%d)", __FUNCTION__, mId,
+diff --git a/services/camera/libcameraservice/api1/client2/JpegProcessor.cpp b/services/camera/libcameraservice/api1/client2/JpegProcessor.cpp
+index bd9786f..0ca5f29 100644
+--- a/services/camera/libcameraservice/api1/client2/JpegProcessor.cpp
++++ b/services/camera/libcameraservice/api1/client2/JpegProcessor.cpp
+@@ -115,7 +115,7 @@ status_t JpegProcessor::updateStream(const Parameters &params) {
+         // Check if stream parameters have to change
+         uint32_t currentWidth, currentHeight;
+         res = device->getStreamInfo(mCaptureStreamId,
+-                &currentWidth, &currentHeight, 0, 0);
++                &currentWidth, &currentHeight, 0);
+         if (res != OK) {
+             ALOGE("%s: Camera %d: Error querying capture output stream info: "
+                     "%s (%d)", __FUNCTION__,
+diff --git a/services/camera/libcameraservice/api1/client2/StreamingProcessor.cpp b/services/camera/libcameraservice/api1/client2/StreamingProcessor.cpp
+index 9e6c0db..3b97bd9 100644
+--- a/services/camera/libcameraservice/api1/client2/StreamingProcessor.cpp
++++ b/services/camera/libcameraservice/api1/client2/StreamingProcessor.cpp
+@@ -25,13 +25,12 @@
+ #define ALOGVV(...) ((void)0)
+ #endif
+ 
+-#include <cutils/properties.h>
+ #include <utils/Log.h>
+ #include <utils/Trace.h>
+ #include <gui/BufferItem.h>
+ #include <gui/Surface.h>
+ #include <camera/ICameraRecordingProxy.h>
+-#include <media/hardware/HardwareAPI.h>
++#include <media/hardware/MetadataBufferType.h>
+ 
+ #include "common/CameraDeviceBase.h"
+ #include "api1/Camera2Client.h"
+@@ -53,10 +52,7 @@ StreamingProcessor::StreamingProcessor(sp<Camera2Client> client):
+         mRecordingStreamId(NO_STREAM),
+         mRecordingFrameAvailable(false),
+         mRecordingHeapCount(kDefaultRecordingHeapCount),
+-        mRecordingHeapFree(kDefaultRecordingHeapCount),
+-        mRecordingFormat(kDefaultRecordingFormat),
+-        mRecordingDataSpace(kDefaultRecordingDataSpace),
+-        mRecordingGrallocUsage(kDefaultRecordingGrallocUsage)
++        mRecordingHeapFree(kDefaultRecordingHeapCount)
+ {
+ }
+ 
+@@ -156,7 +152,7 @@ status_t StreamingProcessor::updatePreviewStream(const Parameters &params) {
+         // Check if stream parameters have to change
+         uint32_t currentWidth, currentHeight;
+         res = device->getStreamInfo(mPreviewStreamId,
+-                &currentWidth, &currentHeight, 0, 0);
++                &currentWidth, &currentHeight, 0);
+         if (res != OK) {
+             ALOGE("%s: Camera %d: Error querying preview stream info: "
+                     "%s (%d)", __FUNCTION__, mId, strerror(-res), res);
+@@ -285,46 +281,6 @@ status_t StreamingProcessor::setRecordingBufferCount(size_t count) {
+     return OK;
+ }
+ 
+-status_t StreamingProcessor::setRecordingFormat(int format,
+-        android_dataspace dataSpace) {
+-    ATRACE_CALL();
+-
+-    Mutex::Autolock m(mMutex);
+-
+-    ALOGV("%s: Camera %d: New recording format/dataspace from encoder: %X, %X",
+-            __FUNCTION__, mId, format, dataSpace);
+-
+-    mRecordingFormat = format;
+-    mRecordingDataSpace = dataSpace;
+-    int prevGrallocUsage = mRecordingGrallocUsage;
+-    if (mRecordingFormat == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED) {
+-        mRecordingGrallocUsage = GRALLOC_USAGE_HW_VIDEO_ENCODER;
+-    } else {
+-        mRecordingGrallocUsage = GRALLOC_USAGE_SW_READ_OFTEN;
+-    }
+-
+-    ALOGV("%s: Camera %d: New recording gralloc usage: %08X", __FUNCTION__, mId,
+-            mRecordingGrallocUsage);
+-
+-    if (prevGrallocUsage != mRecordingGrallocUsage) {
+-        ALOGV("%s: Camera %d: Resetting recording consumer for new usage",
+-            __FUNCTION__, mId);
+-
+-        if (isStreamActive(mActiveStreamIds, mRecordingStreamId)) {
+-            ALOGE("%s: Camera %d: Changing recording format when "
+-                    "recording stream is already active!", __FUNCTION__,
+-                    mId);
+-            return INVALID_OPERATION;
+-        }
+-
+-        releaseAllRecordingFramesLocked();
+-
+-        mRecordingConsumer.clear();
+-    }
+-
+-    return OK;
+-}
+-
+ status_t StreamingProcessor::updateRecordingRequest(const Parameters &params) {
+     ATRACE_CALL();
+     status_t res;
+@@ -385,10 +341,9 @@ status_t StreamingProcessor::recordingStreamNeedsUpdate(
+         return INVALID_OPERATION;
+     }
+ 
+-    uint32_t currentWidth, currentHeight, currentFormat;
+-    android_dataspace currentDataSpace;
++    uint32_t currentWidth, currentHeight;
+     res = device->getStreamInfo(mRecordingStreamId,
+-            &currentWidth, &currentHeight, &currentFormat, &currentDataSpace);
++            &currentWidth, &currentHeight, 0);
+     if (res != OK) {
+         ALOGE("%s: Camera %d: Error querying recording output stream info: "
+                 "%s (%d)", __FUNCTION__, mId,
+@@ -396,11 +351,8 @@ status_t StreamingProcessor::recordingStreamNeedsUpdate(
+         return res;
+     }
+ 
+-    if (mRecordingConsumer == 0 ||
+-            currentWidth != (uint32_t)params.videoWidth ||
+-            currentHeight != (uint32_t)params.videoHeight ||
+-            currentFormat != (uint32_t)mRecordingFormat ||
+-            currentDataSpace != mRecordingDataSpace) {
++    if (mRecordingConsumer == 0 || currentWidth != (uint32_t)params.videoWidth ||
++            currentHeight != (uint32_t)params.videoHeight) {
+         *needsUpdate = true;
+     }
+     *needsUpdate = false;
+@@ -429,7 +381,7 @@ status_t StreamingProcessor::updateRecordingStream(const Parameters &params) {
+         sp<IGraphicBufferConsumer> consumer;
+         BufferQueue::createBufferQueue(&producer, &consumer);
+         mRecordingConsumer = new BufferItemConsumer(consumer,
+-                mRecordingGrallocUsage,
++                GRALLOC_USAGE_HW_VIDEO_ENCODER,
+                 mRecordingHeapCount + 1);
+         mRecordingConsumer->setFrameAvailableListener(this);
+         mRecordingConsumer->setName(String8("Camera2-RecordingConsumer"));
+@@ -441,11 +393,8 @@ status_t StreamingProcessor::updateRecordingStream(const Parameters &params) {
+     if (mRecordingStreamId != NO_STREAM) {
+         // Check if stream parameters have to change
+         uint32_t currentWidth, currentHeight;
+-        uint32_t currentFormat;
+-        android_dataspace currentDataSpace;
+         res = device->getStreamInfo(mRecordingStreamId,
+-                &currentWidth, &currentHeight,
+-                &currentFormat, &currentDataSpace);
++                &currentWidth, &currentHeight, 0);
+         if (res != OK) {
+             ALOGE("%s: Camera %d: Error querying recording output stream info: "
+                     "%s (%d)", __FUNCTION__, mId,
+@@ -453,10 +402,7 @@ status_t StreamingProcessor::updateRecordingStream(const Parameters &params) {
+             return res;
+         }
+         if (currentWidth != (uint32_t)params.videoWidth ||
+-                currentHeight != (uint32_t)params.videoHeight ||
+-                currentFormat != (uint32_t)mRecordingFormat ||
+-                currentDataSpace != mRecordingDataSpace ||
+-                newConsumer) {
++                currentHeight != (uint32_t)params.videoHeight || newConsumer) {
+             // TODO: Should wait to be sure previous recording has finished
+             res = device->deleteStream(mRecordingStreamId);
+ 
+@@ -477,9 +423,11 @@ status_t StreamingProcessor::updateRecordingStream(const Parameters &params) {
+ 
+     if (mRecordingStreamId == NO_STREAM) {
+         mRecordingFrameCount = 0;
++        // Selecting BT.709 colorspace by default
++        // TODO: Wire this in from encoder side
+         res = device->createStream(mRecordingWindow,
+                 params.videoWidth, params.videoHeight,
+-                mRecordingFormat, mRecordingDataSpace,
++                CAMERA2_HAL_PIXEL_FORMAT_OPAQUE, HAL_DATASPACE_BT709,
+                 CAMERA3_STREAM_ROTATION_0, &mRecordingStreamId);
+         if (res != OK) {
+             ALOGE("%s: Camera %d: Can't create output stream for recording: "
+@@ -775,12 +723,12 @@ status_t StreamingProcessor::processRecordingFrame() {
+         }
+ 
+         if (mRecordingHeap == 0) {
+-            size_t payloadSize = sizeof(VideoNativeMetadata);
++            const size_t bufferSize = 4 + sizeof(buffer_handle_t);
+             ALOGV("%s: Camera %d: Creating recording heap with %zu buffers of "
+                     "size %zu bytes", __FUNCTION__, mId,
+-                    mRecordingHeapCount, payloadSize);
++                    mRecordingHeapCount, bufferSize);
+ 
+-            mRecordingHeap = new Camera2Heap(payloadSize, mRecordingHeapCount,
++            mRecordingHeap = new Camera2Heap(bufferSize, mRecordingHeapCount,
+                     "Camera2Client::RecordingHeap");
+             if (mRecordingHeap->mHeap->getSize() == 0) {
+                 ALOGE("%s: Camera %d: Unable to allocate memory for recording",
+@@ -823,18 +771,13 @@ status_t StreamingProcessor::processRecordingFrame() {
+                 mRecordingHeap->mBuffers[heapIdx]->getMemory(&offset,
+                         &size);
+ 
+-        VideoNativeMetadata *payload = reinterpret_cast<VideoNativeMetadata*>(
+-            (uint8_t*)heap->getBase() + offset);
+-        payload->eType = kMetadataBufferTypeANWBuffer;
+-        payload->pBuffer = imgBuffer.mGraphicBuffer->getNativeBuffer();
+-        // b/28466701
+-        payload->pBuffer = (ANativeWindowBuffer*)((uint8_t*)payload->pBuffer -
+-                ICameraRecordingProxy::getCommonBaseAddress());
+-        payload->nFenceFd = -1;
+-
+-        ALOGVV("%s: Camera %d: Sending out ANWBuffer %p",
+-                __FUNCTION__, mId, payload->pBuffer);
+-
++        uint8_t *data = (uint8_t*)heap->getBase() + offset;
++        uint32_t type = kMetadataBufferTypeGrallocSource;
++        *((uint32_t*)data) = type;
++        *((buffer_handle_t*)(data + 4)) = imgBuffer.mGraphicBuffer->handle;
++        ALOGVV("%s: Camera %d: Sending out buffer_handle_t %p",
++                __FUNCTION__, mId,
++                imgBuffer.mGraphicBuffer->handle);
+         mRecordingBuffers.replaceAt(imgBuffer, heapIdx);
+         recordingHeap = mRecordingHeap;
+     }
+@@ -868,45 +811,43 @@ void StreamingProcessor::releaseRecordingFrame(const sp<IMemory>& mem) {
+         return;
+     }
+ 
+-    VideoNativeMetadata *payload = reinterpret_cast<VideoNativeMetadata*>(
+-        (uint8_t*)heap->getBase() + offset);
+-
+-    if (payload->eType != kMetadataBufferTypeANWBuffer) {
++    uint8_t *data = (uint8_t*)heap->getBase() + offset;
++    uint32_t type = *(uint32_t*)data;
++    if (type != kMetadataBufferTypeGrallocSource) {
+         ALOGE("%s: Camera %d: Recording frame type invalid (got %x, expected %x)",
+-                __FUNCTION__, mId, payload->eType,
+-                kMetadataBufferTypeANWBuffer);
++                __FUNCTION__, mId, type,
++                kMetadataBufferTypeGrallocSource);
+         return;
+     }
+ 
+-    // b/28466701
+-    payload->pBuffer = (ANativeWindowBuffer*)(((uint8_t*)payload->pBuffer) +
+-            ICameraRecordingProxy::getCommonBaseAddress());
+-
+     // Release the buffer back to the recording queue
++
++    buffer_handle_t imgHandle = *(buffer_handle_t*)(data + 4);
++
+     size_t itemIndex;
+     for (itemIndex = 0; itemIndex < mRecordingBuffers.size(); itemIndex++) {
+         const BufferItem item = mRecordingBuffers[itemIndex];
+         if (item.mBuf != BufferItemConsumer::INVALID_BUFFER_SLOT &&
+-                item.mGraphicBuffer->getNativeBuffer() == payload->pBuffer) {
++                item.mGraphicBuffer->handle == imgHandle) {
+                 break;
+         }
+     }
+ 
+     if (itemIndex == mRecordingBuffers.size()) {
+-        ALOGE("%s: Camera %d: Can't find returned ANW Buffer %p in list of "
++        ALOGE("%s: Camera %d: Can't find buffer_handle_t %p in list of "
+                 "outstanding buffers", __FUNCTION__, mId,
+-                payload->pBuffer);
++                imgHandle);
+         return;
+     }
+ 
+-    ALOGVV("%s: Camera %d: Freeing returned ANW buffer %p index %d", __FUNCTION__,
+-            mId, payload->pBuffer, itemIndex);
++    ALOGVV("%s: Camera %d: Freeing buffer_handle_t %p", __FUNCTION__,
++            mId, imgHandle);
+ 
+     res = mRecordingConsumer->releaseBuffer(mRecordingBuffers[itemIndex]);
+     if (res != OK) {
+         ALOGE("%s: Camera %d: Unable to free recording frame "
+-                "(Returned ANW buffer: %p): %s (%d)", __FUNCTION__,
+-                mId, payload->pBuffer, strerror(-res), res);
++                "(buffer_handle_t: %p): %s (%d)", __FUNCTION__,
++                mId, imgHandle, strerror(-res), res);
+         return;
+     }
+     mRecordingBuffers.replaceAt(itemIndex);
+diff --git a/services/camera/libcameraservice/api1/client2/StreamingProcessor.h b/services/camera/libcameraservice/api1/client2/StreamingProcessor.h
+index e0cad3a..a562916 100644
+--- a/services/camera/libcameraservice/api1/client2/StreamingProcessor.h
++++ b/services/camera/libcameraservice/api1/client2/StreamingProcessor.h
+@@ -53,8 +53,6 @@ class StreamingProcessor:
+     int getPreviewStreamId() const;
+ 
+     status_t setRecordingBufferCount(size_t count);
+-    status_t setRecordingFormat(int format, android_dataspace_t dataspace);
+-
+     status_t updateRecordingRequest(const Parameters &params);
+     // If needsUpdate is set to true, a updateRecordingStream call with params will recreate
+     // recording stream
+@@ -129,18 +127,6 @@ class StreamingProcessor:
+     Vector<BufferItem> mRecordingBuffers;
+     size_t mRecordingHeapHead, mRecordingHeapFree;
+ 
+-    static const int kDefaultRecordingFormat =
+-            HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
+-    int mRecordingFormat;
+-
+-    static const android_dataspace kDefaultRecordingDataSpace =
+-            HAL_DATASPACE_BT709;
+-    android_dataspace mRecordingDataSpace;
+-
+-    static const int kDefaultRecordingGrallocUsage =
+-            GRALLOC_USAGE_HW_VIDEO_ENCODER;
+-    int mRecordingGrallocUsage;
+-
+     virtual bool threadLoop();
+ 
+     status_t processRecordingFrame();
+diff --git a/services/camera/libcameraservice/api1/client2/ZslProcessor.cpp b/services/camera/libcameraservice/api1/client2/ZslProcessor.cpp
+index 0b79b31..17e44c2 100644
+--- a/services/camera/libcameraservice/api1/client2/ZslProcessor.cpp
++++ b/services/camera/libcameraservice/api1/client2/ZslProcessor.cpp
+@@ -147,7 +147,7 @@ status_t ZslProcessor::updateStream(const Parameters &params) {
+         // Check if stream parameters have to change
+         uint32_t currentWidth, currentHeight;
+         res = device->getStreamInfo(mZslStreamId,
+-                &currentWidth, &currentHeight, 0, 0);
++                &currentWidth, &currentHeight, 0);
+         if (res != OK) {
+             ALOGE("%s: Camera %d: Error querying capture output stream info: "
+                     "%s (%d)", __FUNCTION__,
+diff --git a/services/camera/libcameraservice/api1/client2/ZslProcessor3.cpp b/services/camera/libcameraservice/api1/client2/ZslProcessor3.cpp
+index 69620ac..470a6d6 100644
+--- a/services/camera/libcameraservice/api1/client2/ZslProcessor3.cpp
++++ b/services/camera/libcameraservice/api1/client2/ZslProcessor3.cpp
+@@ -150,7 +150,7 @@ status_t ZslProcessor3::updateStream(const Parameters &params) {
+         // Check if stream parameters have to change
+         uint32_t currentWidth, currentHeight;
+         res = device->getStreamInfo(mZslStreamId,
+-                &currentWidth, &currentHeight, 0, 0);
++                &currentWidth, &currentHeight, 0);
+         if (res != OK) {
+             ALOGE("%s: Camera %d: Error querying capture output stream info: "
+                     "%s (%d)", __FUNCTION__,
+diff --git a/services/camera/libcameraservice/common/CameraDeviceBase.h b/services/camera/libcameraservice/common/CameraDeviceBase.h
+index 7b083a3..de8b342 100644
+--- a/services/camera/libcameraservice/common/CameraDeviceBase.h
++++ b/services/camera/libcameraservice/common/CameraDeviceBase.h
+@@ -128,8 +128,7 @@ class CameraDeviceBase : public virtual RefBase {
+      * Get information about a given stream.
+      */
+     virtual status_t getStreamInfo(int id,
+-            uint32_t *width, uint32_t *height,
+-            uint32_t *format, android_dataspace *dataSpace) = 0;
++            uint32_t *width, uint32_t *height, uint32_t *format) = 0;
+ 
+     /**
+      * Set stream gralloc buffer transform
+diff --git a/services/camera/libcameraservice/device2/Camera2Device.cpp b/services/camera/libcameraservice/device2/Camera2Device.cpp
+index d74f976..63c6f33 100644
+--- a/services/camera/libcameraservice/device2/Camera2Device.cpp
++++ b/services/camera/libcameraservice/device2/Camera2Device.cpp
+@@ -315,8 +315,7 @@ status_t Camera2Device::createReprocessStreamFromStream(int outputId, int *id) {
+ 
+ 
+ status_t Camera2Device::getStreamInfo(int id,
+-        uint32_t *width, uint32_t *height,
+-        uint32_t *format, android_dataspace *dataSpace) {
++        uint32_t *width, uint32_t *height, uint32_t *format) {
+     ATRACE_CALL();
+     ALOGV("%s: E", __FUNCTION__);
+     bool found = false;
+@@ -337,7 +336,6 @@ status_t Camera2Device::getStreamInfo(int id,
+     if (width) *width = (*streamI)->getWidth();
+     if (height) *height = (*streamI)->getHeight();
+     if (format) *format = (*streamI)->getFormat();
+-    if (dataSpace) *dataSpace = HAL_DATASPACE_UNKNOWN;
+ 
+     return OK;
+ }
+diff --git a/services/camera/libcameraservice/device2/Camera2Device.h b/services/camera/libcameraservice/device2/Camera2Device.h
+index b4d343c..a1b5237 100644
+--- a/services/camera/libcameraservice/device2/Camera2Device.h
++++ b/services/camera/libcameraservice/device2/Camera2Device.h
+@@ -63,8 +63,7 @@ class Camera2Device: public CameraDeviceBase {
+             uint32_t width, uint32_t height, int format, int *id);
+     virtual status_t createReprocessStreamFromStream(int outputId, int *id);
+     virtual status_t getStreamInfo(int id,
+-            uint32_t *width, uint32_t *height,
+-            uint32_t *format, android_dataspace *dataSpace);
++            uint32_t *width, uint32_t *height, uint32_t *format);
+     virtual status_t setStreamTransform(int id, int transform);
+     virtual status_t deleteStream(int id);
+     virtual status_t deleteReprocessStream(int id);
+diff --git a/services/camera/libcameraservice/device3/Camera3Device.cpp b/services/camera/libcameraservice/device3/Camera3Device.cpp
+index 8b43154..e759460 100644
+--- a/services/camera/libcameraservice/device3/Camera3Device.cpp
++++ b/services/camera/libcameraservice/device3/Camera3Device.cpp
+@@ -961,8 +961,7 @@ status_t Camera3Device::createReprocessStreamFromStream(int outputId, int *id) {
+ 
+ 
+ status_t Camera3Device::getStreamInfo(int id,
+-        uint32_t *width, uint32_t *height,
+-        uint32_t *format, android_dataspace *dataSpace) {
++        uint32_t *width, uint32_t *height, uint32_t *format) {
+     ATRACE_CALL();
+     Mutex::Autolock il(mInterfaceLock);
+     Mutex::Autolock l(mLock);
+@@ -993,7 +992,7 @@ status_t Camera3Device::getStreamInfo(int id,
+     if (width) *width  = mOutputStreams[idx]->getWidth();
+     if (height) *height = mOutputStreams[idx]->getHeight();
+     if (format) *format = mOutputStreams[idx]->getFormat();
+-    if (dataSpace) *dataSpace = mOutputStreams[idx]->getDataSpace();
++
+     return OK;
+ }
+ 
+diff --git a/services/camera/libcameraservice/device3/Camera3Device.h b/services/camera/libcameraservice/device3/Camera3Device.h
+index 2cd5af3..d1a3b22 100644
+--- a/services/camera/libcameraservice/device3/Camera3Device.h
++++ b/services/camera/libcameraservice/device3/Camera3Device.h
+@@ -110,8 +110,7 @@ class Camera3Device :
+     virtual status_t createReprocessStreamFromStream(int outputId, int *id);
+ 
+     virtual status_t getStreamInfo(int id,
+-            uint32_t *width, uint32_t *height,
+-            uint32_t *format, android_dataspace *dataSpace);
++            uint32_t *width, uint32_t *height, uint32_t *format);
+     virtual status_t setStreamTransform(int id, int transform);
+ 
+     virtual status_t deleteStream(int id);
+diff --git a/services/camera/libcameraservice/device3/Camera3StreamInterface.h b/services/camera/libcameraservice/device3/Camera3StreamInterface.h
+index 54009ae..5192226 100644
+--- a/services/camera/libcameraservice/device3/Camera3StreamInterface.h
++++ b/services/camera/libcameraservice/device3/Camera3StreamInterface.h
+@@ -50,7 +50,6 @@ class Camera3StreamInterface : public virtual RefBase {
+     virtual uint32_t getWidth() const = 0;
+     virtual uint32_t getHeight() const = 0;
+     virtual int      getFormat() const = 0;
+-    virtual android_dataspace getDataSpace() const = 0;
+ 
+     /**
+      * Start the stream configuration process. Returns a handle to the stream's
+-- 
+2.7.4
+

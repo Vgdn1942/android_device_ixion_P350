@@ -1,0 +1,35 @@
+From b86caeee15a1602a084b1229ceb27e9077699dff Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Fri, 28 Aug 2015 06:02:34 +0800
+Subject: [PATCH] rootdir/init.rc: disable default rild
+
+Change-Id: I2746fa71c965f01268c1655a5a17f5f723a8a935
+---
+ rootdir/init.rc | 14 +++++++-------
+ 1 file changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/rootdir/init.rc b/rootdir/init.rc
+index 6ad9869be3..5ed4db18cf 100644
+--- a/rootdir/init.rc
++++ b/rootdir/init.rc
+@@ -595,13 +595,13 @@ service debuggerd /system/bin/debuggerd
+     class main
+     writepid /dev/cpuset/system-background/tasks
+ 
+-service ril-daemon /system/bin/rild
+-    class main
+-    socket rild stream 660 root radio
+-    socket sap_uim_socket1 stream 660 bluetooth bluetooth
+-    socket rild-debug stream 660 radio system
+-    user root
+-    group radio cache inet misc audio log qcom_diag
++#service ril-daemon /system/bin/rild
++#    class main
++#    socket rild stream 660 root radio
++#    socket sap_uim_socket1 stream 660 bluetooth bluetooth
++#    socket rild-debug stream 660 radio system
++#    user root
++#    group radio cache inet misc audio log qcom_diag
+ 
+ service surfaceflinger /system/bin/surfaceflinger
+     class core

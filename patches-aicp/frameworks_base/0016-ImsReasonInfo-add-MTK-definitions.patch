@@ -1,0 +1,35 @@
+From 7374ea114019e4966a8ba15a3bce9ce4f1c2d80e Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Sun, 27 Mar 2016 15:28:54 +0800
+Subject: [PATCH] ImsReasonInfo: add MTK definitions
+
+Change-Id: I7457c1fa6975b59ffd501863f45e9baffa500587
+---
+ telephony/java/com/android/ims/ImsReasonInfo.java | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/telephony/java/com/android/ims/ImsReasonInfo.java b/telephony/java/com/android/ims/ImsReasonInfo.java
+index 85ec16298da4e..7cfb3d991c50b 100644
+--- a/telephony/java/com/android/ims/ImsReasonInfo.java
++++ b/telephony/java/com/android/ims/ImsReasonInfo.java
+@@ -352,4 +352,20 @@ public ImsReasonInfo createFromParcel(Parcel in) {
+             return new ImsReasonInfo[size];
+         }
+     };
++
++    // MTK
++
++    /// M: @{
++    public static final int CODE_SIP_REDIRECTED_EMERGENCY = 329;
++    /// @}
++
++    public static final int CODE_UT_XCAP_403_FORBIDDEN = 830;
++    public static final int CODE_UT_UNKNOWN_HOST = 831;
++
++    ///M: ALPS02112553. For WFC @{
++    public static final int CODE_SIP_WIFI_SIGNAL_LOST = 905;
++    public static final int CODE_SIP_WFC_ISP_PROBLEM = 906;
++    public static final int CODE_SIP_HANDOVER_WIFI_FAIL = 907;
++    public static final int CODE_SIP_HANDOVER_LTE_FAIL = 908;
++    ///@}
+ }

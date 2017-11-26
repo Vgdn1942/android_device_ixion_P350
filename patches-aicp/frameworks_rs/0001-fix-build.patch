@@ -1,0 +1,23 @@
+From 47326fe2cf7e92841d214e1c16ff78a703a1a8f2 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Sun, 12 Jun 2016 21:23:09 +0800
+Subject: [PATCH] fix build
+
+Change-Id: I383e7985452ca39c62e2d273ec0e0b3258e2b66b
+---
+ rsGrallocConsumer.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/rsGrallocConsumer.cpp b/rsGrallocConsumer.cpp
+index f19f17195..20ec2d2dd 100644
+--- a/rsGrallocConsumer.cpp
++++ b/rsGrallocConsumer.cpp
+@@ -70,7 +70,7 @@ status_t GrallocConsumer::lockNextBuffer() {
+         }
+     }
+ 
+-    BufferItem b;
++    BufferQueue::BufferItem b;
+ 
+     err = acquireBufferLocked(&b, 0);
+     if (err != OK) {

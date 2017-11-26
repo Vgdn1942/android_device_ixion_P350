@@ -1,0 +1,42 @@
+From 15b885114fdc292141c3513f9173eb4720e66353 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Thu, 23 Jun 2016 00:09:19 +0800
+Subject: [PATCH] IOMX: be compatible with legacy MTK blobs
+
+Change-Id: I4af5631ff070102d90b0cd7916f6035730c252ea
+---
+ media/libmedia/Android.mk | 4 ++++
+ media/libmedia/IOMX.cpp   | 4 ++++
+ 2 files changed, 8 insertions(+)
+
+diff --git a/media/libmedia/Android.mk b/media/libmedia/Android.mk
+index f66a784c48a..c61b3b7ed20 100644
+--- a/media/libmedia/Android.mk
++++ b/media/libmedia/Android.mk
+@@ -106,6 +106,10 @@ LOCAL_SRC_FILES += \
+ 
+ # StrongPointer.h
+ LOCAL_C_INCLUDES += $(TOP)/frameworks/rs/server
++
++ifeq ($(BOARD_USES_LEGACY_MTK_AV_BLOB),true)
++LOCAL_CFLAGS += -DUSE_LEGACY_MTK_AV_BLOB
++endif
+ endif
+ 
+ include $(BUILD_SHARED_LIBRARY)
+diff --git a/media/libmedia/IOMX.cpp b/media/libmedia/IOMX.cpp
+index ab2d179b833..9e044a82b57 100644
+--- a/media/libmedia/IOMX.cpp
++++ b/media/libmedia/IOMX.cpp
+@@ -695,7 +695,11 @@ status_t BnOMX::onTransact(
+             node_id node = (node_id)data.readInt32();
+             OMX_INDEXTYPE index = static_cast<OMX_INDEXTYPE>(data.readInt32());
+ 
++#ifdef USE_LEGACY_MTK_AV_BLOB
++            size_t size = data.readInt32();
++#else
+             size_t size = data.readInt64();
++#endif
+ 
+             status_t err = NOT_ENOUGH_DATA;
+             void *params = NULL;

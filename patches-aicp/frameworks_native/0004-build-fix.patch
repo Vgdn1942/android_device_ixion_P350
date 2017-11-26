@@ -1,0 +1,41 @@
+From f922b27323a583100e805a6321c141859218f8c7 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Sun, 12 Jun 2016 20:40:24 +0800
+Subject: [PATCH] build fix
+
+Change-Id: I8c3e08786f746f108a7dd553778f1ba5e40ebf02
+---
+ libs/ui/Android.mk        |  1 -
+ libs/ui/MediatekHacks.cpp | 11 -----------
+ 2 files changed, 12 deletions(-)
+ delete mode 100644 libs/ui/MediatekHacks.cpp
+
+diff --git a/libs/ui/Android.mk b/libs/ui/Android.mk
+index 3a154f747f1..3f84d929ba6 100644
+--- a/libs/ui/Android.mk
++++ b/libs/ui/Android.mk
+@@ -44,7 +44,6 @@ LOCAL_SRC_FILES := \
+ 	Rect.cpp \
+ 	Region.cpp \
+ 	UiConfig.cpp \
+-	MediatekHacks.cpp
+ 
+ ifeq ($(BOARD_HAS_MTK_HARDWARE),true)
+ LOCAL_SRC_FILES += \
+diff --git a/libs/ui/MediatekHacks.cpp b/libs/ui/MediatekHacks.cpp
+deleted file mode 100644
+index 1a8156ae6ad..00000000000
+--- a/libs/ui/MediatekHacks.cpp
++++ /dev/null
+@@ -1,11 +0,0 @@
+-#include <ui/GraphicBufferMapper.h>
+-#include <ui/Rect.h>
+-
+-extern "C" {
+-    void _ZN7android19GraphicBufferMapper9lockYCbCrEPK13native_handlejRKNS_4RectEP13android_ycbcr(buffer_handle_t, uint32_t, const android::Rect&, android_ycbcr*);
+-    void _ZN7android19GraphicBufferMapper9lockYCbCrEPK13native_handleiRKNS_4RectEP13android_ycbcr(buffer_handle_t, int, const android::Rect&, android_ycbcr*);
+-
+-    void _ZN7android19GraphicBufferMapper9lockYCbCrEPK13native_handleiRKNS_4RectEP13android_ycbcr(buffer_handle_t handle, int usage, const android::Rect& bounds, android_ycbcr *ycbcr) {
+-        _ZN7android19GraphicBufferMapper9lockYCbCrEPK13native_handlejRKNS_4RectEP13android_ycbcr(handle, static_cast<uint32_t>(usage), bounds, ycbcr);
+-    }
+-}

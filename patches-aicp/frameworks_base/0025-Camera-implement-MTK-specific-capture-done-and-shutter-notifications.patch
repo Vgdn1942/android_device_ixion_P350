@@ -1,0 +1,37 @@
+From 98ce8b09615deb30aeb9e1dca3d1aa7aca268dd1 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Thu, 23 Jun 2016 20:15:57 +0800
+Subject: [PATCH] Camera: implement MTK-specific capture-done and shutter
+ notifications
+
+Change-Id: I99edf2ac2e46cc9e5a08c2d5d7f7ff8015d1c0fa
+---
+ core/java/android/hardware/Camera.java | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/core/java/android/hardware/Camera.java b/core/java/android/hardware/Camera.java
+index 9f2dca2b66ec2..93214c399b63e 100644
+--- a/core/java/android/hardware/Camera.java
++++ b/core/java/android/hardware/Camera.java
+@@ -1311,6 +1311,21 @@ public void handleMessage(Message msg) {
+                     }
+                     break;
+ 
++                // xen0n
++                case MTK_CAMERA_MSG_EXT_NOTIFY_CAPTURE_DONE:
++                    Log.d(TAG, "MTK_CAMERA_MSG_EXT_NOTIFY_CAPTURE_DONE: stub!");
++                    break;
++
++                // xen0n
++                case MTK_CAMERA_MSG_EXT_NOTIFY_SHUTTER:
++                    final boolean playSound = ((int)msg.arg2 != 0);
++                    Log.d(TAG, "MTK_CAMERA_MSG_EXT_NOTIFY_SHUTTER: playSound=" + playSound);
++                    // process as a CAMERA_MSG_SHUTTER
++                    if (playSound && mShutterCallback != null) {
++                        mShutterCallback.onShutter();
++                    }
++                    break;
++
+                 case MTK_CAMERA_MSG_EXT_NOTIFY_RAW_DUMP_STOPPED:
+                     if (mPreviewRawDumpCallback != null)
+                     {

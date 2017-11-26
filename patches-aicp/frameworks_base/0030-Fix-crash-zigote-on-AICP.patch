@@ -1,0 +1,25 @@
+From 5accf8067eddd9524bfb5596dad431a5aae65c31 Mon Sep 17 00:00:00 2001
+From: vgdn1942 <vgdn1942@gmail.com>
+Date: Sun, 5 Nov 2017 21:23:10 +0300
+Subject: [PATCH] Fix crash zigote on AICP
+
+Change-Id: I95b08b8b38289c47c5850015f2a7fc2ce7f601e9
+---
+ core/jni/fd_utils-inl.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/core/jni/fd_utils-inl.h b/core/jni/fd_utils-inl.h
+index 064e2ed..9312163 100644
+--- a/core/jni/fd_utils-inl.h
++++ b/core/jni/fd_utils-inl.h
+@@ -54,6 +54,7 @@ static const char* kPathWhitelist[] = {
+   "/system/etc/event-log-tags",
+   "/sys/kernel/debug/tracing/trace_marker",
+   "/system/framework/framework-res.apk",
++  "/system/framework/org.cyanogenmod.platform-res.apk",
+   "/dev/urandom",
+   "/dev/ion",
+   "@netlink@"
+-- 
+2.7.4
+

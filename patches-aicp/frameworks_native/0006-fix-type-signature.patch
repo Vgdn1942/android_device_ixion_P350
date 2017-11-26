@@ -1,0 +1,39 @@
+From b4d1192d36575eaf7c650efce7c0aa82daeb5127 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Sun, 12 Jun 2016 23:47:30 +0800
+Subject: [PATCH] fix type signature
+
+Change-Id: I801fb161e0aa7f9504610b0f55b6056e968a53f2
+---
+ include/gui/BufferItemConsumer.h | 2 +-
+ libs/gui/BufferItemConsumer.cpp  | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/include/gui/BufferItemConsumer.h b/include/gui/BufferItemConsumer.h
+index 57e121e61cc..8d016b73463 100644
+--- a/include/gui/BufferItemConsumer.h
++++ b/include/gui/BufferItemConsumer.h
+@@ -97,7 +97,7 @@ class BufferItemConsumer: public ConsumerBase
+     // setDefaultBufferFormat allows the BufferQueue to create
+     // GraphicBuffers of a defaultFormat if no format is specified
+     // in dequeueBuffer
+-    status_t setDefaultBufferFormat(PixelFormat defaultFormat);
++    status_t setDefaultBufferFormat(uint32_t defaultFormat);
+ 
+     // setDefaultBufferDataSpace allows the BufferQueue to create
+     // GraphicBuffers of a defaultDataSpace if no data space is specified
+diff --git a/libs/gui/BufferItemConsumer.cpp b/libs/gui/BufferItemConsumer.cpp
+index da41322e221..6c4717ed3e7 100644
+--- a/libs/gui/BufferItemConsumer.cpp
++++ b/libs/gui/BufferItemConsumer.cpp
+@@ -115,8 +115,8 @@ status_t BufferItemConsumer::setDefaultBufferSize(uint32_t w, uint32_t h) {
+ 	return ConsumerBase::setDefaultBufferSize(w, h);
+ }
+ 
+-status_t BufferItemConsumer::setDefaultBufferFormat(PixelFormat defaultFormat) {
+-    return ConsumerBase::setDefaultBufferFormat(defaultFormat);
++status_t BufferItemConsumer::setDefaultBufferFormat(uint32_t defaultFormat) {
++    return ConsumerBase::setDefaultBufferFormat(static_cast<PixelFormat>(defaultFormat));
+ }
+ 
+ status_t BufferItemConsumer::setDefaultBufferDataSpace(

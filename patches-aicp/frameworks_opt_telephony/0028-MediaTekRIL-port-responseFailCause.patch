@@ -1,0 +1,42 @@
+From 47bab09adbbc63951fe9dfff3eacdebf193da27b Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Sun, 26 Jun 2016 13:14:30 +0800
+Subject: [PATCH] MediaTekRIL: port responseFailCause
+
+ported from CyanogenMod/android_device_google_sprout-common@0175f52b1b07b982b8944cd8801d868aa1a6c087 by @varunchitre15.
+
+Change-Id: I588536f1c902f1134365979157e64d6dd3c1d27f
+---
+ .../com/android/internal/telephony/MediaTekRIL.java   | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
+
+diff --git a/src/java/com/android/internal/telephony/MediaTekRIL.java b/src/java/com/android/internal/telephony/MediaTekRIL.java
+index 1354713b51..6c70bd33a8 100644
+--- a/src/java/com/android/internal/telephony/MediaTekRIL.java
++++ b/src/java/com/android/internal/telephony/MediaTekRIL.java
+@@ -2146,6 +2146,25 @@ public void disconnectRilSocket() {
+         }
+     }
+ 
++    // ported from sprout RIL
++    protected Object
++    responseFailCause(Parcel p) {
++        int numInts;
++        int response[];
++
++        numInts = p.readInt();
++        response = new int[numInts];
++        for (int i = 0 ; i < numInts ; i++) {
++            response[i] = p.readInt();
++        }
++        LastCallFailCause failCause = new LastCallFailCause();
++        failCause.causeCode = response[0];
++        if (p.dataAvail() > 0) {
++          failCause.vendorCause = p.readString();
++        }
++        return failCause;
++    }
++
+     // CommandsInterface impl
+ 
+     public void setUiccSubscription(int slotId, int appIndex, int subId,

@@ -1,0 +1,50 @@
+From 7606f6b93f38c7a558016c76a1a72bd3086ec4ea Mon Sep 17 00:00:00 2001
+From: vgdn1942 <vgdn1942@gmail.com>
+Date: Mon, 13 Nov 2017 21:32:54 +0300
+Subject: [PATCH] Use value from lolipop gps header
+
+Change-Id: I17ff76c1e0c528f5842d4989ebd18d1b5797fc86
+---
+ .../server/location/GpsLocationProvider.java       | 26 ++++----
+ 1 file changed, 13 insertions(+), 13 deletions(-)
+
+diff --git a/services/core/java/com/android/server/location/GpsLocationProvider.java b/services/core/java/com/android/server/location/GpsLocationProvider.java
+index 833c340..9e8676e 100644
+--- a/services/core/java/com/android/server/location/GpsLocationProvider.java
++++ b/services/core/java/com/android/server/location/GpsLocationProvider.java
+@@ -143,19 +143,19 @@ public class GpsLocationProvider implements LocationProviderInterface {
+     private static final int LOCATION_HAS_ACCURACY = 16;
+ 
+     // IMPORTANT - the GPS_DELETE_* symbols here must match constants in gps.h
+-    private static final int GPS_DELETE_EPHEMERIS = 0x0001;
+-    private static final int GPS_DELETE_ALMANAC = 0x0002;
+-    private static final int GPS_DELETE_POSITION = 0x0004;
+-    private static final int GPS_DELETE_TIME = 0x0008;
+-    private static final int GPS_DELETE_IONO = 0x0010;
+-    private static final int GPS_DELETE_UTC = 0x0020;
+-    private static final int GPS_DELETE_HEALTH = 0x0040;
+-    private static final int GPS_DELETE_SVDIR = 0x0080;
+-    private static final int GPS_DELETE_SVSTEER = 0x0100;
+-    private static final int GPS_DELETE_SADATA = 0x0200;
+-    private static final int GPS_DELETE_RTI = 0x0400;
+-    private static final int GPS_DELETE_CELLDB_INFO = 0x8000;
+-    private static final int GPS_DELETE_ALL = 0xFFFF;
++    private static final int GPS_DELETE_EPHEMERIS = 0x00000001;
++    private static final int GPS_DELETE_ALMANAC = 0x00000002;
++    private static final int GPS_DELETE_POSITION = 0x00000004;
++    private static final int GPS_DELETE_TIME = 0x00000008;
++    private static final int GPS_DELETE_IONO = 0x00000010;
++    private static final int GPS_DELETE_UTC = 0x00000020;
++    private static final int GPS_DELETE_HEALTH = 0x00000040;
++    private static final int GPS_DELETE_SVDIR = 0x00000080;
++    private static final int GPS_DELETE_SVSTEER = 0x00000100;
++    private static final int GPS_DELETE_SADATA = 0x00000200;
++    private static final int GPS_DELETE_RTI = 0x00000400;
++    private static final int GPS_DELETE_CELLDB_INFO = 0x00000800;
++    private static final int GPS_DELETE_ALL = 0xFFFFFFFF;
+ 
+     // The GPS_CAPABILITY_* flags must match the values in gps.h
+     private static final int GPS_CAPABILITY_SCHEDULING = 0x0000001;
+-- 
+2.7.4
+

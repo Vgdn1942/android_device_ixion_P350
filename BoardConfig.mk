@@ -108,7 +108,7 @@ COMMON_GLOBAL_CPPFLAGS += -DMTK_HARDWARE
 BOARD_USES_CYANOGEN_HARDWARE := true
 BOARD_HARDWARE_CLASS := $(LOCAL_PATH)/cmhw
 # Tap to Wake
-TARGET_TAP_TO_WAKE_NODE := "/sys/class/tpd_gesture/gesture_mode"
+#TARGET_TAP_TO_WAKE_NODE := "/sys/class/tpd_gesture/gesture_mode"
 
 BOARD_CONNECTIVITY_VENDOR := MediaTek
 BOARD_CONNECTIVITY_MODULE := conn_soc
@@ -134,8 +134,8 @@ BOARD_BLUETOOTH_DOES_NOT_USE_RFKILL := true
 BOARD_BLUETOOTH_BDROID_BUILDCFG_INCLUDE_DIR := $(LOCAL_PATH)/bluetooth
 
 # Power and native tap-to-wake
-#TARGET_POWERHAL_VARIANT := mtk-xen0n
-#TARGET_POWER_SET_FEATURE_LIB := power-feature-xen0n
+TARGET_POWERHAL_VARIANT := mtk-xen0n
+TARGET_POWER_SET_FEATURE_LIB := power-feature-mt6580
 
 # system.prop
 TARGET_SYSTEM_PROP := $(LOCAL_PATH)/system.prop

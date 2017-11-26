@@ -55,8 +55,8 @@ PRODUCT_PACKAGES += \
     libshowlogo
 
 # Power
-#PRODUCT_PACKAGES += \
-#    power.mt6580 \
+PRODUCT_PACKAGES += \
+    power.mt6580
 
 # Lights
 PRODUCT_PACKAGES += \

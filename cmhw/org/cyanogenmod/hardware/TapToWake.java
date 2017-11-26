@@ -39,9 +39,7 @@ public class TapToWake {
      * @return boolean Supported devices must return always true
      */
     public static boolean isSupported() {
-        File patch = new File(CONTROL_PATH);
-        return patch.exists();
-        //return true;
+        return true;
     }
 
     /**

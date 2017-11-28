@@ -1,0 +1,17 @@
+# K - 0x25 - 37 - double tap
+# O - 0x18 - 24 - gesture O
+# W - 0x11 - 17 - gesture W
+# C - 0x2e - 46 - gesture C
+# M - 0x32 - 50 - gesture M
+# U - 0x16 - 22 - up swipe
+# D - 0x20 - 32 - down swipe
+# R - 0x13 - 19 - right swipe
+# L - 0x26 - 38 - left swipe
+
+key 37   WAKEUP VIRTUAL
+key 24   CAMERA WAKE_DROPPED
+key 32   MEDIA_PLAY_PAUSE WAKE
+key 22   MEDIA_STOP WAKE
+key 19   MEDIA_NEXT WAKE
+key 38   MEDIA_PREVIOUS WAKE
+

@@ -144,8 +144,7 @@ PRODUCT_PACKAGES += \
 
 # MiraVision
 PRODUCT_PACKAGES += \
-    MiraVision \
-    libjni_pq
+    MiraVision
 
 # EngineerMode
 PRODUCT_PACKAGES += \

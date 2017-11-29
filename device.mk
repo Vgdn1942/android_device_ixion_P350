@@ -64,7 +64,6 @@ PRODUCT_PACKAGES += \
 
 # Camera
 PRODUCT_PACKAGES += \
-    Snap \
     libnvramagentclient \
     libcamera_client_mtk
 

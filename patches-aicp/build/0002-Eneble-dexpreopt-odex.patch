@@ -1,0 +1,35 @@
+From f0cad23fe3ff64cd7ee9397132f2c6b08c1d4808 Mon Sep 17 00:00:00 2001
+From: vgdn1942 <vgdn1942@gmail.com>
+Date: Thu, 30 Nov 2017 16:42:23 +0300
+Subject: [PATCH] Eneble dexpreopt (odex)
+
+Change-Id: Idc9e322d6f5f89106c156dc3c228d5b659b55f53
+---
+ core/main.mk | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/core/main.mk b/core/main.mk
+index c87f27e..3b46308 100644
+--- a/core/main.mk
++++ b/core/main.mk
+@@ -285,7 +285,7 @@ endif
+ 
+ user_variant := $(filter user userdebug,$(TARGET_BUILD_VARIANT))
+ enable_target_debugging := true
+-WITH_DEXPREOPT := false
++#WITH_DEXPREOPT := false
+ tags_to_install :=
+ ifneq (,$(user_variant))
+   # Target is secure in user builds.
+@@ -340,7 +340,7 @@ endif # !enable_target_debugging
+ 
+ ifeq ($(TARGET_BUILD_VARIANT),eng)
+ tags_to_install := debug eng
+-WITH_DEXPREOPT := false
++#WITH_DEXPREOPT := false
+ ifneq ($(filter ro.setupwizard.mode=ENABLED, $(call collapse-pairs, $(ADDITIONAL_BUILD_PROPERTIES))),)
+   # Don't require the setup wizard on eng builds
+   ADDITIONAL_BUILD_PROPERTIES := $(filter-out ro.setupwizard.mode=%,\
+-- 
+2.7.4
+

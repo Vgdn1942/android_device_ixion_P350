@@ -24,9 +24,9 @@ LOCAL_MODULE := libdrmmtkwhitelist
 
 LOCAL_C_INCLUDES += \
     $(TOP)/frameworks/native/include \
-    $(LOCAL_PATH)/../include \
+    $(TOP)/frameworks/av/include \
+    $(TOP)/frameworks/av/drm \
     bionic
-#    $(MTK_PATH_SOURCE)/frameworks/av/include \
 
 LOCAL_SHARED_LIBRARIES := \
     libutils \
@@ -36,7 +36,6 @@ LOCAL_PRELINK_MODULE := false
 
 LOCAL_MODULE_TAGS := optional
 
+LOCAL_EXPORT_C_INCLUDE_DIRS += $(TOP)/frameworks/av/drm
 LOCAL_EXPORT_C_INCLUDE_DIRS += $(LOCAL_PATH)/../include
-LOCAL_EXPORT_C_INCLUDE_DIRS += $(LOCAL_PATH)/../include/drm
-
 include $(BUILD_SHARED_LIBRARY)

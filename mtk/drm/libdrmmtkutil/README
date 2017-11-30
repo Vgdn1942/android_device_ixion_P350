@@ -1,10 +1,10 @@
-library of Drm features, including cta util, widevine util, oma drm util.
+Library of Drm features, including cta util, widevine util, oma drm util.
 
 This library is pre-built by MediaTek internal.
 
 WHAT IT DOES?
 =============
-libdrmmtkutil.so will be used by drm, it contains drm related pre- and post-processing modules.
+libdrmmtkutil.a will be used by drm, it contains drm related pre- and post-processing modules.
 Without them, drm feature will not work.
 
 HOW IT WAS BUILT?
@@ -30,4 +30,4 @@ All source/dependency modules of this module are already put in
 
 HOW TO USE IT?
 ==============
-libdrmmtkutil.so provides basic function of drm.
+libdrmmtkutil.a provides basic function of drm, it is built static library, used by libdrmmtkutil.so.

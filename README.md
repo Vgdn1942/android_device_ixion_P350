@@ -1,4 +1,4 @@
-# LineageOS 13.0/AICP 11.0 device tree for DEXP Ixion P350
+# LineageOS 13.0 device tree for DEXP Ixion P350
 
 DEXP Ixion P350
 ==============
@@ -27,16 +27,19 @@ Working:
 - Mobile data
 - Sensors
 - Lights
-- Camera (only photos)
+- Camera (some cameras do not record video)
 - USB connection (ADB/MTP/PTP)
 - SD-Card
 - GPS
 - Wi-Fi tethering
 - Second SIM
 - Poweroff charge
+- Themes
+- YouTube 720p
 
 Not working/Bugs:
-- Video recording
+- Some cameras do not record video
+- At reboot the error "System" (does not affect work)
 
 # Acknowledgements
 
@@ -45,8 +48,9 @@ Not working/Bugs:
 * DerTeufel
 * ferhung
 * fire855
+* mishkannn (4pda, Fix YouTube 720p)
 * nofearnohappy (4pda, fix USSD)
 * varunchitre15
 * xen0n
 * Zormax (4pda, add EngineerMode)
-* others I might have forgotten to include
+* and others I might have forgotten to include

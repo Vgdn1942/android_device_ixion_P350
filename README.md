@@ -48,7 +48,7 @@ Not working/Bugs:
 * DerTeufel
 * ferhung
 * fire855
-* mishkannn (4pda, Fix YouTube 720p)
+* mishkannn (4pda, fix YouTube 720p)
 * nofearnohappy (4pda, fix USSD)
 * varunchitre15
 * xen0n

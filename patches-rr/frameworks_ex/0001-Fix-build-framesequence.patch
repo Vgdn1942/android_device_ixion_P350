@@ -1,0 +1,35 @@
+From 08070d9d74e01f916e3f4df3ef52d9b93c25ada8 Mon Sep 17 00:00:00 2001
+From: vgdn1942 <vgdn1942@gmail.com>
+Date: Sat, 4 Nov 2017 12:35:35 +0300
+Subject: [PATCH] Fix build framesequence
+
+Change-Id: I8663ed9a969dd1609acb553d1f1e7c64462627cd
+---
+ framesequence/jni/FrameSequence_gif.cpp | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/framesequence/jni/FrameSequence_gif.cpp b/framesequence/jni/FrameSequence_gif.cpp
+index 853f70f..e658425 100644
+--- a/framesequence/jni/FrameSequence_gif.cpp
++++ b/framesequence/jni/FrameSequence_gif.cpp
+@@ -63,7 +63,7 @@ FrameSequence_gif::FrameSequence_gif(Stream* stream) :
+ 
+     if (DGifSlurp(mGif) != GIF_OK) {
+         ALOGW("Gif slurp failed");
+-        DGifCloseFile(mGif, NULL);
++        DGifCloseFile(mGif);
+         mGif = NULL;
+         return;
+     }
+@@ -132,7 +132,7 @@ FrameSequence_gif::FrameSequence_gif(Stream* stream) :
+ 
+ FrameSequence_gif::~FrameSequence_gif() {
+     if (mGif) {
+-        DGifCloseFile(mGif, NULL);
++        DGifCloseFile(mGif);
+     }
+     delete[] mPreservedFrames;
+     delete[] mRestoringFrames;
+-- 
+2.7.4
+

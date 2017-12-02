@@ -174,7 +174,6 @@ PRODUCT_COPY_FILES += \
 
 # Ramdisk
 PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/root/enableswap.sh:root/enableswap.sh \
     $(LOCAL_PATH)/root/fstab.mt6580:root/fstab.mt6580 \
     $(LOCAL_PATH)/root/twrp.fstab:recovery/root/etc/twrp.fstab \
     $(LOCAL_PATH)/root/init.mt6580.rc:root/init.mt6580.rc \

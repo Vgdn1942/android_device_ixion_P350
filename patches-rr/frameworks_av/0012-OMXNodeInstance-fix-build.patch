@@ -1,0 +1,41 @@
+From ba5cafc0b621553ffbe8760883bd558b24f44e5c Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Fri, 19 Aug 2016 16:33:05 +0800
+Subject: [PATCH] OMXNodeInstance: fix build
+
+Change-Id: I6bda4f5a285864973582885fc204e7f2015f9874
+---
+ media/libstagefright/include/OMXNodeInstance.h | 3 +++
+ media/libstagefright/omx/OMXNodeInstance.cpp   | 5 +++++
+ 2 files changed, 8 insertions(+)
+
+diff --git a/media/libstagefright/include/OMXNodeInstance.h b/media/libstagefright/include/OMXNodeInstance.h
+index ba2c3479ed2..d23ff6a18dc 100644
+--- a/media/libstagefright/include/OMXNodeInstance.h
++++ b/media/libstagefright/include/OMXNodeInstance.h
+@@ -191,6 +191,9 @@ struct OMXNodeInstance {
+     // For buffer id management
+     OMX::buffer_id makeBufferID(OMX_BUFFERHEADERTYPE *bufferHeader);
+     OMX_BUFFERHEADERTYPE *findBufferHeader(OMX::buffer_id buffer, OMX_U32 portIndex);
++#ifdef USE_LEGACY_MTK_AV_BLOB
++    OMX_BUFFERHEADERTYPE *findBufferHeader(OMX::buffer_id buffer);
++#endif
+     OMX::buffer_id findBufferID(OMX_BUFFERHEADERTYPE *bufferHeader);
+     void invalidateBufferID(OMX::buffer_id buffer);
+ 
+diff --git a/media/libstagefright/omx/OMXNodeInstance.cpp b/media/libstagefright/omx/OMXNodeInstance.cpp
+index f18a5aab92b..a69db50f6fa 100644
+--- a/media/libstagefright/omx/OMXNodeInstance.cpp
++++ b/media/libstagefright/omx/OMXNodeInstance.cpp
+@@ -1708,6 +1708,11 @@ OMX::buffer_id OMXNodeInstance::makeBufferID(OMX_BUFFERHEADERTYPE *bufferHeader)
+     return (OMX::buffer_id)bufferHeader;
+ }
+ 
++OMX_BUFFERHEADERTYPE *OMXNodeInstance::findBufferHeader(
++        OMX::buffer_id buffer, OMX_U32 portIndex __unused) {
++    return findBufferHeader(buffer);
++}
++
+ OMX_BUFFERHEADERTYPE *OMXNodeInstance::findBufferHeader(OMX::buffer_id buffer) {
+     return (OMX_BUFFERHEADERTYPE *)buffer;
+ }

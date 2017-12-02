@@ -1,0 +1,111 @@
+From 20f3c633c093b093944fb7adff8997d664abce34 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Thu, 24 Mar 2016 19:51:30 +0800
+Subject: [PATCH] CameraService: guard against nullable ANativeWindow pointers
+
+Change-Id: Ia6d6ef00040237ecc6b0eb079d254bcf260c0e65
+---
+ .../device1/CameraHardwareInterface.h              | 36 ++++++++++++++++++++++
+ 1 file changed, 36 insertions(+)
+
+diff --git a/services/camera/libcameraservice/device1/CameraHardwareInterface.h b/services/camera/libcameraservice/device1/CameraHardwareInterface.h
+index 35947a92f06..7a61c56c261 100644
+--- a/services/camera/libcameraservice/device1/CameraHardwareInterface.h
++++ b/services/camera/libcameraservice/device1/CameraHardwareInterface.h
+@@ -627,6 +627,10 @@ class CameraHardwareInterface : public virtual RefBase {
+                       buffer_handle_t* buffer)
+     {
+         ANativeWindow *a = anw(w);
++        if (!a) {
++            ALOGE("%s: ANativeWindow is NULL!", __FUNCTION__);
++            return 0;
++        }
+         return a->queueBuffer(a,
+                   container_of(buffer, ANativeWindowBuffer, handle), -1);
+     }
+@@ -635,6 +639,10 @@ class CameraHardwareInterface : public virtual RefBase {
+                       buffer_handle_t* buffer)
+     {
+         ANativeWindow *a = anw(w);
++        if (!a) {
++            ALOGE("%s: ANativeWindow is NULL!", __FUNCTION__);
++            return 0;
++        }
+         return a->cancelBuffer(a,
+                   container_of(buffer, ANativeWindowBuffer, handle), -1);
+     }
+@@ -642,6 +650,10 @@ class CameraHardwareInterface : public virtual RefBase {
+     static int __set_buffer_count(struct preview_stream_ops* w, int count)
+     {
+         ANativeWindow *a = anw(w);
++        if (!a) {
++            ALOGE("%s: ANativeWindow is NULL!", __FUNCTION__);
++            return 0;
++        }
+         return native_window_set_buffer_count(a, count);
+     }
+ 
+@@ -650,6 +662,10 @@ class CameraHardwareInterface : public virtual RefBase {
+     {
+         int rc;
+         ANativeWindow *a = anw(w);
++        if (!a) {
++            ALOGE("%s: ANativeWindow is NULL!", __FUNCTION__);
++            return 0;
++        }
+ 
+         rc = native_window_set_buffers_dimensions(a, width, height);
+         if (!rc) {
+@@ -662,6 +678,10 @@ class CameraHardwareInterface : public virtual RefBase {
+                       int left, int top, int right, int bottom)
+     {
+         ANativeWindow *a = anw(w);
++        if (!a) {
++            ALOGE("%s: ANativeWindow is NULL!", __FUNCTION__);
++            return 0;
++        }
+         android_native_rect_t crop;
+         crop.left = left;
+         crop.top = top;
+@@ -673,18 +693,30 @@ class CameraHardwareInterface : public virtual RefBase {
+     static int __set_timestamp(struct preview_stream_ops *w,
+                                int64_t timestamp) {
+         ANativeWindow *a = anw(w);
++        if (!a) {
++            ALOGE("%s: ANativeWindow is NULL!", __FUNCTION__);
++            return 0;
++        }
+         return native_window_set_buffers_timestamp(a, timestamp);
+     }
+ 
+     static int __set_usage(struct preview_stream_ops* w, int usage)
+     {
+         ANativeWindow *a = anw(w);
++        if (!a) {
++            ALOGE("%s: ANativeWindow is NULL!", __FUNCTION__);
++            return 0;
++        }
+         return native_window_set_usage(a, usage);
+     }
+ 
+     static int __set_swap_interval(struct preview_stream_ops *w, int interval)
+     {
+         ANativeWindow *a = anw(w);
++        if (!a) {
++            ALOGE("%s: ANativeWindow is NULL!", __FUNCTION__);
++            return 0;
++        }
+         return a->setSwapInterval(a, interval);
+     }
+ 
+@@ -693,6 +725,10 @@ class CameraHardwareInterface : public virtual RefBase {
+                       int *count)
+     {
+         ANativeWindow *a = anw(w);
++        if (!a) {
++            ALOGE("%s: ANativeWindow is NULL!", __FUNCTION__);
++            return 0;
++        }
+         return a->query(a, NATIVE_WINDOW_MIN_UNDEQUEUED_BUFFERS, count);
+     }
+ 

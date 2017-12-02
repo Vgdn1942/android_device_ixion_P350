@@ -1,0 +1,44 @@
+From 33279eaea917964d8e3176d59ab65929f852a858 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Sun, 27 Mar 2016 18:08:57 +0800
+Subject: [PATCH] UiccController: add getIccApplicationChannel for MTK
+
+Change-Id: I1d4a1ff93b96f142489b9804013dcf417ffdf76f
+---
+ .../internal/telephony/uicc/UiccController.java    | 23 ++++++++++++++++++++++
+ 1 file changed, 23 insertions(+)
+
+diff --git a/src/java/com/android/internal/telephony/uicc/UiccController.java b/src/java/com/android/internal/telephony/uicc/UiccController.java
+index b457ebc10d..14d549d4af 100644
+--- a/src/java/com/android/internal/telephony/uicc/UiccController.java
++++ b/src/java/com/android/internal/telephony/uicc/UiccController.java
+@@ -523,6 +523,29 @@ public void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
+     private static final String OPERATOR_OP09 = "OP09";
+     Phone[] sProxyPhones = null;
+ 
++    // MTK-START
++    public int getIccApplicationChannel(int slotId, int family) {
++        synchronized (mLock) {
++            int index = 0;
++            switch (family) {
++                case UiccController.APP_FAM_IMS:
++                    // FIXME: error handling for invaild slotId?
++                    index = mIsimSessionId[slotId];
++                    // Workaround: to avoid get sim status has open isim channel but java layer
++                    // haven't update channel id
++                    if (index == 0) {
++                        index = (getUiccCardApplication(slotId, family) != null) ? 1 : 0;
++                    }
++                    break;
++                default:
++                    if (DBG) log("unknown application");
++                    break;
++            }
++            return index;
++        }
++    }
++    // MTK-END
++
+     //Notifies when card status changes
+     public void registerForIccRecovery(Handler h, int what, Object obj) {
+         synchronized (mLock) {

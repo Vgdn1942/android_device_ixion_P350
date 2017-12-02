@@ -1,0 +1,74 @@
+From f177664a4b778ca508f196c12101b86c92c193fc Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Sat, 2 Jul 2016 00:28:41 +0800
+Subject: [PATCH] IOMX: fix unnoticed ABI breakage inside the framework
+
+Change-Id: If57bb81080d72f07cb129edaa9eebfa535124a31
+---
+ media/libmedia/IOMX.cpp | 20 ++++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+
+diff --git a/media/libmedia/IOMX.cpp b/media/libmedia/IOMX.cpp
+index 9e044a82b57..6fcd50d06f4 100644
+--- a/media/libmedia/IOMX.cpp
++++ b/media/libmedia/IOMX.cpp
+@@ -147,7 +147,11 @@ class BpOMX : public BpInterface<IOMX> {
+         data.writeInterfaceToken(IOMX::getInterfaceDescriptor());
+         data.writeInt32((int32_t)node);
+         data.writeInt32(index);
++#ifdef USE_LEGACY_MTK_AV_BLOB
++        data.writeInt32(size);
++#else
+         data.writeInt64(size);
++#endif
+         data.write(params, size);
+         remote()->transact(GET_PARAMETER, data, &reply);
+ 
+@@ -168,7 +172,11 @@ class BpOMX : public BpInterface<IOMX> {
+         data.writeInterfaceToken(IOMX::getInterfaceDescriptor());
+         data.writeInt32((int32_t)node);
+         data.writeInt32(index);
++#ifdef USE_LEGACY_MTK_AV_BLOB
++        data.writeInt32(size);
++#else
+         data.writeInt64(size);
++#endif
+         data.write(params, size);
+         remote()->transact(SET_PARAMETER, data, &reply);
+ 
+@@ -182,7 +190,11 @@ class BpOMX : public BpInterface<IOMX> {
+         data.writeInterfaceToken(IOMX::getInterfaceDescriptor());
+         data.writeInt32((int32_t)node);
+         data.writeInt32(index);
++#ifdef USE_LEGACY_MTK_AV_BLOB
++        data.writeInt32(size);
++#else
+         data.writeInt64(size);
++#endif
+         data.write(params, size);
+         remote()->transact(GET_CONFIG, data, &reply);
+ 
+@@ -203,7 +215,11 @@ class BpOMX : public BpInterface<IOMX> {
+         data.writeInterfaceToken(IOMX::getInterfaceDescriptor());
+         data.writeInt32((int32_t)node);
+         data.writeInt32(index);
++#ifdef USE_LEGACY_MTK_AV_BLOB
++        data.writeInt32(size);
++#else
+         data.writeInt64(size);
++#endif
+         data.write(params, size);
+         remote()->transact(SET_CONFIG, data, &reply);
+ 
+@@ -583,7 +599,11 @@ class BpOMX : public BpInterface<IOMX> {
+         data.writeInterfaceToken(IOMX::getInterfaceDescriptor());
+         data.writeInt32((int32_t)node);
+         data.writeInt32(port_index);
++#ifdef USE_LEGACY_MTK_AV_BLOB
++        data.writeInt32(size);
++#else
+         data.writeInt64(size);
++#endif
+         data.write(optionData, size);
+         data.writeInt32(type);
+         remote()->transact(SET_INTERNAL_OPTION, data, &reply);

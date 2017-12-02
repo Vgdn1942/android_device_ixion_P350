@@ -1,0 +1,25 @@
+From a891c40dbb597a748531d86a6308cbc2235cca98 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Thu, 24 Mar 2016 01:55:24 +0800
+Subject: [PATCH] init: double the number of available environment variables
+
+Change-Id: Ie831be3e0ed907ef77d69cf47572088666bddf78
+---
+ init/init.cpp | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/init/init.cpp b/init/init.cpp
+index 2c243f0621..5eb44ee87f 100644
+--- a/init/init.cpp
++++ b/init/init.cpp
+@@ -85,7 +85,9 @@ static int have_console;
+ static char console_name[PROP_VALUE_MAX] = "/dev/console";
+ static time_t process_needs_restart;
+ 
+-static const char *ENV[32];
++// xen0n: some MTK services (e.g. ril-daemon-mtk) require very large number
++// of sockets, which can't be contained in 32 entries minus other variables.
++static const char *ENV[64];
+ 
+ bool waiting_for_exec = false;
+ 

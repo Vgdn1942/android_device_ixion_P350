@@ -1,0 +1,1194 @@
+From d765bc91f177eaa76cf021ae059f281d8071502e Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Sun, 27 Mar 2016 16:08:02 +0800
+Subject: [PATCH] mtk: add com.mediatek.gba package
+
+Change-Id: I3aa8982a555f3851bf5bec201ca0a2299ffbed38
+---
+ Android.mk                                         |   1 +
+ core/java/com/mediatek/gba/GbaBaseCredential.java  | 182 ++++++++
+ core/java/com/mediatek/gba/GbaCipherSuite.java     | 465 +++++++++++++++++++++
+ .../com/mediatek/gba/GbaHttpUrlCredential.java     |  86 ++++
+ core/java/com/mediatek/gba/GbaManager.java         | 201 +++++++++
+ core/java/com/mediatek/gba/IGbaService.aidl        |  17 +
+ core/java/com/mediatek/gba/NafSessionKey.aidl      |   3 +
+ core/java/com/mediatek/gba/NafSessionKey.java      | 157 +++++++
+ 8 files changed, 1112 insertions(+)
+ create mode 100644 core/java/com/mediatek/gba/GbaBaseCredential.java
+ create mode 100644 core/java/com/mediatek/gba/GbaCipherSuite.java
+ create mode 100644 core/java/com/mediatek/gba/GbaHttpUrlCredential.java
+ create mode 100644 core/java/com/mediatek/gba/GbaManager.java
+ create mode 100644 core/java/com/mediatek/gba/IGbaService.aidl
+ create mode 100644 core/java/com/mediatek/gba/NafSessionKey.aidl
+ create mode 100644 core/java/com/mediatek/gba/NafSessionKey.java
+
+diff --git a/Android.mk b/Android.mk
+index 47ac718a7015c..c8c01db995f24 100644
+--- a/Android.mk
++++ b/Android.mk
+@@ -421,6 +421,7 @@ LOCAL_SRC_FILES += \
+ 	packages/services/Proxy/com/android/net/IProxyCallback.aidl \
+ 	packages/services/Proxy/com/android/net/IProxyPortListener.aidl \
+ 	../../vendor/cmsdk/sdk/src/java/org/cyanogenmod/internal/themes/IIconCacheManager.aidl \
++    core/java/com/mediatek/gba/IGbaService.aidl \
+     telephony/java/com/mediatek/internal/telephony/ITelephonyEx.aidl \
+     telephony/java/com/mediatek/internal/telephony/gsm/IGsmVideoCallCallback.aidl \
+     telephony/java/com/mediatek/internal/telephony/gsm/IGsmVideoCallProvider.aidl \
+diff --git a/core/java/com/mediatek/gba/GbaBaseCredential.java b/core/java/com/mediatek/gba/GbaBaseCredential.java
+new file mode 100644
+index 0000000000000..36464613fc924
+--- /dev/null
++++ b/core/java/com/mediatek/gba/GbaBaseCredential.java
+@@ -0,0 +1,182 @@
++package com.mediatek.gba;
++
++import android.content.Context;
++import android.net.Network;
++import android.os.IBinder;
++import android.os.RemoteException;
++import android.os.ServiceManager;
++import android.telephony.SubscriptionManager;
++import android.util.Log;
++
++/**
++ * HTTP Authenticator for GBA procedure.
++ * It is based class.
++ *
++ * @hide
++ */
++public abstract class GbaBaseCredential {
++    private final static String TAG = "GbaBaseCredential";
++
++    static final byte[] DEFAULT_UA_SECURITY_PROTOCOL_ID_HTTP =
++        new byte[] {(byte) 0x01, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x02};
++    static final byte[] DEFAULT_UA_SECURITY_PROTOCOL_ID_TLS =
++        new byte[] {(byte) 0x01, (byte) 0x00, (byte) 0x01, (byte) 0x00, (byte) 0x2F};
++    final protected static char[] HEX_ARRAY = "0123456789abcdef".toCharArray();
++
++    protected static Context sContext;
++    protected static Network sNetwork;
++    protected static int sSubId;
++    protected static boolean sIsTlsEnabled;
++    protected static boolean sCachedSessionKeyUsed;
++    protected static String sPasswd;
++    protected static String sNafAddress;
++    protected static IGbaService sService;
++
++    /**
++      * Empty construciton function.
++      *
++      */
++    GbaBaseCredential() {
++
++    }
++
++    /**
++      * Construciton function with initalization parameters.
++      *
++      */
++    GbaBaseCredential(Context context, String nafAddress, int subId) {
++        super();
++        sContext = context;
++        sSubId = subId;
++
++        if (nafAddress.charAt(nafAddress.length() - 1) == '/') {
++            nafAddress = nafAddress.substring(0, nafAddress.length() - 1);
++        }
++
++        sIsTlsEnabled = true;
++        sCachedSessionKeyUsed = false;
++        sNafAddress = nafAddress.toLowerCase();
++
++        if (sNafAddress.indexOf("http://") != -1) {
++            sNafAddress = nafAddress.substring(7);
++            sIsTlsEnabled = false;
++        } else if (sNafAddress.indexOf("https://") != -1) {
++            sNafAddress = nafAddress.substring(8);
++            sIsTlsEnabled = true;
++        }
++
++        Log.d(TAG, "nafAddress:" + sNafAddress);
++    }
++
++    /**
++      * Tell GbaCredential the connection is TLS or not.
++      *
++      * @param tlsEnabled indicate the connection is over TLS or not.
++      *
++      */
++    public void setTlsEnabled(boolean tlsEnabled) {
++        sIsTlsEnabled = tlsEnabled;
++    }
++
++    /**
++      * Configure which subscription to use in GBA procedure.
++      *
++      * @param subId indicate the subscription id.
++      *
++      */
++    public void setSubId(int subId) {
++        sSubId = subId;
++    }
++
++    /**
++      * Configure dedicated network.
++      *
++      * @param network network that will be used to establish socket connection.
++      *
++      */
++    public void setNetwork(Network network) {
++        if (network != null) {
++            Log.i(TAG, "GBA dedicated network netid:" + network);
++            sNetwork = network;
++        }
++    }
++
++    /**
++      * Get session key for NAF server by GBA procedure.
++      *
++      @return NafSessionKey: the session key of NAF server.
++      */
++    public static NafSessionKey getNafSessionKey() {
++        NafSessionKey nafSessionKey = null;
++
++        try {
++            IBinder b = ServiceManager.getService("GbaService");
++
++            if (b == null) {
++                Log.i("debug", "The binder is null");
++                return null;
++            }
++
++            sService = IGbaService.Stub.asInterface(b);
++        } catch (NullPointerException e) {
++            e.printStackTrace();
++        }
++
++        try {
++            byte[] uaId = DEFAULT_UA_SECURITY_PROTOCOL_ID_TLS;
++
++            if (sIsTlsEnabled) {
++                String gbaStr = System.getProperty("gba.ciper.suite", "");
++
++                if (gbaStr.length() > 0) {
++                    GbaCipherSuite cipherSuite = GbaCipherSuite.getByName(gbaStr);
++
++                    if (cipherSuite != null) {
++                        byte[] cipherSuiteCode = cipherSuite.getCode();
++                        uaId[3] = cipherSuiteCode[0];
++                        uaId[4] = cipherSuiteCode[1];
++                    }
++                }
++            } else {
++                uaId = DEFAULT_UA_SECURITY_PROTOCOL_ID_HTTP;
++            }
++
++            if (sNetwork != null) {
++                sService.setNetwork(sNetwork);
++            }
++
++            String realm = System.getProperty("digest.realm", "");
++            Log.i(TAG, "realm:" + realm);
++            if (realm.length() > 0) {
++                String[] segments = realm.split(";");
++                sNafAddress = segments[0].substring(segments[0].indexOf("@") + 1);
++                Log.i(TAG, "NAF FQDN:" + sNafAddress);
++            } else {
++                return null;
++            }
++
++            if (SubscriptionManager.INVALID_SUBSCRIPTION_ID == sSubId) {
++                nafSessionKey = sService.runGbaAuthentication(sNafAddress,
++                                uaId, sCachedSessionKeyUsed);
++            } else {
++                nafSessionKey = sService.runGbaAuthenticationForSubscriber(sNafAddress,
++                                uaId, sCachedSessionKeyUsed, sSubId);
++            }
++
++            if (nafSessionKey != null && (nafSessionKey.getException() != null) &&
++                    (nafSessionKey.getException() instanceof IllegalStateException)) {
++                String msg = ((IllegalStateException) nafSessionKey.getException())
++                        .getMessage();
++
++                if ("HTTP 403 Forbidden".equals(msg)) {
++                    Log.i(TAG, "GBA hit 403");
++                    System.setProperty("gba.auth", "403");
++                }
++            }
++        } catch (RemoteException re) {
++            re.printStackTrace();
++        }
++
++        return nafSessionKey;
++    }
++}
+\ No newline at end of file
+diff --git a/core/java/com/mediatek/gba/GbaCipherSuite.java b/core/java/com/mediatek/gba/GbaCipherSuite.java
+new file mode 100644
+index 0000000000000..6be8854a97384
+--- /dev/null
++++ b/core/java/com/mediatek/gba/GbaCipherSuite.java
+@@ -0,0 +1,465 @@
++package com.mediatek.gba;
++
++import java.util.Hashtable;
++
++/**
++* Represents Cipher Suite as defined in TLS 1.0 spec.,
++* A.5. The CipherSuite;
++* C. CipherSuite definitions.
++* @see <a href="http://www.ietf.org/rfc/rfc2246.txt">TLS 1.0 spec.</a>
++ * @hide
++*
++*/
++class GbaCipherSuite {
++    // cipher suite code
++    private final byte[] mCipherSuiteCode;
++
++    // cipher suite name
++    private final String mCipherSuiteName;
++
++    // hash for quick access to cipher suite by name
++    private static final Hashtable<String, GbaCipherSuite> mSuiteByName;
++
++    /**
++    * TLS cipher suite codes.
++    */
++    static final byte[] CODE_SSL_NULL_WITH_NULL_NULL = { 0x00, 0x00 };
++    static final byte[] CODE_SSL_RSA_WITH_NULL_MD5 = { 0x00, 0x01 };
++    static final byte[] CODE_SSL_RSA_WITH_NULL_SHA = { 0x00, 0x02 };
++    static final byte[] CODE_SSL_RSA_EXPORT_WITH_RC4_40_MD5 = { 0x00, 0x03 };
++    static final byte[] CODE_SSL_RSA_WITH_RC4_128_MD5 = { 0x00, 0x04 };
++    static final byte[] CODE_SSL_RSA_WITH_RC4_128_SHA = { 0x00, 0x05 };
++    static final byte[] CODE_SSL_RSA_EXPORT_WITH_RC2_CBC_40_MD5 = { 0x00, 0x06 };
++    // BEGIN android-removed
++    // static final byte[] CODE_TLS_RSA_WITH_IDEA_CBC_SHA = { 0x00, 0x07 };
++    // END android-removed
++    static final byte[] CODE_SSL_RSA_EXPORT_WITH_DES40_CBC_SHA = { 0x00, 0x08 };
++    static final byte[] CODE_SSL_RSA_WITH_DES_CBC_SHA = { 0x00, 0x09 };
++    static final byte[] CODE_SSL_RSA_WITH_3DES_EDE_CBC_SHA = { 0x00, 0x0A };
++    // BEGIN android-removed
++    // static final byte[] CODE_SSL_DH_DSS_EXPORT_WITH_DES40_CBC_SHA = { 0x00, 0x0B };
++    // static final byte[] CODE_SSL_DH_DSS_WITH_DES_CBC_SHA = { 0x00, 0x0C };
++    // static final byte[] CODE_SSL_DH_DSS_WITH_3DES_EDE_CBC_SHA = { 0x00, 0x0D };
++    // static final byte[] CODE_SSL_DH_RSA_EXPORT_WITH_DES40_CBC_SHA = { 0x00, 0x0E };
++    // static final byte[] CODE_SSL_DH_RSA_WITH_DES_CBC_SHA = { 0x00, 0x0F };
++    // static final byte[] CODE_SSL_DH_RSA_WITH_3DES_EDE_CBC_SHA = { 0x00, 0x10 };
++    // END android-removed
++    static final byte[] CODE_SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA = { 0x00, 0x11 };
++    static final byte[] CODE_SSL_DHE_DSS_WITH_DES_CBC_SHA = { 0x00, 0x12 };
++    static final byte[] CODE_SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA = { 0x00, 0x13 };
++    static final byte[] CODE_SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA = { 0x00, 0x14 };
++    static final byte[] CODE_SSL_DHE_RSA_WITH_DES_CBC_SHA = { 0x00, 0x15 };
++    static final byte[] CODE_SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA = { 0x00, 0x16 };
++    static final byte[] CODE_SSL_DH_anon_EXPORT_WITH_RC4_40_MD5 = { 0x00, 0x17 };
++    static final byte[] CODE_SSL_DH_anon_WITH_RC4_128_MD5 = { 0x00, 0x18 };
++    static final byte[] CODE_SSL_DH_anon_EXPORT_WITH_DES40_CBC_SHA = { 0x00, 0x19 };
++    static final byte[] CODE_SSL_DH_anon_WITH_DES_CBC_SHA = { 0x00, 0x1A };
++    static final byte[] CODE_SSL_DH_anon_WITH_3DES_EDE_CBC_SHA = { 0x00, 0x1B };
++
++    // AES Cipher Suites from RFC 3268 - http://www.ietf.org/rfc/rfc3268.txt
++    static final byte[] CODE_TLS_RSA_WITH_AES_128_CBC_SHA = { 0x00, 0x2F };
++    //static final byte[] CODE_TLS_DH_DSS_WITH_AES_128_CBC_SHA = { 0x00, 0x30 };
++    //static final byte[] CODE_TLS_DH_RSA_WITH_AES_128_CBC_SHA = { 0x00, 0x31 };
++    static final byte[] CODE_TLS_DHE_DSS_WITH_AES_128_CBC_SHA = { 0x00, 0x32 };
++    static final byte[] CODE_TLS_DHE_RSA_WITH_AES_128_CBC_SHA = { 0x00, 0x33 };
++    static final byte[] CODE_TLS_DH_anon_WITH_AES_128_CBC_SHA = { 0x00, 0x34 };
++    static final byte[] CODE_TLS_RSA_WITH_AES_256_CBC_SHA = { 0x00, 0x35 };
++    //static final byte[] CODE_TLS_DH_DSS_WITH_AES_256_CBC_SHA = { 0x00, 0x36 };
++    //static final byte[] CODE_TLS_DH_RSA_WITH_AES_256_CBC_SHA = { 0x00, 0x37 };
++    static final byte[] CODE_TLS_DHE_DSS_WITH_AES_256_CBC_SHA = { 0x00, 0x38 };
++    static final byte[] CODE_TLS_DHE_RSA_WITH_AES_256_CBC_SHA = { 0x00, 0x39 };
++    static final byte[] CODE_TLS_DH_anon_WITH_AES_256_CBC_SHA = { 0x00, 0x3A };
++
++    // EC Cipher Suites from RFC 4492 - http://www.ietf.org/rfc/rfc4492.txt
++    static final byte[] CODE_TLS_ECDH_ECDSA_WITH_NULL_SHA = { (byte) 0xc0, 0x01};
++    static final byte[] CODE_TLS_ECDH_ECDSA_WITH_RC4_128_SHA = { (byte) 0xc0, 0x02};
++    static final byte[] CODE_TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA = { (byte) 0xc0, 0x03};
++    static final byte[] CODE_TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA = { (byte) 0xc0, 0x04};
++    static final byte[] CODE_TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA = { (byte) 0xc0, 0x05};
++    static final byte[] CODE_TLS_ECDHE_ECDSA_WITH_NULL_SHA = { (byte) 0xc0, 0x06};
++    static final byte[] CODE_TLS_ECDHE_ECDSA_WITH_RC4_128_SHA = { (byte) 0xc0, 0x07};
++    static final byte[] CODE_TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA = { (byte) 0xc0, 0x08};
++    static final byte[] CODE_TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA = { (byte) 0xc0, 0x09};
++    static final byte[] CODE_TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA = { (byte) 0xc0, 0x0A};
++    static final byte[] CODE_TLS_ECDH_RSA_WITH_NULL_SHA = { (byte) 0xc0, 0x0B};
++    static final byte[] CODE_TLS_ECDH_RSA_WITH_RC4_128_SHA = { (byte) 0xc0, 0x0C};
++    static final byte[] CODE_TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA = { (byte) 0xc0, 0x0D};
++    static final byte[] CODE_TLS_ECDH_RSA_WITH_AES_128_CBC_SHA = { (byte) 0xc0, 0x0E};
++    static final byte[] CODE_TLS_ECDH_RSA_WITH_AES_256_CBC_SHA = { (byte) 0xc0, 0x0F};
++    static final byte[] CODE_TLS_ECDHE_RSA_WITH_NULL_SHA = { (byte) 0xc0, 0x10};
++    static final byte[] CODE_TLS_ECDHE_RSA_WITH_RC4_128_SHA = { (byte) 0xc0, 0x11};
++    static final byte[] CODE_TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA = { (byte) 0xc0, 0x12};
++    static final byte[] CODE_TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA = { (byte) 0xc0, 0x13};
++    static final byte[] CODE_TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA = { (byte) 0xc0, 0x14};
++    static final byte[] CODE_TLS_ECDH_anon_WITH_NULL_SHA = { (byte) 0xc0, 0x15};
++    static final byte[] CODE_TLS_ECDH_anon_WITH_RC4_128_SHA = { (byte) 0xc0, 0x16};
++    static final byte[] CODE_TLS_ECDH_anon_WITH_3DES_EDE_CBC_SHA = { (byte) 0xc0, 0x17};
++    static final byte[] CODE_TLS_ECDH_anon_WITH_AES_128_CBC_SHA = { (byte) 0xc0, 0x18};
++    static final byte[] CODE_TLS_ECDH_anon_WITH_AES_256_CBC_SHA = { (byte) 0xc0, 0x19};
++
++    static final  GbaCipherSuite SSL_NULL_WITH_NULL_NULL = new GbaCipherSuite(
++        "SSL_NULL_WITH_NULL_NULL", CODE_SSL_NULL_WITH_NULL_NULL);
++
++    static final  GbaCipherSuite SSL_RSA_WITH_NULL_MD5 = new GbaCipherSuite(
++        "SSL_RSA_WITH_NULL_MD5", CODE_SSL_RSA_WITH_NULL_MD5);
++
++    static final  GbaCipherSuite SSL_RSA_WITH_NULL_SHA = new GbaCipherSuite(
++        "SSL_RSA_WITH_NULL_SHA", CODE_SSL_RSA_WITH_NULL_SHA);
++
++    static final  GbaCipherSuite SSL_RSA_EXPORT_WITH_RC4_40_MD5 = new GbaCipherSuite(
++        "SSL_RSA_EXPORT_WITH_RC4_40_MD5", CODE_SSL_RSA_EXPORT_WITH_RC4_40_MD5);
++
++    static final  GbaCipherSuite SSL_RSA_WITH_RC4_128_MD5 = new GbaCipherSuite(
++        "SSL_RSA_WITH_RC4_128_MD5", CODE_SSL_RSA_WITH_RC4_128_MD5);
++
++    static final  GbaCipherSuite SSL_RSA_WITH_RC4_128_SHA = new GbaCipherSuite(
++        "SSL_RSA_WITH_RC4_128_SHA", CODE_SSL_RSA_WITH_RC4_128_SHA);
++
++    static final  GbaCipherSuite SSL_RSA_EXPORT_WITH_RC2_CBC_40_MD5 = new GbaCipherSuite(
++        "SSL_RSA_EXPORT_WITH_RC2_CBC_40_MD5", CODE_SSL_RSA_EXPORT_WITH_RC2_CBC_40_MD5);
++
++    // BEGIN android-removed
++    // static final  GbaCipherSuite TLS_RSA_WITH_IDEA_CBC_SHA = new GbaCipherSuite(
++    //         "TLS_RSA_WITH_IDEA_CBC_SHA", CODE_TLS_RSA_WITH_IDEA_CBC_SHA);
++    // END android-removed
++
++    static final  GbaCipherSuite SSL_RSA_EXPORT_WITH_DES40_CBC_SHA = new GbaCipherSuite(
++        "SSL_RSA_EXPORT_WITH_DES40_CBC_SHA", CODE_SSL_RSA_EXPORT_WITH_DES40_CBC_SHA);
++
++    static final  GbaCipherSuite SSL_RSA_WITH_DES_CBC_SHA = new GbaCipherSuite(
++        "SSL_RSA_WITH_DES_CBC_SHA", CODE_SSL_RSA_WITH_DES_CBC_SHA);
++
++    static final  GbaCipherSuite SSL_RSA_WITH_3DES_EDE_CBC_SHA = new GbaCipherSuite(
++        "SSL_RSA_WITH_3DES_EDE_CBC_SHA", CODE_SSL_RSA_WITH_3DES_EDE_CBC_SHA);
++
++    // BEGIN android-removed
++    // static final  GbaCipherSuite SSL_DH_DSS_EXPORT_WITH_DES40_CBC_SHA = new GbaCipherSuite(
++    //         "SSL_DH_DSS_EXPORT_WITH_DES40_CBC_SHA", CODE_SSL_DH_DSS_EXPORT_WITH_DES40_CBC_SHA);
++    //
++    // static final  GbaCipherSuite SSL_DH_DSS_WITH_DES_CBC_SHA = new GbaCipherSuite(
++    //         "SSL_DH_DSS_WITH_DES_CBC_SHA", CODE_SSL_DH_DSS_WITH_DES_CBC_SHA);
++    //
++    // static final  GbaCipherSuite SSL_DH_DSS_WITH_3DES_EDE_CBC_SHA = new GbaCipherSuite(
++    //         "SSL_DH_DSS_WITH_3DES_EDE_CBC_SHA", CODE_SSL_DH_DSS_WITH_3DES_EDE_CBC_SHA);
++    //
++    // static final  GbaCipherSuite SSL_DH_RSA_EXPORT_WITH_DES40_CBC_SHA = new GbaCipherSuite(
++    //         "SSL_DH_RSA_EXPORT_WITH_DES40_CBC_SHA", CODE_SSL_DH_RSA_EXPORT_WITH_DES40_CBC_SHA);
++    //
++    // static final  GbaCipherSuite SSL_DH_RSA_WITH_DES_CBC_SHA = new GbaCipherSuite(
++    //         "SSL_DH_RSA_WITH_DES_CBC_SHA", CODE_SSL_DH_RSA_WITH_DES_CBC_SHA);
++    //
++    // static final  GbaCipherSuite SSL_DH_RSA_WITH_3DES_EDE_CBC_SHA = new GbaCipherSuite(
++    //         "SSL_DH_RSA_WITH_3DES_EDE_CBC_SHA", CODE_SSL_DH_RSA_WITH_3DES_EDE_CBC_SHA);
++    // END android-removed
++
++    static final  GbaCipherSuite SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA = new GbaCipherSuite(
++        "SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA", CODE_SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA);
++
++    static final  GbaCipherSuite SSL_DHE_DSS_WITH_DES_CBC_SHA = new GbaCipherSuite(
++        "SSL_DHE_DSS_WITH_DES_CBC_SHA", CODE_SSL_DHE_DSS_WITH_DES_CBC_SHA);
++
++    static final  GbaCipherSuite SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA = new GbaCipherSuite(
++        "SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA", CODE_SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA);
++
++    static final  GbaCipherSuite SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA = new GbaCipherSuite(
++        "SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA", CODE_SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA);
++
++    static final  GbaCipherSuite SSL_DHE_RSA_WITH_DES_CBC_SHA = new GbaCipherSuite(
++        "SSL_DHE_RSA_WITH_DES_CBC_SHA", CODE_SSL_DHE_RSA_WITH_DES_CBC_SHA);
++
++    static final  GbaCipherSuite SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA = new GbaCipherSuite(
++        "SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA", CODE_SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA);
++
++    static final  GbaCipherSuite SSL_DH_anon_EXPORT_WITH_RC4_40_MD5 = new GbaCipherSuite(
++        "SSL_DH_anon_EXPORT_WITH_RC4_40_MD5", CODE_SSL_DH_anon_EXPORT_WITH_RC4_40_MD5);
++
++    static final  GbaCipherSuite SSL_DH_anon_WITH_RC4_128_MD5 = new GbaCipherSuite(
++        "SSL_DH_anon_WITH_RC4_128_MD5", CODE_SSL_DH_anon_WITH_RC4_128_MD5);
++
++    static final  GbaCipherSuite SSL_DH_anon_EXPORT_WITH_DES40_CBC_SHA = new GbaCipherSuite(
++        "SSL_DH_anon_EXPORT_WITH_DES40_CBC_SHA", CODE_SSL_DH_anon_EXPORT_WITH_DES40_CBC_SHA);
++
++    static final  GbaCipherSuite SSL_DH_anon_WITH_DES_CBC_SHA = new GbaCipherSuite(
++        "SSL_DH_anon_WITH_DES_CBC_SHA", CODE_SSL_DH_anon_WITH_DES_CBC_SHA);
++
++    static final  GbaCipherSuite SSL_DH_anon_WITH_3DES_EDE_CBC_SHA = new GbaCipherSuite(
++        "SSL_DH_anon_WITH_3DES_EDE_CBC_SHA", CODE_SSL_DH_anon_WITH_3DES_EDE_CBC_SHA);
++
++    static final  GbaCipherSuite TLS_RSA_WITH_AES_128_CBC_SHA
++    = new GbaCipherSuite("TLS_RSA_WITH_AES_128_CBC_SHA",
++                         CODE_TLS_RSA_WITH_AES_128_CBC_SHA);
++    static final  GbaCipherSuite TLS_DHE_DSS_WITH_AES_128_CBC_SHA
++    = new GbaCipherSuite("TLS_DHE_DSS_WITH_AES_128_CBC_SHA",
++                         CODE_TLS_DHE_DSS_WITH_AES_128_CBC_SHA);
++    static final  GbaCipherSuite TLS_DHE_RSA_WITH_AES_128_CBC_SHA
++    = new GbaCipherSuite("TLS_DHE_RSA_WITH_AES_128_CBC_SHA",
++                         CODE_TLS_DHE_RSA_WITH_AES_128_CBC_SHA);
++    static final  GbaCipherSuite TLS_DH_anon_WITH_AES_128_CBC_SHA
++    = new GbaCipherSuite("TLS_DH_anon_WITH_AES_128_CBC_SHA",
++                         CODE_TLS_DH_anon_WITH_AES_128_CBC_SHA);
++    static final  GbaCipherSuite TLS_RSA_WITH_AES_256_CBC_SHA
++    = new GbaCipherSuite("TLS_RSA_WITH_AES_256_CBC_SHA",
++                         CODE_TLS_RSA_WITH_AES_256_CBC_SHA);
++    static final  GbaCipherSuite TLS_DHE_DSS_WITH_AES_256_CBC_SHA
++    = new GbaCipherSuite("TLS_DHE_DSS_WITH_AES_256_CBC_SHA",
++                         CODE_TLS_DHE_DSS_WITH_AES_256_CBC_SHA);
++    static final  GbaCipherSuite TLS_DHE_RSA_WITH_AES_256_CBC_SHA
++    = new GbaCipherSuite("TLS_DHE_RSA_WITH_AES_256_CBC_SHA",
++                         CODE_TLS_DHE_RSA_WITH_AES_256_CBC_SHA);
++    static final  GbaCipherSuite TLS_DH_anon_WITH_AES_256_CBC_SHA
++    = new GbaCipherSuite("TLS_DH_anon_WITH_AES_256_CBC_SHA",
++                         CODE_TLS_DH_anon_WITH_AES_256_CBC_SHA);
++
++    static final  GbaCipherSuite TLS_ECDH_ECDSA_WITH_NULL_SHA
++    = new GbaCipherSuite("TLS_ECDH_ECDSA_WITH_NULL_SHA",
++                         CODE_TLS_ECDH_ECDSA_WITH_NULL_SHA);
++    static final  GbaCipherSuite TLS_ECDH_ECDSA_WITH_RC4_128_SHA
++    = new GbaCipherSuite("TLS_ECDH_ECDSA_WITH_RC4_128_SHA",
++                         CODE_TLS_ECDH_ECDSA_WITH_RC4_128_SHA);
++    static final  GbaCipherSuite TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA
++    = new GbaCipherSuite("TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA",
++                         CODE_TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA);
++    static final  GbaCipherSuite TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA
++    = new GbaCipherSuite("TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA",
++                         CODE_TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA);
++    static final  GbaCipherSuite TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA
++    = new GbaCipherSuite("TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA",
++                         CODE_TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA);
++    static final  GbaCipherSuite TLS_ECDHE_ECDSA_WITH_NULL_SHA
++    = new GbaCipherSuite("TLS_ECDHE_ECDSA_WITH_NULL_SHA",
++                         CODE_TLS_ECDHE_ECDSA_WITH_NULL_SHA);
++    static final  GbaCipherSuite TLS_ECDHE_ECDSA_WITH_RC4_128_SHA
++    = new GbaCipherSuite("TLS_ECDHE_ECDSA_WITH_RC4_128_SHA",
++                         CODE_TLS_ECDHE_ECDSA_WITH_RC4_128_SHA);
++    static final  GbaCipherSuite TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA
++    = new GbaCipherSuite("TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA",
++                         CODE_TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA);
++    static final  GbaCipherSuite TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA
++    = new GbaCipherSuite("TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
++                         CODE_TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA);
++    static final  GbaCipherSuite TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA
++    = new GbaCipherSuite("TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA",
++                         CODE_TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA);
++    static final  GbaCipherSuite TLS_ECDH_RSA_WITH_NULL_SHA
++    = new GbaCipherSuite("TLS_ECDH_RSA_WITH_NULL_SHA",
++                         CODE_TLS_ECDH_RSA_WITH_NULL_SHA);
++    static final  GbaCipherSuite TLS_ECDH_RSA_WITH_RC4_128_SHA
++    = new GbaCipherSuite("TLS_ECDH_RSA_WITH_RC4_128_SHA",
++                         CODE_TLS_ECDH_RSA_WITH_RC4_128_SHA);
++    static final  GbaCipherSuite TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA
++    = new GbaCipherSuite("TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA",
++                         CODE_TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA);
++    static final  GbaCipherSuite TLS_ECDH_RSA_WITH_AES_128_CBC_SHA
++    = new GbaCipherSuite("TLS_ECDH_RSA_WITH_AES_128_CBC_SHA",
++                         CODE_TLS_ECDH_RSA_WITH_AES_128_CBC_SHA);
++    static final  GbaCipherSuite TLS_ECDH_RSA_WITH_AES_256_CBC_SHA
++    = new GbaCipherSuite("TLS_ECDH_RSA_WITH_AES_256_CBC_SHA",
++                         CODE_TLS_ECDH_RSA_WITH_AES_256_CBC_SHA);
++    static final  GbaCipherSuite TLS_ECDHE_RSA_WITH_NULL_SHA
++    = new GbaCipherSuite("TLS_ECDHE_RSA_WITH_NULL_SHA",
++                         CODE_TLS_ECDHE_RSA_WITH_NULL_SHA);
++    static final  GbaCipherSuite TLS_ECDHE_RSA_WITH_RC4_128_SHA
++    = new GbaCipherSuite("TLS_ECDHE_RSA_WITH_RC4_128_SHA",
++                         CODE_TLS_ECDHE_RSA_WITH_RC4_128_SHA);
++    static final  GbaCipherSuite TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA
++    = new GbaCipherSuite("TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA",
++                         CODE_TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA);
++    static final  GbaCipherSuite TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA
++    = new GbaCipherSuite("TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
++                         CODE_TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA);
++    static final  GbaCipherSuite TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
++    = new GbaCipherSuite("TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
++                         CODE_TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA);
++    static final  GbaCipherSuite TLS_ECDH_anon_WITH_NULL_SHA
++    = new GbaCipherSuite("TLS_ECDH_anon_WITH_NULL_SHA",
++                         CODE_TLS_ECDH_anon_WITH_NULL_SHA);
++    static final  GbaCipherSuite TLS_ECDH_anon_WITH_RC4_128_SHA
++    = new GbaCipherSuite("TLS_ECDH_anon_WITH_RC4_128_SHA",
++                         CODE_TLS_ECDH_anon_WITH_RC4_128_SHA);
++    static final  GbaCipherSuite TLS_ECDH_anon_WITH_3DES_EDE_CBC_SHA
++    = new GbaCipherSuite("TLS_ECDH_anon_WITH_3DES_EDE_CBC_SHA",
++                         CODE_TLS_ECDH_anon_WITH_3DES_EDE_CBC_SHA);
++    static final  GbaCipherSuite TLS_ECDH_anon_WITH_AES_128_CBC_SHA
++    = new GbaCipherSuite("TLS_ECDH_anon_WITH_AES_128_CBC_SHA",
++                         CODE_TLS_ECDH_anon_WITH_AES_128_CBC_SHA);
++    static final  GbaCipherSuite TLS_ECDH_anon_WITH_AES_256_CBC_SHA
++    = new GbaCipherSuite("TLS_ECDH_anon_WITH_AES_256_CBC_SHA",
++                         CODE_TLS_ECDH_anon_WITH_AES_256_CBC_SHA);
++
++    // arrays for quick access to cipher suite by code
++    private static final  GbaCipherSuite[] SUITES_BY_CODE_0x00 = {
++        // http://www.iana.org/assignments/tls-parameters/tls-parameters.xml
++        SSL_NULL_WITH_NULL_NULL,                          // { 0x00, 0x00 };
++        SSL_RSA_WITH_NULL_MD5,                            // { 0x00, 0x01 };
++        SSL_RSA_WITH_NULL_SHA,                            // { 0x00, 0x02 };
++        SSL_RSA_EXPORT_WITH_RC4_40_MD5,                   // { 0x00, 0x03 };
++        SSL_RSA_WITH_RC4_128_MD5,                         // { 0x00, 0x04 };
++        SSL_RSA_WITH_RC4_128_SHA,                         // { 0x00, 0x05 };
++        // BEGIN android-changed
++        null, // SSL_RSA_EXPORT_WITH_RC2_CBC_40_MD5,      // { 0x00, 0x06 };
++        null, // TLS_RSA_WITH_IDEA_CBC_SHA,               // { 0x00, 0x07 };
++        // END android-changed
++        SSL_RSA_EXPORT_WITH_DES40_CBC_SHA,                // { 0x00, 0x08 };
++        SSL_RSA_WITH_DES_CBC_SHA,                         // { 0x00, 0x09 };
++        SSL_RSA_WITH_3DES_EDE_CBC_SHA,                    // { 0x00, 0x0a };
++        // BEGIN android-changed
++        null, // SSL_DH_DSS_EXPORT_WITH_DES40_CBC_SHA     // { 0x00, 0x0b };
++        null, // SSL_DH_DSS_WITH_DES_CBC_SHA,             // { 0x00, 0x0c };
++        null, // SSL_DH_DSS_WITH_3DES_EDE_CBC_SHA,        // { 0x00, 0x0d };
++        null, // SSL_DH_RSA_EXPORT_WITH_DES40_CBC_SHA,    // { 0x00, 0x0e };
++        null, // SSL_DH_RSA_WITH_DES_CBC_SHA,             // { 0x00, 0x0f };
++        null, // SSL_DH_RSA_WITH_3DES_EDE_CBC_SHA,        // { 0x00, 0x10 };
++        // END android-changed
++        SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA,            // { 0x00, 0x11 };
++        SSL_DHE_DSS_WITH_DES_CBC_SHA,                     // { 0x00, 0x12 };
++        SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA,                // { 0x00, 0x13 };
++        SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA,            // { 0x00, 0x14 };
++        SSL_DHE_RSA_WITH_DES_CBC_SHA,                     // { 0x00, 0x15 };
++        SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA,                // { 0x00, 0x16 };
++        SSL_DH_anon_EXPORT_WITH_RC4_40_MD5,               // { 0x00, 0x17 };
++        SSL_DH_anon_WITH_RC4_128_MD5,                     // { 0x00, 0x18 };
++        SSL_DH_anon_EXPORT_WITH_DES40_CBC_SHA,            // { 0x00, 0x19 };
++        SSL_DH_anon_WITH_DES_CBC_SHA,                     // { 0x00, 0x1A };
++        SSL_DH_anon_WITH_3DES_EDE_CBC_SHA,                // { 0x00, 0x1B };
++        // BEGIN android-added
++        null, // SSL_FORTEZZA_KEA_WITH_NULL_SHA           // { 0x00, 0x1C };
++        null, // SSL_FORTEZZA_KEA_WITH_FORTEZZA_CBC_SHA   // { 0x00, 0x1D };
++        null, // TLS_KRB5_WITH_DES_CBC_SHA                // { 0x00, 0x1E };
++        null, // TLS_KRB5_WITH_3DES_EDE_CBC_SHA           // { 0x00, 0x1F };
++        null, // TLS_KRB5_WITH_RC4_128_SHA                // { 0x00, 0x20 };
++        null, // TLS_KRB5_WITH_IDEA_CBC_SHA               // { 0x00, 0x21 };
++        null, // TLS_KRB5_WITH_DES_CBC_MD5                // { 0x00, 0x22 };
++        null, // TLS_KRB5_WITH_3DES_EDE_CBC_MD5           // { 0x00, 0x23 };
++        null, // TLS_KRB5_WITH_RC4_128_MD5                // { 0x00, 0x24 };
++        null, // TLS_KRB5_WITH_IDEA_CBC_MD5               // { 0x00, 0x25 };
++        null, // TLS_KRB5_EXPORT_WITH_DES_CBC_40_SHA      // { 0x00, 0x26 };
++        null, // TLS_KRB5_EXPORT_WITH_RC2_CBC_40_SHA      // { 0x00, 0x27 };
++        null, // TLS_KRB5_EXPORT_WITH_RC4_40_SHA          // { 0x00, 0x28 };
++        null, // TLS_KRB5_EXPORT_WITH_DES_CBC_40_MD5      // { 0x00, 0x29 };
++        null, // TLS_KRB5_EXPORT_WITH_RC2_CBC_40_MD5      // { 0x00, 0x2A };
++        null, // TLS_KRB5_EXPORT_WITH_RC4_40_MD5          // { 0x00, 0x2B };
++        null, // TLS_PSK_WITH_NULL_SHA                    // { 0x00, 0x2C };
++        null, // TLS_DHE_PSK_WITH_NULL_SHA                // { 0x00, 0x2D };
++        null, // TLS_RSA_PSK_WITH_NULL_SHA                // { 0x00, 0x2E };
++        TLS_RSA_WITH_AES_128_CBC_SHA,                     // { 0x00, 0x2F };
++        null, // TLS_DH_DSS_WITH_AES_128_CBC_SHA          // { 0x00, 0x30 };
++        null, // TLS_DH_RSA_WITH_AES_128_CBC_SHA          // { 0x00, 0x31 };
++        TLS_DHE_DSS_WITH_AES_128_CBC_SHA,                 // { 0x00, 0x32 };
++        TLS_DHE_RSA_WITH_AES_128_CBC_SHA,                 // { 0x00, 0x33 };
++        TLS_DH_anon_WITH_AES_128_CBC_SHA,                 // { 0x00, 0x34 };
++        TLS_RSA_WITH_AES_256_CBC_SHA,                     // { 0x00, 0x35 };
++        null, // TLS_DH_DSS_WITH_AES_256_CBC_SHA,         // { 0x00, 0x36 };
++        null, // TLS_DH_RSA_WITH_AES_256_CBC_SHA,         // { 0x00, 0x37 };
++        TLS_DHE_DSS_WITH_AES_256_CBC_SHA,                 // { 0x00, 0x38 };
++        TLS_DHE_RSA_WITH_AES_256_CBC_SHA,                 // { 0x00, 0x39 };
++        TLS_DH_anon_WITH_AES_256_CBC_SHA,                 // { 0x00, 0x3A };
++        // END android-added
++    };
++    private static final  GbaCipherSuite[] SUITES_BY_CODE_0xc0 = {
++        null,                                             // { 0xc0, 0x00};
++        TLS_ECDH_ECDSA_WITH_NULL_SHA,                     // { 0xc0, 0x01};
++        TLS_ECDH_ECDSA_WITH_RC4_128_SHA,                  // { 0xc0, 0x02};
++        TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA,             // { 0xc0, 0x03};
++        TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA,              // { 0xc0, 0x04};
++        TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA,              // { 0xc0, 0x05};
++        TLS_ECDHE_ECDSA_WITH_NULL_SHA,                    // { 0xc0, 0x06};
++        TLS_ECDHE_ECDSA_WITH_RC4_128_SHA,                 // { 0xc0, 0x07};
++        TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA,            // { 0xc0, 0x08};
++        TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,             // { 0xc0, 0x09};
++        TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,             // { 0xc0, 0x0A};
++        TLS_ECDH_RSA_WITH_NULL_SHA,                       // { 0xc0, 0x0B};
++        TLS_ECDH_RSA_WITH_RC4_128_SHA,                    // { 0xc0, 0x0C};
++        TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA,               // { 0xc0, 0x0D};
++        TLS_ECDH_RSA_WITH_AES_128_CBC_SHA,                // { 0xc0, 0x0E};
++        TLS_ECDH_RSA_WITH_AES_256_CBC_SHA,                // { 0xc0, 0x0F};
++        TLS_ECDHE_RSA_WITH_NULL_SHA,                      // { 0xc0, 0x10};
++        TLS_ECDHE_RSA_WITH_RC4_128_SHA,                   // { 0xc0, 0x11};
++        TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,              // { 0xc0, 0x12};
++        TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,               // { 0xc0, 0x13};
++        TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,               // { 0xc0, 0x14};
++        TLS_ECDH_anon_WITH_NULL_SHA,                      // { 0xc0, 0x15};
++        TLS_ECDH_anon_WITH_RC4_128_SHA,                   // { 0xc0, 0x16};
++        TLS_ECDH_anon_WITH_3DES_EDE_CBC_SHA,              // { 0xc0, 0x17};
++        TLS_ECDH_anon_WITH_AES_128_CBC_SHA,               // { 0xc0, 0x18};
++        TLS_ECDH_anon_WITH_AES_256_CBC_SHA,               // { 0xc0, 0x19};
++        // TLS_SRP_SHA_WITH_3DES_EDE_CBC_SHA,             // { 0xc0, 0x1A};
++        // TLS_SRP_SHA_RSA_WITH_3DES_EDE_CBC_SHA,         // { 0xc0, 0x1B};
++        // TLS_SRP_SHA_DSS_WITH_3DES_EDE_CBC_SHA,         // { 0xc0, 0x1C};
++        // TLS_SRP_SHA_WITH_AES_128_CBC_SHA,              // { 0xc0, 0x1D};
++        // TLS_SRP_SHA_RSA_WITH_AES_128_CBC_SHA,          // { 0xc0, 0x1E};
++        // TLS_SRP_SHA_DSS_WITH_AES_128_CBC_SHA,          // { 0xc0, 0x1F};
++        // TLS_SRP_SHA_WITH_AES_256_CBC_SHA,              // { 0xc0, 0x20};
++        // TLS_SRP_SHA_RSA_WITH_AES_256_CBC_SHA,          // { 0xc0, 0x21};
++        // TLS_SRP_SHA_DSS_WITH_AES_256_CBC_SHA,          // { 0xc0, 0x22};
++        // TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,       // { 0xc0, 0x23};
++        // TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384,       // { 0xc0, 0x24};
++        // TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA256,        // { 0xc0, 0x25};
++        // TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA384,        // { 0xc0, 0x26};
++        // TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,         // { 0xc0, 0x27};
++        // TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384,         // { 0xc0, 0x28};
++        // TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256,          // { 0xc0, 0x29};
++        // TLS_ECDH_RSA_WITH_AES_256_CBC_SHA384,          // { 0xc0, 0x2A};
++        // TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,       // { 0xc0, 0x2B};
++        // TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,       // { 0xc0, 0x2C};
++        // TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256,        // { 0xc0, 0x2D};
++        // TLS_ECDH_ECDSA_WITH_AES_256_GCM_SHA384,        // { 0xc0, 0x2E};
++        // TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,         // { 0xc0, 0x2F};
++        // TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,         // { 0xc0, 0x30};
++        // TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256,          // { 0xc0, 0x31};
++        // TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384,          // { 0xc0, 0x32};
++        // TLS_ECDHE_PSK_WITH_RC4_128_SHA,                // { 0xc0, 0x33};
++        // TLS_ECDHE_PSK_WITH_3DES_EDE_CBC_SHA,           // { 0xc0, 0x34};
++        // TLS_ECDHE_PSK_WITH_AES_128_CBC_SHA,            // { 0xc0, 0x35};
++        // TLS_ECDHE_PSK_WITH_AES_256_CBC_SHA,            // { 0xc0, 0x36};
++        // TLS_ECDHE_PSK_WITH_AES_128_CBC_SHA256,         // { 0xc0, 0x37};
++        // TLS_ECDHE_PSK_WITH_AES_256_CBC_SHA384,         // { 0xc0, 0x38};
++        // TLS_ECDHE_PSK_WITH_NULL_SHA,                   // { 0xc0, 0x39};
++        // TLS_ECDHE_PSK_WITH_NULL_SHA256,                // { 0xc0, 0x3A};
++        // TLS_ECDHE_PSK_WITH_NULL_SHA384,                // { 0xc0, 0x3B};
++    };
++
++    private GbaCipherSuite(String name, byte[] code) {
++        this.mCipherSuiteName = name;
++        this.mCipherSuiteCode = code;
++    }
++
++    static {
++        mSuiteByName = new Hashtable<String, GbaCipherSuite>();
++        registerCipherSuitesByCode(SUITES_BY_CODE_0x00);
++        registerCipherSuitesByCode(SUITES_BY_CODE_0xc0);
++    }
++
++    private static int registerCipherSuitesByCode(GbaCipherSuite[] cipherSuites) {
++        int count = 0;
++
++        for (int i = 0; i < cipherSuites.length; i++) {
++            if (cipherSuites[i] == SSL_NULL_WITH_NULL_NULL) {
++                continue;
++            }
++
++            if (cipherSuites[i] == null) {
++                continue;
++            }
++
++            mSuiteByName.put(cipherSuites[i].getName(), cipherSuites[i]);
++        }
++
++        return count;
++    }
++
++    /**
++     * Returns CipherSuite by name.
++     */
++    public static GbaCipherSuite getByName(String name) {
++        return mSuiteByName.get(name);
++    }
++
++    public String getName() {
++        return mCipherSuiteName;
++    }
++
++    public byte[] getCode() {
++        return mCipherSuiteCode;
++    }
++
++}
+\ No newline at end of file
+diff --git a/core/java/com/mediatek/gba/GbaHttpUrlCredential.java b/core/java/com/mediatek/gba/GbaHttpUrlCredential.java
+new file mode 100644
+index 0000000000000..3c85f21e462ac
+--- /dev/null
++++ b/core/java/com/mediatek/gba/GbaHttpUrlCredential.java
+@@ -0,0 +1,86 @@
++package com.mediatek.gba;
++
++import android.content.Context;
++import android.telephony.SubscriptionManager;
++import android.util.Base64;
++import android.util.Log;
++
++import java.net.Authenticator;
++import java.net.PasswordAuthentication;
++
++/**
++ * HTTP Authenticator for GBA procedure.
++ * This is designed for HttpUrlConnection.
++ *
++ * @hide
++ */
++public class GbaHttpUrlCredential extends GbaBaseCredential {
++    private final static String TAG = "GbaCredentials";
++
++    private Authenticator mAuthenticator = new GbaAuthenticator();
++
++    /**
++      * Construction function for GbaCredentials.
++      *
++      * @param context the application context.
++      * @param nafAddress the sceme name + FQDN value of NAF server address.
++      * e.g. https://www.google.com or http://www.google.com
++      *
++      * @hide
++      */
++    public GbaHttpUrlCredential(Context context, String nafAddress) {
++        this(context, nafAddress, SubscriptionManager.INVALID_SUBSCRIPTION_ID);
++    }
++
++    /**
++      * Construction function for GbaCredentials.
++      *
++      * @param context the application context.
++      * @param nafAddress the sceme name + FQDN value of NAF server address.
++      * @param subId the subscription id.
++      * e.g. https://www.google.com or http://www.google.com
++      *
++      * @hide
++      */
++    public GbaHttpUrlCredential(Context context, String nafAddress, int subId) {
++        super(context, nafAddress, subId);
++        System.setProperty("http.digest.support", "true");
++    }
++
++    public Authenticator getAuthenticator() {
++        return mAuthenticator;
++    }
++
++    /**
++      * Authenticator for OkHttp stack.
++      * Used for HTTP digest method.
++      *
++      */
++    private class GbaAuthenticator extends Authenticator {
++        private PasswordAuthentication mPasswordAuthentication;
++
++        protected PasswordAuthentication getPasswordAuthentication() {
++            Log.i(TAG, "getPasswordAuthentication");
++
++            if (mPasswordAuthentication == null || sCachedSessionKeyUsed) {
++                Log.i(TAG, "Run GBA procedure");
++                NafSessionKey nafSessionKey = GbaBaseCredential.getNafSessionKey();
++                if (nafSessionKey == null ||
++                        (nafSessionKey != null && nafSessionKey.getKey() == null)) {
++                    return null;
++                }
++                String password = Base64.encodeToString(nafSessionKey.getKey(), Base64.NO_WRAP);
++                mPasswordAuthentication = new PasswordAuthentication(
++                    nafSessionKey.getBtid(),
++                    password.toCharArray());
++            } else {
++                if (!sCachedSessionKeyUsed) {
++                    sCachedSessionKeyUsed = true;
++                }
++            }
++
++            return mPasswordAuthentication;
++        }
++    }
++
++}
+diff --git a/core/java/com/mediatek/gba/GbaManager.java b/core/java/com/mediatek/gba/GbaManager.java
+new file mode 100644
+index 0000000000000..b5c9e3f89f91f
+--- /dev/null
++++ b/core/java/com/mediatek/gba/GbaManager.java
+@@ -0,0 +1,201 @@
++package com.mediatek.gba;
++
++import android.content.Context;
++import android.os.IBinder;
++import android.os.RemoteException;
++import android.os.ServiceManager;
++import android.util.Log;
++
++
++/**
++ * A class provides the GBA service APIs.
++ *
++ * @hide
++ */
++public final class GbaManager {
++    private static final String TAG = "GbaManager";
++
++    private final Context mContext;
++    private static IGbaService mService;
++    private static GbaManager mGbaManager = null;
++
++    public static final int IMS_GBA_NONE     = 0;
++    public static final int IMS_GBA_ME       = 1;
++    public static final int IMS_GBA_U        = 2;
++
++    public static final String IMS_GBA_KS_NAF       = "Ks_NAF";
++    public static final String IMS_GBA_KS_EXT_NAF   = "Ks_ext_NAF";
++
++    public static final byte[] DEFAULT_UA_SECURITY_PROTOCOL_ID0 = new byte[]
++                    {(byte) 0x01, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00};
++    public static final byte[] DEFAULT_UA_SECURITY_PROTOCOL_ID1 = new byte[]
++                    {(byte) 0x01, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x01}; //MBMS
++    public static final byte[] DEFAULT_UA_SECURITY_PROTOCOL_ID2 = new byte[]
++                    {(byte) 0x01, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x02};
++    public static final byte[] DEFAULT_UA_SECURITY_PROTOCOL_ID3 = new byte[]
++                    {(byte) 0x01, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x03}; //MBMS
++
++    private static final byte[] DEFAULT_UA_SECURITY_PROTOCOL_ID_HTTP =
++        new byte[] {(byte) 0x01, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x02};
++    private static final byte[] DEFAULT_UA_SECURITY_PROTOCOL_ID_TLS =
++        new byte[] {(byte) 0x01, (byte) 0x00, (byte) 0x01, (byte) 0x00, (byte) 0x2F};
++
++    /**
++     * Helpers to get the default GbaManager.
++     */
++    public static GbaManager getDefaultGbaManager(Context context) {
++        if (context == null) {
++            throw new IllegalArgumentException("context cannot be null");
++        }
++
++        synchronized (GbaManager.class) {
++            if (mGbaManager == null) {
++                IBinder b = ServiceManager.getService("GbaService");
++
++                if (b == null) {
++                    Log.i("debug", "The binder is null");
++                    return null;
++                }
++
++                mService = IGbaService.Stub.asInterface(b);
++                mGbaManager = new GbaManager(context);
++            }
++
++            return mGbaManager;
++        }
++    }
++
++    GbaManager(Context context) {
++        mContext = context;
++    }
++
++    /**
++     * Check GBA is supported and support type or not.
++     *
++     * @return GBA Support Type
++     */
++    public int getGbaSupported() {
++        try {
++            return mService.getGbaSupported();
++        } catch (RemoteException e) {
++            return 0;
++        }
++    }
++
++    /**
++     * Check GBA is supported and support type or not for a particular subscription.
++     *
++     * @param subId subscription whose subscriber id is returned
++     *
++     * @return GBA Support Type
++     */
++    public int getGbaSupported(int subId) {
++        try {
++            return mService.getGbaSupported();
++        } catch (RemoteException e) {
++            return 0;
++        }
++    }
++
++    /**
++     * Check GBA NAFSession key is expired or not.
++     *
++     * @param nafFqdn The FQDN address of NAF server
++     * @param nafSecurProtocolId The security protocol id of NAF server
++     *
++     * @return indicate key is expired or not
++     */
++    public boolean isGbaKeyExpired(String nafFqdn, byte[] nafSecurProtocolId) {
++        try {
++            return mService.isGbaKeyExpired(nafFqdn, nafSecurProtocolId);
++        } catch (RemoteException e) {
++            return true;
++        }
++    }
++
++    /**
++     * Check GBA NAFSession key is expired or not for a particular subscription.
++     *
++     * @param nafFqdn The FQDN address of NAF server
++     * @param nafSecurProtocolId The security protocol id of NAF server
++     * @param subId subscription whose subscriber id is returned
++     *
++     * @return indicate key is expired or not
++     */
++    public boolean isGbaKeyExpired(String nafFqdn, byte[] nafSecurProtocolId, int subId) {
++        try {
++            return mService.isGbaKeyExpired(nafFqdn, nafSecurProtocolId);
++        } catch (RemoteException e) {
++            return true;
++        }
++    }
++
++    /**
++     * Perform GBA bootstrap authentication.
++     *
++     * @param nafFqdn The FQDN address of NAF server
++     * @param nafSecureProtocolId The security protocol id of NAF server
++     * @param forceRun Indicate to force run GBA bootstrap procedure without
++     *                 get NAS Session key from GBA cache
++     *
++     * @return GBA NAS Session Key
++     */
++    public NafSessionKey runGbaAuthentication(String nafFqdn, byte[] nafSecureProtocolId,
++            boolean forceRun) {
++        try {
++            return mService.runGbaAuthentication(nafFqdn, nafSecureProtocolId, forceRun);
++        } catch (RemoteException e) {
++            return null;
++        }
++    }
++
++    /**
++     * Perform GBA bootstrap authentication for a particular subscription.
++     *
++     * @param nafFqdn The FQDN address of NAF server
++     * @param nafSecureProtocolId The security protocol id of NAF server
++     * @param forceRun Indicate to force run GBA bootstrap procedure without
++     *                 get NAS Session key from GBA cache
++     * @param subId subscription whose subscriber id is returned
++     *
++     * @return GBA NAS Session Key
++     */
++    public NafSessionKey runGbaAuthentication(String nafFqdn, byte[] nafSecureProtocolId,
++            boolean forceRun, int subId) {
++        try {
++            return mService.runGbaAuthenticationForSubscriber(nafFqdn,
++                    nafSecureProtocolId, forceRun, subId);
++        } catch (RemoteException e) {
++            return null;
++        }
++    }
++
++    /**
++     * Get the NAF security protocol id.
++     * If NAF client uses TLS connection, this API should be called after the TLS connection
++     * is established. By this case, the cipher suite has been decided.
++     * @param isTls Indicate to connect with server with TLS connection or not.
++     *
++     * @return return the NAF security protocol id.
++     */
++
++   public byte[] getNafSecureProtocolId(boolean isTls) {
++        byte[] uaId = DEFAULT_UA_SECURITY_PROTOCOL_ID_TLS;
++
++        if (isTls) {
++            String gbaStr = System.getProperty("gba.ciper.suite", "");
++            if (gbaStr.length() > 0) {
++                GbaCipherSuite cipherSuite = GbaCipherSuite.getByName(gbaStr);
++                if (cipherSuite != null) {
++                    byte[] cipherSuiteCode = cipherSuite.getCode();
++                    uaId[3] = cipherSuiteCode[0];
++                    uaId[4] = cipherSuiteCode[1];
++                }
++            }
++        } else {
++            uaId = DEFAULT_UA_SECURITY_PROTOCOL_ID_HTTP;
++        }
++
++        return uaId;
++   }
++}
+\ No newline at end of file
+diff --git a/core/java/com/mediatek/gba/IGbaService.aidl b/core/java/com/mediatek/gba/IGbaService.aidl
+new file mode 100644
+index 0000000000000..53474e192b2bc
+--- /dev/null
++++ b/core/java/com/mediatek/gba/IGbaService.aidl
+@@ -0,0 +1,17 @@
++package com.mediatek.gba;
++
++import android.net.Network;
++import com.mediatek.gba.NafSessionKey;
++
++/**
++ * @hide
++ */
++interface IGbaService {
++    int getGbaSupported();
++    int getGbaSupportedForSubscriber(in int subId);
++    boolean isGbaKeyExpired(String nafFqdn, in byte[] nafSecurProtocolId);
++    boolean isGbaKeyExpiredForSubscriber(String nafFqdn, in byte[] nafSecurProtocolId, in int subId);
++    NafSessionKey runGbaAuthentication(in String nafFqdn, in byte[] nafSecurProtocolId, boolean forceRun);
++    NafSessionKey runGbaAuthenticationForSubscriber(in String nafFqdn, in byte[] nafSecurProtocolId, boolean forceRun, in int subId);
++    void setNetwork(in Network network);
++}
+\ No newline at end of file
+diff --git a/core/java/com/mediatek/gba/NafSessionKey.aidl b/core/java/com/mediatek/gba/NafSessionKey.aidl
+new file mode 100644
+index 0000000000000..1c856579f95d9
+--- /dev/null
++++ b/core/java/com/mediatek/gba/NafSessionKey.aidl
+@@ -0,0 +1,3 @@
++package com.mediatek.gba;
++
++parcelable NafSessionKey;
+\ No newline at end of file
+diff --git a/core/java/com/mediatek/gba/NafSessionKey.java b/core/java/com/mediatek/gba/NafSessionKey.java
+new file mode 100644
+index 0000000000000..8c1783b00e5c1
+--- /dev/null
++++ b/core/java/com/mediatek/gba/NafSessionKey.java
+@@ -0,0 +1,157 @@
++package com.mediatek.gba;
++
++import android.os.Parcel;
++import android.os.Parcelable;
++
++/**
++ * Utitity contain class for NafSessionKey.
++ * @hide
++ */
++public class NafSessionKey implements Parcelable {
++    private String mBtid;
++    private byte[] mKey;
++    private String mKeylifetime;
++    private String mNafKeyName;
++    private byte[] mNafId;
++    private Exception mException;
++
++    public NafSessionKey() {
++        super();
++
++    }
++
++    public NafSessionKey(final String btid, final byte[] key, final String keylifetime) {
++        mBtid = btid;
++        mKey = key;
++        mKeylifetime = keylifetime;
++    }
++
++    public String getBtid() {
++        return mBtid;
++    }
++
++    public void setBtid(final String btid) {
++        mBtid = btid;
++    }
++
++    public byte[] getKey() {
++        return mKey;
++    }
++
++    public void setKey(final byte[] key) {
++        mKey = key;
++    }
++
++    public String getKeylifetime() {
++        return mKeylifetime;
++    }
++
++    public void setKeylifetime(final String keylifetime) {
++        mKeylifetime = keylifetime;
++    }
++
++    public String getNafKeyName() {
++        return mNafKeyName;
++    }
++
++    public void setNafKeyName(String nafKeyName) {
++        mNafKeyName = nafKeyName;
++    }
++
++    public void setNafId(byte[] nafId) {
++        mNafId = nafId;
++    }
++
++    public byte[] getNafId() {
++        return mNafId;
++    }
++
++    public void setException(Exception e) {
++        mException = e;
++    }
++
++    public Exception getException() {
++        return mException;
++    }
++
++    /**
++     * Implement the Parcelable interface
++     * @hide
++     */
++    public int describeContents() {
++        return 0;
++    }
++
++    /**
++     * Implement the Parcelable interface.
++     *
++     * @param dest The Parcel in which the object should be written.
++     * @param flags Additional flags about how the object should be written.
++     * @hide
++     */
++    public void writeToParcel(Parcel dest, int flags) {
++        dest.writeString(mBtid);
++        dest.writeByteArray(mKey);
++        dest.writeString(mKeylifetime);
++        dest.writeString(mNafKeyName);
++        if (mException != null) {
++            dest.writeException(mException);
++        }
++    }
++
++    /**
++     * Implement the Parcelable interface.
++     * @hide
++     */
++    public static final Creator<NafSessionKey> CREATOR =
++        new Creator<NafSessionKey>() {
++            public NafSessionKey createFromParcel(Parcel in) {
++                NafSessionKey nafSessionKey = new NafSessionKey();
++                String btid = in.readString();
++
++                if (btid != null) {
++                    nafSessionKey.setBtid(btid);
++                }
++
++                byte[] key = in.createByteArray();
++
++                if (key != null) {
++                    nafSessionKey.setKey(key);
++                }
++
++                String keylifetime = in.readString();
++
++                if (keylifetime != null) {
++                    nafSessionKey.setKeylifetime(keylifetime);
++                }
++
++                String nafKeyName = in.readString();
++
++                if (nafKeyName != null) {
++                    nafSessionKey.setNafKeyName(nafKeyName);
++                }
++
++                int exceptionCode = in.readInt();
++                String exceptionString = in.readString();
++
++                if (exceptionString != null) {
++                    nafSessionKey.setException(new IllegalStateException(exceptionString));
++                }
++
++                return nafSessionKey;
++            }
++
++            public NafSessionKey[] newArray(int size) {
++                return new NafSessionKey[size];
++            }
++        };
++
++    @Override
++    public String toString() {
++        synchronized (this) {
++            StringBuilder builder = new StringBuilder("NafSessionKey: btid:");
++            builder.append(mBtid).append(":").append(mKeylifetime).append(":").append(mNafKeyName);
++            return builder.toString();
++        }
++    }
++}

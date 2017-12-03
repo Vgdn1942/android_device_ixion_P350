@@ -2289,7 +2289,7 @@ index b77138b..b044982 100644
 -  <string name="dash_title_text_size">Title Text Size</string>
 -  <string name="dash_category_text_size">Category Text Size</string>
 +  <string name="dash_title_text_size">Размер текста заголовков</string>
-+  <string name="dash_category_text_size">Размер текста категорий</string>]
++  <string name="dash_category_text_size">Размер текста категорий</string>
    <!-- Carrier Label - Hide based on notifications -->
    <string name="text_title">Текст</string>
    <string name="number_of_notifications_title">Количество уведомлений</string>

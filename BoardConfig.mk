@@ -153,7 +153,11 @@ RECOVERY_GRAPHICS_USE_LINELENGTH := true
 TARGET_PREBUILT_RECOVERY_KERNEL := $(LOCAL_PATH)/kernel
 TARGET_USE_CUSTOM_LUN_FILE_PATH := "/sys/devices/platform/mt_usb/musb-hdrc.0.auto/gadget/lun%d/file"
 
+ifeq ($(RECOVERY_VARIANT),twrp)
 TARGET_RECOVERY_FSTAB := $(LOCAL_PATH)/root/fstab.mt6580
+else
+TARGET_RECOVERY_FSTAB := $(LOCAL_PATH)/root/recovery.fstab
+endif
 
 # TWRP
 ifeq ($(RECOVERY_VARIANT),twrp)

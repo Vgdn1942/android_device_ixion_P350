@@ -1,0 +1,276 @@
+From 7bd0048a291ddb135414b46f5efe8120d628052f Mon Sep 17 00:00:00 2001
+From: vgdn1942 <vgdn1942@gmail.com>
+Date: Mon, 4 Dec 2017 00:42:57 +0300
+Subject: [PATCH] Update Russian translation
+
+---
+ res/values-ru/rr_strings.xml | 104 +++++++++++++++++++++----------------------
+ 1 file changed, 52 insertions(+), 52 deletions(-)
+
+diff --git a/res/values-ru/rr_strings.xml b/res/values-ru/rr_strings.xml
+index b044982..3651770 100644
+--- a/res/values-ru/rr_strings.xml
++++ b/res/values-ru/rr_strings.xml
+@@ -140,36 +140,36 @@
+   <string name="hide_help_title">Скрыть справку</string>
+   <string name="show_help_title">Показать справку</string>
+   <string name="empty_title">Нет</string>
+-  <string name="color_picker_help_screen_title">Справка средства выбора цвета</string>
++  <string name="color_picker_help_screen_title">Справка средства\nвыбора цвета</string>
+   <string name="color_picker_help_ab_title">Панель действий:</string>
+   <string name="color_picker_help_ab_back_title">Кнопка «Назад»:</string>
+-  <string name="color_picker_help_ab_back_summary">"Закрыть средство выбора цвета без применения нового цвета, (отменить). \nЭто имеет тот же эффект, что и нажатие кнопки \"Назад\" на панели навигации."</string>
++  <string name="color_picker_help_ab_back_summary">"Закрыть средство выбора цвета без применения нового цвета, (отменить).\nЭто имеет тот же эффект, что и нажатие кнопки \"Назад\" на панели навигации."</string>
+   <string name="color_picker_help_ab_name_title">Заголовок:</string>
+   <string name="color_picker_help_ab_name_summary">Всего-лишь заголовок, нет дополнительных функций</string>
+-  <string name="color_picker_help_ab_color_apply_title">Предварительный просмотр и применение цвета:</string>
+-  <string name="color_picker_help_ab_color_apply_summary">Предварительный просмотр цвета всегда виден. \nЕсли новый цвет не идентичен старому, то значок будет расширен, чтобы позволить применить новый цвет.</string>
++  <string name="color_picker_help_ab_color_apply_title">Предварительный просмотр и\nприменение цвета:</string>
++  <string name="color_picker_help_ab_color_apply_summary">Предварительный просмотр цвета всегда виден.\nЕсли новый цвет не идентичен старому, то значок будет расширен, чтобы позволить применить новый цвет.</string>
+   <string name="color_picker_help_ab_menu_title">Кнопка «Меню»:</string>
+   <string name="color_picker_help_ab_menu_reset_title">Восстановить:</string>
+   <string name="color_picker_help_ab_menu_reset_summary">Сбрасывает новый цвет на цвет Android или RR по умолчанию без применения нового цвета.</string>
+   <string name="color_picker_help_ab_menu_hex_title">Значение HEX:</string>
+   <string name="color_picker_help_ab_menu_hex_summary">"Показывает поле ввода hex-значения.\nЗначения Hex должны быть в шестнадцатеричном цветовом формате:\n«#aarrggbb» («альфа» (прозрачность), «красный», «зеленый» и «синий»).\nКнопка «Назад» закрывает поле ввода без установки hex-значения.\nКнопка «Применить» задает hex-значение как новый цвет, без применения нового цвета."</string>
+   <string name="color_picker_help_ab_menu_favorites_title">Показать/скрыть избранное:</string>
+-  <string name="color_picker_help_ab_menu_favorites_summary">Показывает/скрывает избранное. \nСкрытие избранного не сбросит избранные цвета.</string>
++  <string name="color_picker_help_ab_menu_favorites_summary">Показывает/скрывает избранное.\nСкрытие избранного не сбросит избранные цвета.</string>
+   <string name="color_picker_help_ab_menu_help_title">Показать/скрыть справку:</string>
+   <string name="color_picker_help_ab_menu_help_summary">Показывает/скрывает этот экран справки.</string>
+   <string name="color_picker_help_colors_title">Цвета:</string>
+   <string name="color_picker_help_picker_view_title">Панель цветов:</string>
+-  <string name="color_picker_help_picker_view_summary">Выберите цвет, чтобы установить новый цвет, не применяя его. \nЦветовая гамма может быть изменена при помощи слайдера с правой стороны.</string>
++  <string name="color_picker_help_picker_view_summary">Выберите цвет, чтобы установить новый цвет, не применяя его.\nЦветовая гамма может быть изменена при помощи слайдера с правой стороны.</string>
+   <string name="color_picker_help_color_buttons_title">Цветные кнопки:</string>
+   <string name="color_picker_help_favorites_title">Избранное:</string>
+-  <string name="color_picker_help_favorites_summary">Избранные цвета отсутствуют по умолчанию.\nНовый цвет можно сохранить в избранное в любое время при помощи долгого нажатия (пустой слот избранного будет заменен новым цветом).\nНажатие устанавливает любимый цвет как новый цвет без применения нового цвета.</string>
++  <string name="color_picker_help_favorites_summary">Избранные цвета отсутствуют по умолчанию.\nНовый цвет можно сохранить в избранное в любое время при помощи долгого нажатия (пустой слот избранного будет заменен новым цветом).\nНажатие устанавливает избранный цвет как новый цвет без применения нового цвета.</string>
+   <string name="color_picker_help_palette_title">"Палитра:\n(RR, Material and RGB)"</string>
+-  <string name="color_picker_help_palette_summary">"Все цвета палитры имеют фиксированные значения.\nA click sets the favorite color as new color, without applying the new color."</string>
++  <string name="color_picker_help_palette_summary">"Все цвета палитры имеют фиксированные значения.\nНажатие устанавливает избранный цвет как новый цвет без применения нового цвета."</string>
+   <string name="color_picker_help_do_not_show_title">Не показывать снова</string>
+   <string name="color_picker_help_button_ok_title">ОК</string>
+   <!-- RR Extra Info -->
+   <string name="brokenextrainfo">Дополнительная информация</string>
+-  <string name="brokenextrainfo_summary">Display extra info for cpu, display, etc</string>
++  <string name="brokenextrainfo_summary">Показать дополнительную информацию о процессоре, дисплее и т.п.</string>
+   <!--Time Contexual Header -->
+   <string name="contexual_header_title">Динамичный заголовок панели уведомлений</string>
+   <string name="status_bar_custom_header_title">Динамичный фон</string>
+@@ -447,8 +447,8 @@
+   <string name="lockscreen_security_alpha">Затемнение экрана блокировки при вводе PIN/пароля/ключа</string>
+   <!-- Lockscreen wallpaper -->
+   <string name="lockscreen_wallpaper_title">Обои</string>
+-  <string name="lockscreen_wallpaper_summary">Обои на экране блокировки</string>
+-  <string name="lockscreen_wallpaper_set_title">Обои на экране блокировки</string>
++  <string name="lockscreen_wallpaper_summary">Обои экрана блокировки</string>
++  <string name="lockscreen_wallpaper_set_title">Обои экрана блокировки</string>
+   <string name="lockscreen_wallpaper_clear_title">Сбросить обои экрана блокировки</string>
+   <string name="reset_lockscreen_wallpaper">Установлено по умолчанию</string>
+   <string name="lockscreen_options_title">Опции</string>
+@@ -637,13 +637,13 @@
+   <string name="network_traffic_title">Сетевой трафик</string>
+   <string name="show_network_traffic_state">Отображение трафика в строке состояния</string>
+   <string name="show_network_traffic_unit">Единицы измерения</string>
+-  <string name="show_network_traffic_frequency">Интервал обновления</string>
++  <string name="show_network_traffic_frequency">Частота обновления</string>
+   <string name="show_network_traffic_disable">Отключено</string>
+   <string name="show_network_traffic_up">Исходящий</string>
+   <string name="show_network_traffic_down">Входящий</string>
+   <string name="show_network_traffic_all">Исходящий и входящий</string>
+-  <string name="show_network_traffic_bit">Бит в секунду</string>
+-  <string name="show_network_traffic_byte">Байт в секунду</string>
++  <string name="show_network_traffic_bit">Биты в секунду</string>
++  <string name="show_network_traffic_byte">Байты в секунду</string>
+   <string name="show_network_traffic_500">500 мс</string>
+   <string name="show_network_traffic_1000">1000 мс</string>
+   <string name="show_network_traffic_1500">1500 мс</string>
+@@ -690,25 +690,25 @@
+   <string name="disable_hwkeys_title">Отключение аппаратных кнопок</string>
+   <string name="disable_hwkeys_summary">Включение/Отключение аппаратных кнопок</string>
+   <!-- Media art -->
+-  <string name="media_art_title">Медиа обложки</string>
+-  <string name="media_art_summary">Включает показ обложек мультимедиа на экране блокировки</string>
++  <string name="media_art_title">Обложки альбомов</string>
++  <string name="media_art_summary">Включить отображение обложек альбомов на экране блокировки</string>
+   <!-- Battery Bar -->
+   <string name="battery_icon">Стиль иконки батареи</string>
+   <string name="battery_not_title">Иконка батареи в уведомлениях</string>
+   <string name="battery_not_summary">Иконка батареи будет появляться на кнопке очистки приложений</string>
+   <string name="battery_bar_location">Расположение панели</string>
+   <string name="battery_bar_color">Цвет панели</string>
+-  <string name="battery_bar">Настройки панели заряда батареи</string>
+-  <string name="battery_bar_summary">Настройка распложения и цвета панели заряда батареи</string>
+-  <string name="battery_bar_style_title">Стиль панели</string>
+-  <string name="battery_bar_thickness_title">Толщина панели</string>
++  <string name="battery_bar">Полоса заряда батареи</string>
++  <string name="battery_bar_summary">Настройка расположения и цвета полосы заряда батареи</string>
++  <string name="battery_bar_style_title">Стиль полосы</string>
++  <string name="battery_bar_thickness_title">Толщина полосы</string>
+   <string name="battery_bar_animate_title">Анимация заряда</string>
+-  <string name="battery_bar_animate_summary">Анимация заряда может привести к понижению производительности. Включайте на своё усмотрение.</string>
+-  <string name="battery_bar_charging_color">Цвет индикатора батареи при зарядке</string>
+-  <string name="battery_bar_battery_low_color">Цвет индикатора батареи при низком заряде аккумулятора</string>
++  <string name="battery_bar_animate_summary">Анимация заряда может привести к понижению производительности.</string>
++  <string name="battery_bar_charging_color">Цвет полосы батареи при зарядке</string>
++  <string name="battery_bar_battery_low_color">Цвет полосы батареи при низком заряде аккумулятора</string>
+   <string name="battery_bar_style_regular">Обычный</string>
+   <string name="battery_bar_style_center_mirrored">По центру (зеркально)</string>
+-  <string name="battery_bar_style_reversed">Реверсивный</string>
++  <string name="battery_bar_style_reversed">Обратный</string>
+   <string name="battery_bar_use_gradient_color">Использовать градиент</string>
+   <string name="battery_bar_gradient_color_summary">Использовать градиент в качестве шкалы для уровня заряда батареи</string>
+   <string name="battery_bar_high_color">Цвет высокого уровня заряда</string>
+@@ -791,8 +791,8 @@
+   <string name="show_headset_icon_summary">Показывать значок, когда гарнитура подключена</string>
+   <!--Power menu -->
+   <string name="power_category">Меню кнопки питания</string>
+-  <string name="lockscreen_enable_power_menu_title">Показывать меню питания на экране блокировки</string>
+-  <string name="lockscreen_enable_power_menu_summary">Эта опция отключит меню питания только на защищенном экране блокировки</string>
++  <string name="lockscreen_enable_power_menu_title">Показывать меню кнопки питания на экране блокировки</string>
++  <string name="lockscreen_enable_power_menu_summary">Включить отображение меню кнопки питания на защищенном экране блокировки</string>
+   <!-- Slim DSLV -->
+   <string name="shortcut_action_none">Нет</string>
+   <string name="shortcut_action_longpress">Долгое нажатие:</string>
+@@ -983,7 +983,7 @@
+   <string name="shortcut_action_back">Назад</string>
+   <string name="shortcut_action_menu">Меню</string>
+   <string name="shortcut_action_ime">Выбор способа ввода</string>
+-  <string name="shortcut_action_power_menu">Меню питания</string>
++  <string name="shortcut_action_power_menu">Меню кнопки питания</string>
+   <string name="shortcut_action_recent">Недавние приложения</string>
+   <string name="shortcut_action_power">Выключить экран</string>
+   <string name="shortcut_action_search">Поиск в приложении</string>
+@@ -1002,13 +1002,13 @@
+   <!-- Superuser indicator on status bar -->
+   <string name="su_indicator">Индикатор суперпользователя</string>
+   <string name="su_indicator_summary_on">Индикатор суперпользователя отображается, когда сессия активна</string>
+-  <string name="su_indicator_summary_off">Включите для отображения индикатора суперпользователя во время активной сессии. Только для root, встроенного в CM</string>
++  <string name="su_indicator_summary_off">Отображения индикатора суперпользователя во время активной сессии</string>
+   <string name="rr_misc_title">Разное</string>
+   <string name="rr_systemuituner">Настройка системного интерфейса</string>
+   <string name="enable_multi_window_summary">Несколько приложений на одном экране.</string>
+-  <string name="warning_multi_window_text">ПРЕДУПРЕЖДЕНИЕ: Это экспериментальная функция, которая допускает множественные действия на экране одновременно через интерфейс панели недавних приложений. Некоторые приложения могут работать нестабильно, с использованием этой функции.</string>
++  <string name="warning_multi_window_text">ПРЕДУПРЕЖДЕНИЕ: Это экспериментальная функция, с помощью которой можно запускать несколько приложений на одном экране через интерфейс панели недавних приложений. Некоторые приложения могут работать нестабильно.</string>
+   <!-- Restart SystemUI -->
+-  <string name="restart_systemui">Перезагрузить пользовательский интерфейс</string>
++  <string name="restart_systemui">Перезагрузить SystemUI</string>
+   <!-- SuperSU -->
+   <string name="supersu_title">SuperSU</string>
+   <string name="weather_settings_title">Погода</string>
+@@ -1025,7 +1025,7 @@
+   <string name="weather_condition_icon_dlg_title">Выберите стиль иконок для отображения погоды</string>
+   <string name="weather_condition_icon_monochrome_title">Монохромные</string>
+   <string name="weather_condition_icon_colored_title">Цветные</string>
+-  <string name="weather_condition_icon_vclouds_title">Объёмные</string>
++  <string name="weather_condition_icon_vclouds_title">Реалистичные</string>
+   <string name="icons_title">Иконки погоды</string>
+   <string name="position_right_title">Справа</string>
+   <string name="position_centered_title">По центру</string>
+@@ -1097,7 +1097,7 @@
+   <string name="status_bar_temperature_hidden">Скрыть</string>
+   <string name="status_bar_temperature_show_scale">Показывать со знаком</string>
+   <string name="status_bar_temperature_hide_scale">Показывать без знака</string>
+-  <string name="status_bar_temperature_location_title">Местопложение</string>
++  <string name="status_bar_temperature_location_title">Местоположение</string>
+   <string name="status_bar_temperature_location_summary">Выберите, где будет отображаться температура в строке состояния</string>
+   <string name="status_bar_temperature_location_right">Справа</string>
+   <string name="status_bar_temperature_location_left">Слева</string>
+@@ -1142,14 +1142,14 @@
+   <string name="status_bar_date_style_normal">Нормально</string>
+   <string name="status_bar_date_style_lowercase">Строчные</string>
+   <string name="status_bar_date_style_uppercase">Прописные</string>
+-  <string name="status_bar_date_format_custom">Пользовательский java формат</string>
+-  <string name="status_bar_date_string_edittext_title">Должно быть в формате напр. MM/dd/yy</string>
++  <string name="status_bar_date_format_custom">Пользовательский формат</string>
++  <string name="status_bar_date_string_edittext_title">Например EEE dd MMM yy</string>
+   <string name="status_bar_date_string_edittext_summary">Ввести значение</string>
+   <string name="default_string">По умолчанию</string>
+-  <string name="powermenu_lockscreen_title">Меню питания</string>
+-  <string name="powermenu_lockscreen_summary">Показывать меню питания на экране блокировки</string>
+-  <string name="lock_screen_show_current">Зарядный ток</string>
+-  <string name="lock_screen_show_current_summary">Показывать зарядный ток на экране блокировки</string>
++  <string name="powermenu_lockscreen_title">Меню кнопки питания</string>
++  <string name="powermenu_lockscreen_summary">Показывать меню кнопки питания на экране блокировки</string>
++  <string name="lock_screen_show_current">Текущий заряд</string>
++  <string name="lock_screen_show_current_summary">Показывать текущий заряд на экране блокировки</string>
+   <!-- Qucik unlock -->
+   <string name="unlock_quick_unlock_control_title">Быстрая разблокировка</string>
+   <string name="unlock_quick_unlock_control_summary">Автоматически разблокировать, когда введен верный PIN/пароль</string>
+@@ -1376,9 +1376,9 @@
+   <string name="doze_notification_color_invert_summary_off">Уведомления не будут инвертированы. Используйте для темных тем.</string>
+   <string name="doze_notification_color_invert_summary_on">Уведомления будут инвертированы. Используйте для светлых/стоковых тем.</string>
+   <!-- Power menu Animations  -->
+-  <string name="power_menu_animation_title">Анимация меню питания</string>
+-  <string name="power_menu_animation_summary">Изменить анимацию меню выключения</string>
+-  <string name="power_menu_animation_dialog_title">Выберите анимацию меню питания</string>
++  <string name="power_menu_animation_title">Анимация меню кнопки питания</string>
++  <string name="power_menu_animation_summary">Изменить анимацию меню кнопки питания</string>
++  <string name="power_menu_animation_dialog_title">Выберите анимацию меню кнопки питания</string>
+   <string name="power_menu_animation_aosp">AOSP (по умолчанию)</string>
+   <string name="power_menu_animation_bottom">Снизу</string>
+   <string name="power_menu_animation_top">Сверху</string>
+@@ -1388,8 +1388,8 @@
+   <string name="power_menu_animation_turn">Разворот</string>
+   <string name="power_menu_animation_fly">Свечение</string>
+   <string name="power_menu_animation_card">3D</string>
+-  <string name="power_menu_animation_translucent_top">Translucent (вверху)</string>
+-  <string name="power_menu_animation_translucent_bottom">Translucent (внизу)</string>
++  <string name="power_menu_animation_translucent_top">Полупрозрачная (вверху)</string>
++  <string name="power_menu_animation_translucent_bottom">Полупрозрачная (внизу)</string>
+   <!-- IME animations -->
+   <string name="ime_animation_title">Анимации клавиатуры</string>
+   <string name="ime_animation_summary">Настроить анимации системной клавиатуры</string>
+@@ -1512,7 +1512,7 @@
+   <string name="quick_settings_sp_vibrate_title">Плитки</string>
+   <string name="quick_settings_sp_vibrate_summary">Вибрировать при одиночном нажатии на плитки</string>
+   <!-- QS shade transparency -->
+-  <string name="qs_transparent_shade">Непрозрачность панели быстрых настроек</string>
++  <string name="qs_transparent_shade">Прозрачность панели быстрых настроек</string>
+   <!-- Notifications transparency -->
+   <string name="notifications_transparency">Прозрачность уведомлений</string>
+   <!-- Safe headset volume restore checkbox -->
+@@ -1594,16 +1594,16 @@
+   <string name="missed_call_breath_summary">Уведомление о пропущенном звонке с эффектом \"дыхания\" в строке состояния</string>
+   <string name="voicemail_breath_title">Голосовая почта</string>
+   <string name="voicemail_breath_summary">Уведомление о голосовой почте с эффектом \"дыхания\" в строке состояния</string>
+-  <string name="sms_breath_title">СМС</string>
+-  <string name="sms_breath_summary">Уведомление о СМС с эффектом \"дыхания\" в строке состояния</string>
++  <string name="sms_breath_title">SMS</string>
++  <string name="sms_breath_summary">Уведомление о SMS с эффектом \"дыхания\" в строке состояния</string>
+   <!-- QS header transparency -->
+-  <string name="qs_transparent_header">Непрозрачность заголовка панели уведомлений</string>
++  <string name="qs_transparent_header">Прозрачность заголовка панели уведомлений</string>
+   <!-- Volume dialog transparency -->
+-  <string name="volume_dialog_transparency">Непрозрачность панели громкости</string>
++  <string name="volume_dialog_transparency">Прозрачность панели громкости</string>
+   <!-- Power menu and dialogs transparency -->
+-  <string name="power_menu_transparency">Непрозрачность меню питания</string>
++  <string name="power_menu_transparency">Прозрачность меню кнопки питания</string>
+   <!-- Power/reboot dialogs dim amount -->
+-  <string name="power_menu_dialog_dim">Затемнение фона при отображении меню питания</string>
++  <string name="power_menu_dialog_dim">Затемнение фона при отображении меню кнопки питания</string>
+   <!-- Ability to disable hardware keys via nav bar settings -->
+   <string name="hw_keys_title">Аппаратные кнопки</string>
+   <string name="hw_keys_summary">Включить аппаратные кнопки</string>
+@@ -1851,7 +1851,7 @@
+   <string name="color_picker_label">Выбор цвета</string>
+   <!-- Fling -->
+   <string name="fling_settings">Настройки Fling</string>
+-  <string name="fling_interface">Интерфейс жестов Fling</string>
++  <string name="fling_interface">Жесты Fling</string>
+   <string name="fling_enable_title">Включить Fling</string>
+   <string name="fling_back_home_policy">Назад и Домой должны быть назначены всегда. Для изменения назначения Назад и Домой, установите сначала нужные назначения</string>
+   <string name="fling_split_bar_policy">Когда назначено действие только справа или слева, оно выполняется на всей панели</string>
+@@ -2028,7 +2028,7 @@
+   <string name="text_cat_title">Текст категорий</string>
+   <!-- Dashboard Text Size -->
+   <string name="dash_title_text_size">Размер текста заголовков</string>
+-  <string name="dash_category_text_size">Размер текста категорий</string>]
++  <string name="dash_category_text_size">Размер текста категорий</string>
+   <!-- Carrier Label - Hide based on notifications -->
+   <string name="text_title">Текст</string>
+   <string name="number_of_notifications_title">Количество уведомлений</string>
+-- 
+2.7.4
+

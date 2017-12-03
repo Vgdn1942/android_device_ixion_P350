@@ -4,6 +4,8 @@ import init.project.rc
 import init.xlog.rc
 import init.${ro.hardware}.power.rc
 import init.modem.rc
+import meta_init.modem.rc
+import init.nvdata.rc
 
 on early-boot
     # NOTE: early-boot is AFTER even post-fs-data!

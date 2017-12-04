@@ -43,18 +43,18 @@ EXPERIMENTAL_USE_JAVA8 := true
 
 # Kernel
 BOARD_KERNEL_CMDLINE += \
-    bootopt=64S3,32S1,32S1 \
-    androidboot.hardware=mt6580 \
-    androidboot.selinux=disabled
+	bootopt=64S3,32S1,32S1 \
+	androidboot.hardware=mt6580 \
+	androidboot.selinux=disabled
 
 BOARD_KERNEL_BASE := 0x80000000
 BOARD_KERNEL_PAGESIZE := 2048
 
 BOARD_MKBOOTIMG_ARGS := \
-    --kernel_offset 0x00008000 \
-    --ramdisk_offset 0x04000000 \
-    --tags_offset 0x0e000000 \
-    --board P350_R01_13.02.
+	--kernel_offset 0x00008000 \
+	--ramdisk_offset 0x04000000 \
+	--tags_offset 0x0e000000 \
+	--board P350_R01_13.02.
 
 TARGET_PREBUILT_KERNEL := $(LOCAL_PATH)/kernel
 
@@ -64,7 +64,7 @@ BOARD_DONT_USE_MTK_BOOTIMG := true
 
 TARGET_KMODULES := true
 
-TARGET_GLOBAL_CFLAGS   += -mfpu=neon -mfloat-abi=softfp
+TARGET_GLOBAL_CFLAGS += -mfpu=neon -mfloat-abi=softfp
 TARGET_GLOBAL_CPPFLAGS += -mfpu=neon -mfloat-abi=softfp
 
 COMMON_GLOBAL_CFLAGS += -DDISABLE_HW_ID_MATCH_CHECK
@@ -184,7 +184,7 @@ TARGET_USE_CUSTOM_LUN_FILE_PATH := "/sys/devices/platform/mt_usb/musb-hdrc.0.aut
 
 # SELinux
 BOARD_SEPOLICY_DIRS += \
-    $(LOCAL_PATH)/sepolicy
+	$(LOCAL_PATH)/sepolicy
 
 # NOTE: remove this once Marshmallow kernel is available
 POLICYVERS := 29

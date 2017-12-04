@@ -189,7 +189,3 @@ BOARD_SEPOLICY_DIRS += \
 # NOTE: remove this once Marshmallow kernel is available
 POLICYVERS := 29
 
-# Hack for building without kernel sources
-ifeq ($(TARGET_DEVICE),P350)
-$(shell mkdir -p $(OUT)/obj/KERNEL_OBJ/usr)
-endif

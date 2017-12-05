@@ -24,7 +24,6 @@ on post-fs-data
     setprop vold.post_fs_data_done 1
     
 service permission_check /system/bin/permission_check
-    class main
     user root
     group system radio
     oneshot

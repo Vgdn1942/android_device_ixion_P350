@@ -201,8 +201,8 @@ index f68e0a91b1c..6c483aab814 100644
      KeyedVector<OMX_BUFFERHEADERTYPE *, OMX::buffer_id> mBufferHeaderToBufferID;
 +#endif
      MetadataBufferType mMetadataType[2];
+     bool mGraphicBufferEnabled[2];
  
-     // For debug support
 diff --git a/media/libstagefright/omx/Android.mk b/media/libstagefright/omx/Android.mk
 index d16d5df1204..31a0c4f1e71 100644
 --- a/media/libstagefright/omx/Android.mk

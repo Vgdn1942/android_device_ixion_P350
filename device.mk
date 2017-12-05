@@ -25,10 +25,6 @@ TARGET_SCREEN_WIDTH := 720
 PRODUCT_PACKAGES += \
 	libxlog
 
-# Add libboringssl-compat.so to provide BIO_f_base64
-PRODUCT_PACKAGES += \
-	libboringssl-compat
-
 # init
 #PRODUCT_PACKAGES += \
 #	proj-dev-setup
@@ -138,9 +134,9 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
 	 $(LOCAL_PATH)/configs/agps_profiles_conf2.xml:system/etc/agps_profiles_conf2.xml
 
-# Need for gps.default.so
+# Need for gps.mt6580.so
 PRODUCT_PACKAGES += \
-	libcurl
+	gps.mt6580.so
 
 # Torch
 PRODUCT_PACKAGES += \

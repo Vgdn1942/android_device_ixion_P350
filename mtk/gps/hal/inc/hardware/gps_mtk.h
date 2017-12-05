@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Sony Mobile Communications AB
+ * Copyright (C) 2010 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,21 @@
  * limitations under the License.
  */
 
-#include <openssl/rsa.h>
+#ifndef ANDROID_INCLUDE_HARDWARE_GPS_MTK_H
+#define ANDROID_INCLUDE_HARDWARE_GPS_MTK_H
 
-int RSA_verify_PKCS1_PSS(RSA *rsa,
-			 const unsigned char *mHash,
-			 const EVP_MD *Hash,
-			 const unsigned char *EM,
-			 int sLen)
-{
-	return RSA_verify_PKCS1_PSS_mgf1(rsa, mHash, Hash, NULL, EM, sLen);
-}
+#include <hardware/gps.h>
+
+__BEGIN_DECLS
+
+/** GPS callback structure with Mediatek extension. */
+typedef struct _GpsCallbacks_mtk {
+    GpsCallbacks base;
+
+//    gnss_sv_status_callback gnss_sv_status_cb;
+} GpsCallbacks_mtk;
+
+__END_DECLS
+
+#endif /* ANDROID_INCLUDE_HARDWARE_GPS_MTK_H */
+

@@ -104,6 +104,9 @@ ro.sf.hwrotation=0
 drm.service.enabled=true
 fmradio.driver.enable=1
 
+# Low-ram optimizations
+ro.config.low_ram=true
+persist.sys.force_highendgfx=true
 
 #
 # MTK bits

@@ -34,15 +34,23 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
 	libmtkabi
 
-# Display
+# Graphics
 PRODUCT_PACKAGES += \
+	hwcomposer.mt6580 \
 	libgralloc_extra \
 	libion_mtk \
 	libion \
 	libui_ext \
 	libgui_ext \
 	guiext-server \
-	libmtk_drvb
+	libmtk_drvb \
+	libm4u \
+	libbwc \
+	libged \
+	libperfservice \
+	libperfservicenative \
+	libgas \
+	libdpframework
 
 # Offline charge
 PRODUCT_PACKAGES += \

@@ -1,0 +1,16 @@
+A common interface for game detection for GPU drivers.
+
+WHAT IT DOES?
+=============
+A game detection for GPU behavior.
+
+HOW IT WAS BUILT?
+==================
+It needs the following library from MTK:
+1.  libbinder.so
+2.  libcutils.so
+3.  libperfservicenative.so
+4.  libutils.so
+
+HOW TO USE IT?
+==============

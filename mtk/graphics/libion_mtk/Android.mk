@@ -25,7 +25,7 @@ LOCAL_MODULE_TAGS := optional
 
 LOCAL_C_INCLUDES += \
         $(LOCAL_PATH)/include \
-        $(LOCAL_PATH)/../kernel-headers \
+        $(LOCAL_PATH)/../../kernel-headers \
         $(TOP)/system/core/include
 
 LOCAL_SHARED_LIBRARIES := libion liblog

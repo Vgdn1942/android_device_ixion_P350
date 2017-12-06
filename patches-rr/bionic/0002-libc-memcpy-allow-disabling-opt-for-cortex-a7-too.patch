@@ -1,0 +1,35 @@
+From fe838600e7ed394791d4d32b1b99bf89b99e58f2 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Wed, 22 Jun 2016 16:26:51 +0800
+Subject: [PATCH] libc: memcpy: allow disabling opt for cortex-a7 too
+
+Change-Id: Ic9115ea000de59beac59d76ad73712466d36906a
+---
+ libc/arch-arm/cortex-a7/cortex-a7.mk | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/libc/arch-arm/cortex-a7/cortex-a7.mk b/libc/arch-arm/cortex-a7/cortex-a7.mk
+index 3629a5765c..7a9b4b668a 100644
+--- a/libc/arch-arm/cortex-a7/cortex-a7.mk
++++ b/libc/arch-arm/cortex-a7/cortex-a7.mk
+@@ -2,7 +2,6 @@ libc_bionic_src_files_arm += \
+     arch-arm/cortex-a7/bionic/memset.S \
+ 
+ libc_bionic_src_files_arm += \
+-    arch-arm/cortex-a15/bionic/memcpy.S \
+     arch-arm/cortex-a15/bionic/stpcpy.S \
+     arch-arm/cortex-a15/bionic/strcat.S \
+     arch-arm/cortex-a15/bionic/__strcat_chk.S \
+@@ -17,3 +16,12 @@ libc_bionic_src_files_arm += \
+ 
+ libc_bionic_src_files_arm += \
+     arch-arm/denver/bionic/memmove.S \
++
++# Optimization not required for some targets
++ifeq ($(TARGET_CPU_MEMCPY_OPT_DISABLE),true)
++libc_bionic_src_files_arm += \
++    arch-arm/cortex-a7/bionic/memcpy.S
++else
++libc_bionic_src_files_arm += \
++    arch-arm/cortex-a15/bionic/memcpy.S
++endif

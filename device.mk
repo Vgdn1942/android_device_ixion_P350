@@ -134,9 +134,8 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
 	 $(LOCAL_PATH)/configs/agps_profiles_conf2.xml:system/etc/agps_profiles_conf2.xml
 
-# Need for gps.mt6580.so
 PRODUCT_PACKAGES += \
-	gps.mt6580.so
+	gps.mt6580
 
 # Torch
 PRODUCT_PACKAGES += \

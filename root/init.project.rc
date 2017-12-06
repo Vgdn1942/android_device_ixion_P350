@@ -96,7 +96,7 @@ service audio-daemon /system/bin/audiocmdservice_atci
     class main
     socket atci-audio stream 660 media system
     user media
-    group nvram media system sdcard_rw
+    group radio media system sdcard_rw
     disabled
     oneshot
 

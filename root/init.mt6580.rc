@@ -996,14 +996,6 @@ service nvram_daemon /system/bin/nvram_daemon
     group system
     oneshot
 
-# DFO (Begin)
-service featured /system/bin/featured
-    class core
-    user nvram
-    group system
-    socket dfo stream 660 nvram system
-# DFO (End)
-
 service atci_service /system/bin/atci_service
     class core
     socket atci-service stream 660 radio system
@@ -1311,7 +1303,7 @@ service agpsd /system/bin/mtk_agpsd
     socket agpsd2 stream 660 gps inet
     socket agpsd3 stream 660 gps inet
     user gps
-    group gps system ccci radio inet sdcard_r sdcard_rw misc
+    group gps radio inet sdcard_r sdcard_rw misc
 
 service wifi2agps /system/bin/wifi2agps
     class main
@@ -1489,7 +1481,6 @@ service mc64xxd /system/bin/mc64xxd
 #sensor service (end)
 #
 
-# this is "engineer mode server", we don't need it
 #
 #emsvr service (start)
 #

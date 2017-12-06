@@ -122,7 +122,10 @@ PRODUCT_PACKAGES += \
 	mtk-rilmd2 \
 	ccci_fsd \
 	ccci_mdinit \
-	libccci_util
+	libccci_util \
+	terservice \
+	libterservice \
+	muxreport
 
 # Telecom
 PRODUCT_COPY_FILES += \

@@ -17,7 +17,7 @@ index 29fb4186d58..b4f93b21739 100644
  	$(TOP)/hardware/samsung/exynos4/include
  endif
  
-+ifeq ($(BOARD_HAS_MTK_HARDWARE),true)
++ifeq ($(BOARD_USES_MTK_HARDWARE),true)
 +ifeq ($(BOARD_USES_LEGACY_MTK_AV_BLOB),true)
 +LOCAL_CFLAGS += -DUSE_LEGACY_MTK_AV_BLOB
 +endif

@@ -20,7 +20,7 @@ index 3a154f747f1..3f84d929ba6 100644
  	UiConfig.cpp \
 -	MediatekHacks.cpp
  
- ifeq ($(BOARD_HAS_MTK_HARDWARE),true)
+ ifeq ($(BOARD_USES_MTK_HARDWARE),true)
  LOCAL_SRC_FILES += \
 diff --git a/libs/ui/MediatekHacks.cpp b/libs/ui/MediatekHacks.cpp
 deleted file mode 100644

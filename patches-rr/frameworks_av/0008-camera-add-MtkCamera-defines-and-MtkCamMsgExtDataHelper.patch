@@ -20,7 +20,7 @@ index 36f6da10742..b0e0c107fe4 100644
  LOCAL_WHOLE_STATIC_LIBRARIES += libcamera_parameters
  endif
  
-+ifeq ($(BOARD_HAS_MTK_HARDWARE),true)
++ifeq ($(BOARD_USES_MTK_HARDWARE),true)
 +LOCAL_SRC_FILES += \
 +    MtkCamera.cpp \
 +

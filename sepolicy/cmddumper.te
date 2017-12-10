@@ -4,7 +4,7 @@
 # ==============================================
 # Type Declaration
 # ==============================================
-type cmddumper, domain;
+type cmddumper, domain, domain_deprecated;
 type cmddumper_exec, exec_type, file_type;
 
 # ==============================================
@@ -12,24 +12,27 @@ type cmddumper_exec, exec_type, file_type;
 # ==============================================
 init_daemon_domain(cmddumper)
 
-#============= cmddumper ==============
+# cmddumper  access on /data/mdlog 
 allow cmddumper mdlog_data_file:fifo_file create_file_perms;
 allow cmddumper mdlog_data_file:file create_file_perms;
 allow cmddumper mdlog_data_file:dir { create_dir_perms relabelto };
-allow cmddumper ttySDIO_device:chr_file { read write ioctl open };
-allow cmddumper fuse:dir create_dir_perms;
-allow cmddumper fuse:file create_file_perms;
+allow cmddumper system_data_file:dir { create_dir_perms relabelfrom relabelto};
 
+#cmddumper access external modem ttySDIO2 
+allow cmddumper ttySDIO_device:chr_file { read write ioctl open };
+
+# for modem logging sdcard access
+allow cmddumper sdcard_type:dir create_dir_perms;
+allow cmddumper sdcard_type:file create_file_perms;
+
+# modem logger socket access
 allow cmddumper init:unix_stream_socket connectto;
 allow cmddumper property_socket:sock_file { write read };
 allow cmddumper platform_app:unix_stream_socket connectto;
+allow cmddumper shell_exec:file { rx_file_perms };
+allow cmddumper system_file:file x_file_perms;
 
-allow cmddumper shell_exec:file { read execute open execute_no_trans };
-allow cmddumper system_file:file execute_no_trans;
-
+#allow emdlogger to set property
 allow cmddumper debug_mdlogger_prop:property_service set;
 allow cmddumper debug_prop:property_service set;
-
-#allow cmddumper tmpfs:lnk_file read;
-allow cmddumper system_data_file:dir { write create open add_name relabelfrom relabelto};
 

@@ -35,7 +35,7 @@
 #include <sys/timerfd.h>
 #include <linux/rtc.h>
 
-#include <healthd.h>
+#include <healthd/healthd.h>
 
 void healthd_board_init(struct healthd_config*)
 {

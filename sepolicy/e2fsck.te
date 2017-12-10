@@ -1,2 +1,0 @@
-# Add by vgdn1942
-allow e2fsck block:blk_file { rw_dir_perms };

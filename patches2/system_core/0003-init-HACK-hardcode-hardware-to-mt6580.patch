@@ -1,0 +1,23 @@
+From 7b7806f8c693cad07e437e5956a3e52e407e521c Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Sun, 11 Sep 2016 01:13:18 +0800
+Subject: [PATCH] init: HACK hardcode hardware to mt6595
+
+Change-Id: I7ab8c0c724e1358200e58b3f49688038c78e7431
+---
+ init/init.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/init/init.cpp b/init/init.cpp
+index 61f4b7c967..a1bcfdaf90 100755
+--- a/init/init.cpp
++++ b/init/init.cpp
+@@ -366,7 +366,7 @@ static void export_kernel_boot_props() {
+         { "ro.boot.mode",       "ro.bootmode",   "unknown", },
+         { "ro.boot.baseband",   "ro.baseband",   "unknown", },
+         { "ro.boot.bootloader", "ro.bootloader", "unknown", },
+-        { "ro.boot.hardware",   "ro.hardware",   "unknown", },
++        { "ro.boot.hardware",   "ro.hardware",   "mt6580", },
+ #ifndef IGNORE_RO_BOOT_REVISION
+         { "ro.boot.revision",   "ro.revision",   "0", },
+ #endif

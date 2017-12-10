@@ -687,7 +687,9 @@ int write_frame(
         /* Using Address filed, Control field and Length field to calculate the FCS and store it in postfix[0] */
         postfix[0] = frame_calc_crc(prefix + 1, prefix_length - 1);
         syslogdump(">s ", prefix,prefix_length); /* syslogdump for basic mode */
-        c = write(serial.fd, prefix, prefix_length);
+        do {
+            c = write(serial.fd, prefix, prefix_length);
+        } while (c < 0 && errno == EINTR);
         int writeErrno = errno;
         LOGMUX(LOG_DEBUG, "Write prefix len=%d written=%d errno=%d", prefix_length, c, writeErrno);
         if (c != prefix_length) {
@@ -715,7 +717,9 @@ int write_frame(
         // Wirte information into buffer
         if (length > 0) {
             syslogdump(">s ", input,length); /* syslogdump for basic mode */
-            c = write(serial.fd, input, length);
+            do {
+                c = write(serial.fd, input, length);
+            } while (c < 0 && errno == EINTR);
             writeErrno = errno;
             LOGMUX(LOG_DEBUG, "Write data len=%d written=%d errno=%d", length, c, writeErrno);
             if (length != c) {
@@ -741,7 +745,9 @@ int write_frame(
 
         // Write postfix
         syslogdump(">s ", postfix,2); /* syslogdump for basic mode */
-        c = write(serial.fd, postfix, 2);
+        do {
+            c = write(serial.fd, postfix, 2);
+        } while (c < 0 && errno == EINTR);
         writeErrno = errno;
         LOGMUX(LOG_DEBUG, "Write postfix len=%d written=%d errno=%d", 2, c, writeErrno);
         if (c != 2) {
@@ -898,7 +904,7 @@ static int logical_channel_init(Channel * channel, int id)
     channel->devicename = id ? "/dev/ptmx" : NULL; // TODO do we need this to be dynamic anymore?
     // clear reopen flag
     channel->reopen = 0;
-
+    pthread_mutex_init(&channel->reopen_mutex, NULL);
 #ifdef MUX_ANDROID
     // find configuration in ch_cfg
     for (i = 0; i < MUXD_CH_NUM_ALL; i++) {
@@ -940,7 +946,6 @@ static int logical_channel_establish(Channel *channel)
 
         /* Only send SABM for each MUX's channel*/
         channel->sabm_ua_pending = 1;
-
         write_frame(channel->id, NULL, 0, GSM0710_TYPE_SABM | GSM0710_PF);
 
         LOGMUX(LOG_INFO, "Connecting %s to virtual channel %d on %s", channel->ptsname, channel->id, serial.devicename);
@@ -994,7 +999,7 @@ static int setup_pty_interface(Channel *channel)
             unlink(channel->ptslink);
             SYSCHECK(chmod(channel->ptsname, 0660));
             SYSCHECK(symlink(channel->ptsname, channel->ptslink));
-                        LOGMUX(LOG_ERR,"symlink done,fd %d: %s->%s",channel->fd, channel->ptsname, channel->ptslink);
+            LOGMUX(LOG_INFO,"symlink done,fd %d: %s->%s",channel->fd, channel->ptsname, channel->ptslink);
         }
 #if 0
         if (channel_id < vir_ports && restarted == 0) {
@@ -1017,7 +1022,7 @@ static int setup_pty_interface(Channel *channel)
     }
 
     //create thread
-    LOGMUX(LOG_ERR, "New channel properties: number: %d fd: %d device: %s", channel->id, channel->fd, channel->devicename);
+    LOGMUX(LOG_INFO, "New channel properties: number: %d fd: %d device: %s", channel->id, channel->fd, channel->devicename);
 
     //iniitialize pointer to thread args
     Poll_Thread_Arg *poll_thread_arg = (Poll_Thread_Arg *)calloc(1, sizeof(Poll_Thread_Arg));
@@ -1042,7 +1047,7 @@ static int setup_pty_interface(Channel *channel)
  */
 int pseudo_device_read(void *vargp)
 {
-	LOGMUX(LOG_INFO, "Enter, LackofAtciChannel=%d",LackofAtciChannel);
+    LOGMUX(LOG_INFO, "Enter, LackofAtciChannel=%d",LackofAtciChannel);
     Channel *channel = (Channel *)vargp;
     /* Note by LS: Because the pseudo_device_read() is ivoked due to newly incoming data */
     /* The buffer size of N_TTY is defined as 4096 in tty.h: The maximum bytes of newly incoming data maybe 4096 */
@@ -1062,7 +1067,7 @@ int pseudo_device_read(void *vargp)
         return GSM0710MUXD_PTY_READ_ERR;
     }
 
-	if (!channel->opened && !LackofAtciChannel) {
+        if (!channel->opened && !LackofAtciChannel) {
         /* Note by LS: In our implementation: each non-control channel must be opened at the initialization stage */
         Gsm0710Muxd_Assert(GSM0710MUXD_TXTHREAD_ERR);
 #if 0
@@ -1233,6 +1238,7 @@ int pseudo_device_read(void *vargp)
 
 close_pty_channel:
     LOGMUX(LOG_INFO, "Appl. dropped connection, device %s shutting down. Set to be reopened", channel->ptsname);
+    pthread_mutex_lock(&channel->reopen_mutex);
     /*disconnect channel from pty*/
     if (channel->ptslink != NULL) unlink(channel->ptslink);
     close(channel->fd);
@@ -1243,7 +1249,7 @@ close_pty_channel:
 
     /* set channel to be reopened. this will not be cleared when doing a channel close */
     channel->reopen = 1;
-
+    pthread_mutex_unlock(&channel->reopen_mutex);
     //LOGMUX(LOG_DEBUG, "Leave");
     return GSM0710MUXD_PTY_READ_ERR;
 }
@@ -1639,7 +1645,7 @@ static GSM0710_Frame *gsm0710_base_buffer_get_frame(GSM0710_Buffer *buf, int pas
     buf->flag_found = 0; /* prepare for any future frame processing*/
 
     if (frame->channel != MUXD_VT_CH_NUM)
-        LOGMUX(LOG_INFO, "Get a complete frame. ch:%d, ctrl:%d, len:%d", frame->channel,
+        LOGMUX(LOG_DEBUG, "Get a complete frame. ch:%d, ctrl:%d, len:%d", frame->channel,
                frame->control, frame->length);
     return frame;
 
@@ -1890,6 +1896,11 @@ static int chat(int    serial_device_fd, char * cmd, int to)
         } while (wrote < 0 && errno == EINTR);
 
         if (wrote < 0) {
+            if (errno==ETXTBSY || errno==ENODEV) {
+                LOGMUX(LOG_ERR, "Chat Fail, modem already exception, exit");
+                property_set(PROPERTY_MODEM_EE, "1");
+                exit(0);
+            }
             LOGMUX(LOG_ERR, "Wrote fail");
             return -1;
         }
@@ -2181,7 +2192,8 @@ static int handle_command(GSM0710_Frame *frame)
                     if (!channel->opened) break;
 
                     if ((signals & GSM0710_SIGNAL_FC) == GSM0710_SIGNAL_FC) {
-                                                LOGMUX(LOG_INFO, "No frames allowed, channel id=%d,tx_fc_off=%d",channel->id,channel->tx_fc_lock);
+                        LOGMUX(LOG_INFO, "No frames allowed, channel id=%d,tx_fc_off=%d"
+                                ,channel->id,channel->tx_fc_off);
 
                         /* TX from the AP side to Modem is disallowed */
                         pthread_mutex_lock(&channel->tx_fc_lock);
@@ -2400,12 +2412,14 @@ int extract_frames(GSM0710_Buffer *buf)
                     while (1) {
                         if ((write_result = write(channel->fd, frame->data, frame->length)) >= 0) {
                             int fsync_result = -1;
-							LOGMUX(LOG_INFO, "write() returned. Written %d/%d bytes of frame to %s", write_result, frame->length, channel->ptsname);
+                            LOGMUX(LOG_DEBUG,
+                                    "write() returned. Written %d/%d bytes of frame to %s",
+                                    write_result, frame->length, channel->ptsname);
                             /* Ref Linux Man Page: fsync() transfers ("flushes") all modified in-core data of (i.e., modified buffer cache pages for) the file referred to by the file descriptor fd to the disk device (or other permanent storage device) where that file resides */
                             /* The call blocks until the device reports that the transfer has completed */
                             fsync_result = fsync(channel->fd); /*push to /dev/pts device */
                             if (fsync_result < 0) {
-                                LOGMUX(LOG_ERR, "fsync() failed (%d, %d - %s)", fsync_result, errno, strerror(errno));
+                                LOGMUX(LOG_DEBUG, "fsync() failed (%d, %d - %s)", fsync_result, errno, strerror(errno));
                             }
 
                             #ifdef __MUXD_FLOWCONTROL__
@@ -2445,10 +2459,11 @@ int extract_frames(GSM0710_Buffer *buf)
                                 goto uih_process_done;
                                 #endif  /* __MUXD_FLOWCONTROL__ */
                                 break;
-                            #if 0
+
                             case EBADF:
                                 LOGMUX(LOG_ERR, "Interrupt signal EBADF caught");
                                 break;
+                            #if 0
                             case EINVAL:
                                 LOGMUX(LOG_ERR, "Interrupt signal EINVAL caught");
                                 break;
@@ -2475,6 +2490,9 @@ int extract_frames(GSM0710_Buffer *buf)
                                 sleep(1);
                                 break;
                             default:
+                                LOGMUX(LOG_ERR, "try to get reopen mutex");
+                                int backupErr = errno;
+                                pthread_mutex_lock(&channel->reopen_mutex);
                                 if (channel->reopen) {
                                     LOGMUX(LOG_ERR, "channel%d needs to be reopened\n", channel->id);
                                     //MTK-START [mtk06800] retry after some intervals to prevent too much logs
@@ -2482,9 +2500,10 @@ int extract_frames(GSM0710_Buffer *buf)
                                     //MTK-END [mtk06800] retry after some intervals to prevent too much logs
                                     watchdog(&serial);
                                 } else {
-                                    LOGMUX(LOG_ERR, "Unknown interrupt signal errno=%d caught from write()\n", errno);
+                                    LOGMUX(LOG_ERR, "Unknown interrupt signal errno=%d caught from write()\n", backupErr);
                                     Gsm0710Muxd_Assert(9);
                                 }
+                                pthread_mutex_unlock(&channel->reopen_mutex);
                                 break;
                             }
                         }
@@ -2549,12 +2568,12 @@ uih_process_done:
                         channellist[frame->channel].sabm_ua_pending = 0;
 
                         if (frame->channel == 0) {
-                            LOGMUX(LOG_ERR, "Control channel opened");
+                            LOGMUX(LOG_INFO, "Control channel opened");
                             //send version Siemens version test
                             //static unsigned char version_test[] = "\x23\x21\x04TEMUXVERSION2\0";
                             //write_frame(0, version_test, sizeof(version_test), GSM0710_TYPE_UIH);
                         } else {
-                            LOGMUX(LOG_ERR, "Logical channel %d opened", frame->channel);
+                            LOGMUX(LOG_INFO, "Logical channel %d opened", frame->channel);
                         }
 
                         #ifdef  MUX_ANDROID
@@ -2569,10 +2588,10 @@ uih_process_done:
                             mux_setup_chnl_complete = 1;
                             pthread_mutex_unlock(&setup_chnl_complete_lock);
 
-                            LOGMUX(LOG_ERR, "Finish MUX Channel Setup Procedure");
+                            LOGMUX(LOG_INFO, "Finish MUX Channel Setup Procedure");
                             pthread_cond_signal(&setup_chnl_complete_signal);
                         } else if (frame->channel == 24) {
-                            LOGMUX(LOG_ERR, "Finish MUX Channel Setup Procedure for VT");
+                            LOGMUX(LOG_INFO, "Finish MUX Channel Setup Procedure for VT");
                         }
                         #endif /* MUX_ANDROID */
                     } else if (channellist[frame->channel].disc_ua_pending == 1) {
@@ -2596,21 +2615,21 @@ uih_process_done:
                         //close channels
                     } else {
                         LOGMUX(LOG_INFO, "Logical channel %d couldn't be opened", frame->channel);
-						// temp solution for lack of ATCI channel
-						if(frame->channel == 26) {
-							LOGMUX(LOG_INFO, "temp solution for ATCI channel when open fail");
-							pthread_mutex_lock(&setup_chnl_complete_lock);
-							mux_setup_chnl_complete = 1;
-							pthread_mutex_unlock(&setup_chnl_complete_lock);
+                        // temp solution for lack of ATCI channel
+                        if(frame->channel == 26) {
+                            LOGMUX(LOG_INFO, "temp solution for ATCI channel when open fail");
+                            pthread_mutex_lock(&setup_chnl_complete_lock);
+                            mux_setup_chnl_complete = 1;
+                            pthread_mutex_unlock(&setup_chnl_complete_lock);
 
-							LOGMUX(LOG_ERR, "Finish MUX Channel Setup Procedure");
-							pthread_cond_signal(&setup_chnl_complete_signal);
+                            LOGMUX(LOG_INFO, "Finish MUX Channel Setup Procedure");
+                            pthread_cond_signal(&setup_chnl_complete_signal);
 
-							property_set("lackof.atci.channel", "1");
-							LackofAtciChannel = 1;
-						}
-					}
-				}
+                            property_set("lackof.atci.channel", "1");
+                            LackofAtciChannel = 1;
+                        }
+                    }
+                }
                 break;
             case GSM0710_TYPE_DISC:
                 if (channellist[frame->channel].opened) {
@@ -2637,10 +2656,11 @@ uih_process_done:
             case GSM0710_TYPE_SABM:
                 //channel open request
                 if (channellist[frame->channel].opened) {
-                    if (frame->channel == 0)
+                    if (frame->channel == 0) {
                         LOGMUX(LOG_INFO, "Control channel opened");
-                    else
+                    } else {
                         LOGMUX(LOG_INFO, "Logical channel %d opened", frame->channel);
+                    }
                 } else {
                     //channel already closed
                     LOGMUX(LOG_WARNING, "Received SABM even though channel %d was already closed", frame->channel);
@@ -2818,10 +2838,12 @@ void signal_treatment(int param)
         LOGMUX(LOG_WARNING, "MUXD recv SIGKILL,stop_muxd=%d",stop_muxd);
     default:
         LOGMUX(LOG_ERR, "Unknown interrupt signal errno=%d caught\n", errno);
-        if(stop_muxd != 1){
+        if (stop_muxd != 1) {
             stop_muxd = 1;
-            LOGMUX(LOG_ERR, "Close CCCI port,fd=%d",serial.fd);
-            SYSCHECK(shutdown_devices(SHUTDOWN_DEV_W_ACTIVE_FINALIZED));
+            LOGMUX(LOG_ERR, "Close CCCI port,fd=%d", serial.fd);
+            if (shutdown_devices(SHUTDOWN_DEV_W_ACTIVE_FINALIZED) < 0) {
+                LOGMUX(LOG_ERR, "system-error: '%s' (code: %d)", strerror(errno), errno);
+            }
         }
         exit(0);
         break;
@@ -3375,14 +3397,14 @@ int watchdog(Serial *serial)
         }
 #endif  /* __MUX_UT__ */
         // Establish CCH
-        LOGMUX(LOG_NOTICE, "Init control channel");
+        LOGMUX(LOG_INFO, "Init control channel");
         channellist[0].sabm_ua_pending = 1;
         write_frame(0, NULL, 0, GSM0710_TYPE_SABM | GSM0710_PF); //need to move? messy
 
         //tempary solution. call to allocate virtual port(s)
         int rc = 0;
         for (i = 1; i <= vir_ports; i++) {
-            LOGMUX(LOG_ERR, "Allocating logical channel %d/%d ", i, vir_ports);
+            LOGMUX(LOG_INFO, "Allocating logical channel %d/%d ", i, vir_ports);
             if ((rc = c_alloc_channel()) > 0) {
                 pthread_mutex_unlock(&watch_lock);
                 return rc;
@@ -3408,16 +3430,16 @@ int watchdog(Serial *serial)
             rild_started++;
 #ifdef MTK_RIL_MD2
             property_set("ctl.start", "ril-daemon-md2");
-            LOGMUX(LOG_ERR, "ril-daemon-md2 started!");
+            LOGMUX(LOG_INFO, "ril-daemon-md2 started!");
 #else
             property_set("ctl.stop", "ril-daemon");
-            LOGMUX(LOG_ERR, "ril-daemon stopped!");
+            LOGMUX(LOG_INFO, "ril-daemon stopped!");
             property_set("ctl.start", "ril-daemon-mtk");
-            LOGMUX(LOG_ERR, "ril-daemon-mtk started!");
+            LOGMUX(LOG_INFO, "ril-daemon-mtk started!");
 #endif
             prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0);
             setuid(AID_RADIO);
-            LOGMUX(LOG_ERR, "muxd switch to user radio");
+            LOGMUX(LOG_INFO, "muxd switch to user radio");
         }
 #endif
         break;
@@ -3690,7 +3712,7 @@ int isDualTalkSupport() {
     } else if (telephonyMode >= 5) {
         isDtSupport = 1;
     }
-    LOGMUX(LOG_INFO, "isDualTalkSupport:%d",isDtSupport);
+    //LOGMUX(LOG_INFO, "isDualTalkSupport:%d",isDtSupport);
     return isDtSupport;
 }
 
@@ -3705,8 +3727,9 @@ int main(int argc, char *argv[])
     LOGMUX(LOG_ERR, "Enter");
     int opt, rc = -1;
     char dev_node[32] = {0};
-
+    int enableMd1 = 0, enableMd2 = 0, enableMd5 = 0;
     char prop_value[PROPERTY_VALUE_MAX] = { 0 };
+
     property_get("ril.mux.debuglog.enable", prop_value, NULL);
     if (prop_value[0] == '1') {
         LOGMUX(LOG_INFO, "Enable full log");
@@ -3714,43 +3737,48 @@ int main(int argc, char *argv[])
     }
 
     property_set(PROPERTY_MODEM_EE, "0");
+    property_get("ro.boot.opt_md1_support", prop_value, "0");
+    enableMd1 = atoi(prop_value);
+    property_get("ro.boot.opt_md2_support", prop_value, "0");
+    enableMd2 = atoi(prop_value);
+    property_get("ro.boot.opt_md5_support", prop_value, "0");
+    enableMd5 = atoi(prop_value);
 
     if(isDualTalkSupport()) {
     #ifdef MTK_RIL_MD2
-    #if defined(MTK_ENABLE_MD5)
-        // for DSDA external MD2
-        snprintf(dev_node, 32, "%s", ccci_get_node_name(USR_MUXD_DATA, MD_SYS5));
-
-    #elif defined(MTK_ENABLE_MD2)
-        // for DSDA internal MD2
-        snprintf(dev_node, 32, "%s", ccci_get_node_name(USR_MUXD_DATA, MD_SYS2));
-    #else
-        LOGMUX(LOG_ERR, "ccci_get_node_name unknown, default tablet=%s", dev_node);
-        Gsm0710Muxd_Assert(GSM0710MUXD_OPEN_SERIAL_DEV_ERR);
-    #endif
+        if (enableMd5) {
+            // for DSDA external MD2
+            snprintf(dev_node, 32, "%s", ccci_get_node_name(USR_MUXD_DATA, MD_SYS5));
+        } else if (enableMd2) {
+            // for DSDA internal MD2
+            snprintf(dev_node, 32, "%s", ccci_get_node_name(USR_MUXD_DATA, MD_SYS2));
+        } else {
+            LOGMUX(LOG_ERR, "ccci_get_node_name unknown, default tablet=%s", dev_node);
+            Gsm0710Muxd_Assert(GSM0710MUXD_OPEN_SERIAL_DEV_ERR);
+        }
     #else /* MTK_RIL_MD2 */
-    #if defined(MTK_ENABLE_MD1)
-        snprintf(dev_node, 32, "%s", ccci_get_node_name(USR_MUXD_DATA, MD_SYS1));
-    #elif defined(MTK_ENABLE_MD5)
-        snprintf(dev_node, 32, "%s", ccci_get_node_name(USR_MUXD_DATA, MD_SYS5));
-    #else
-        LOGMUX(LOG_ERR, "ccci_get_node_name unknown, default tablet=%s", dev_node);
-        Gsm0710Muxd_Assert(GSM0710MUXD_OPEN_SERIAL_DEV_ERR);
-    #endif
+        if (enableMd1) {
+            snprintf(dev_node, 32, "%s", ccci_get_node_name(USR_MUXD_DATA, MD_SYS1));
+        } else if (enableMd5) {
+            snprintf(dev_node, 32, "%s", ccci_get_node_name(USR_MUXD_DATA, MD_SYS5));
+        } else {
+            LOGMUX(LOG_ERR, "ccci_get_node_name unknown, default tablet=%s", dev_node);
+            Gsm0710Muxd_Assert(GSM0710MUXD_OPEN_SERIAL_DEV_ERR);
+        }
     #endif /* MTK_RIL_MD2 */
 
     } else {
-    #if defined(MTK_ENABLE_MD1)
-        snprintf(dev_node, 32, "%s", ccci_get_node_name(USR_MUXD_DATA, MD_SYS1));
-    #elif defined(MTK_ENABLE_MD2)
-        snprintf(dev_node, 32, "%s", ccci_get_node_name(USR_MUXD_DATA, MD_SYS2));
-    #elif defined(MTK_ENABLE_MD5)
-        snprintf(dev_node, 32, "%s", ccci_get_node_name(USR_MUXD_DATA, MD_SYS5));
-    #else
-        snprintf(dev_node, 32, "%s", "/dev/ttyUSB1");
-        LOGMUX(LOG_ERR, "ccci_get_node_name unknown, default tablet=%s", dev_node);
-    #endif
-        LOGMUX(LOG_INFO, "ccci_get_node_name=%s", dev_node);
+        if (enableMd1) {
+            snprintf(dev_node, 32, "%s", ccci_get_node_name(USR_MUXD_DATA, MD_SYS1));
+        } else if (enableMd2) {
+            snprintf(dev_node, 32, "%s", ccci_get_node_name(USR_MUXD_DATA, MD_SYS2));
+        } else if (enableMd5) {
+            snprintf(dev_node, 32, "%s", ccci_get_node_name(USR_MUXD_DATA, MD_SYS5));
+        } else {
+            snprintf(dev_node, 32, "%s", "/dev/ttyUSB1");
+            LOGMUX(LOG_ERR, "ccci_get_node_name unknown, default tablet=%s", dev_node);
+        }
+            LOGMUX(LOG_INFO, "ccci_get_node_name=%s", dev_node);
     }
 
     serial.devicename = dev_node;

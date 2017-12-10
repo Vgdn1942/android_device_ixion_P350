@@ -1,4 +1,4 @@
-# LineageOS 13.0 device tree for DEXP Ixion P350
+# LineageOS 14.1 device tree for DEXP Ixion P350
 
 DEXP Ixion P350
 ==============
@@ -17,29 +17,28 @@ Camera  | 8MPx, LED Flash
 ![DEXP](https://content2.onliner.by/catalog/device/main/28756eabf91d930d247cb06211958125.jpeg "DEXP Ixion P350 Tundra Black")
 
 Working:
-- Wi-Fi
+- Modem
+- Voice
 - Bluetooth
 - Audio
-- Modem
-- SMS
-- Voice
-- USSD
-- Mobile data
+- Video play
 - Sensors
 - Lights
-- Camera (some cameras do not record video)
 - USB connection (ADB/MTP/PTP)
 - SD-Card
+
+Not working/Bugs:
+- Reboot when screen off
+- Wi-Fi
+- SMS
+- USSD
+- Mobile data
+- Camera
 - GPS
 - Wi-Fi tethering
 - Second SIM
 - Poweroff charge
-- Themes
 - YouTube 720p
-
-Not working/Bugs:
-- Some cameras do not record video
-- At reboot the error "System" (does not affect work)
 
 # Acknowledgements
 

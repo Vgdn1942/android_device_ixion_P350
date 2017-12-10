@@ -1,0 +1,25 @@
+From b5966d460862e78fefdefea907a79e43fe57a003 Mon Sep 17 00:00:00 2001
+From: vgdn1942 <vgdn1942@gmail.com>
+Date: Sun, 10 Dec 2017 16:59:26 +0300
+Subject: [PATCH] Add proc/ged to whitelist
+
+Change-Id: Ied9fba92fb969af778833f957ece992720242be0
+---
+ core/jni/fd_utils-inl.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/core/jni/fd_utils-inl.h b/core/jni/fd_utils-inl.h
+index a68a602..c6fc508 100644
+--- a/core/jni/fd_utils-inl.h
++++ b/core/jni/fd_utils-inl.h
+@@ -58,6 +58,7 @@ static const char* kPathWhitelist[] = {
+   "/dev/urandom",
+   "/dev/ion",
+   "/dev/dri/renderD129", // Fixes b/31172436
++  "/proc/ged", // MTK add
+   "/system/framework/org.cyanogenmod.platform-res.apk",
+ #ifdef PATH_WHITELIST_EXTRA_H
+ PATH_WHITELIST_EXTRA_H
+-- 
+2.7.4
+

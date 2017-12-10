@@ -144,15 +144,19 @@
 #define LOG_INFO    6
 #define LOG_DEBUG    7
 
-#ifdef MTK_RIL_MD1
-#define LOGMUX(lvl,f,...) do{if(lvl<=syslog_level){\
-                                RLOGD("[gsm0710muxd] %d:%s(): " f, __LINE__, __FUNCTION__, ##__VA_ARGS__);}\
-                          }while(0)
-#else
-#define LOGMUX(lvl,f,...) do{if(lvl<=syslog_level){\
-                                RLOGD("[gsm0710muxdmd2] %d:%s(): " f, __LINE__, __FUNCTION__, ##__VA_ARGS__);}\
-                          }while(0)
-#endif
+#define LOGMUX(lvl,f,...) {switch(lvl) {\
+                                case LOG_WARNING:\
+                                case LOG_ERR:\
+                                    RLOGE("%d:%s(): " f, __LINE__, __FUNCTION__, ##__VA_ARGS__);\
+                                break;\
+                                case LOG_INFO:\
+                                    RLOGD("%d:%s(): " f, __LINE__, __FUNCTION__, ##__VA_ARGS__);\
+                                break;\
+                                default:\
+                                case LOG_DEBUG:\
+                                    RLOGD("%d:%s(): " f, __LINE__, __FUNCTION__, ##__VA_ARGS__);\
+                                break;\
+                          }}
 
 #endif /*MUX_ANDROID*/
 
@@ -405,7 +409,7 @@ typedef struct Channel // Channel data
 
     int negotiated_N1;
     unsigned char v24_signals;
-
+    pthread_mutex_t reopen_mutex;
 #ifdef __MUXD_FLOWCONTROL__
     /* For TX flow control usage of each non-control channel */
     unsigned char tx_fc_off:1, rx_fc_off:1, rx_thread:1;

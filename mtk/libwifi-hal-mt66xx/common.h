@@ -15,7 +15,9 @@
 #define DEFAULT_EVENT_CB_SIZE   (64)
 #define DEFAULT_CMD_SIZE        (64)
 #define DOT11_OUI_LEN             3
+#define DOT11_MAX_SSID_LEN        32
 
+#define MAX_PROBE_RESP_IE_LEN      2048
 /*
  Vendor OUI - This is a unique identifier that identifies organization. Lets
  code Android specific functions with Google OUI; although vendors can do more
@@ -25,6 +27,10 @@
 const uint32_t GOOGLE_OUI = 0x001A11;
 /* TODO: define vendor OUI here */
 
+#ifndef MAC2STR
+#define MAC2STR(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
+#define MACSTR "%02x:%02x:%02x:%02x:%02x:%02x"
+#endif
 
 /*
  This enum defines ranges for various commands; commands themselves
@@ -33,33 +39,29 @@ const uint32_t GOOGLE_OUI = 0x001A11;
  */
 
 typedef enum {
-    /* don't use 0 as a valid subcommand */
-    VENDOR_NL80211_SUBCMD_UNSPECIFIED,
+    /* Don't use 0 as a valid subcommand */
+    ANDROID_NL80211_SUBCMD_UNSPECIFIED,
 
-    /* define all vendor startup commands between 0x0 and 0x0FFF */
-    VENDOR_NL80211_SUBCMD_RANGE_START = 0x0001,
-    VENDOR_NL80211_SUBCMD_RANGE_END   = 0x0FFF,
+    /* Define all vendor startup commands between 0x0 and 0x0FFF */
+    ANDROID_NL80211_SUBCMD_WIFI_RANGE_START = 0x0001,
+    ANDROID_NL80211_SUBCMD_WIFI_RANGE_END   = 0x0FFF,
 
-    /* define all GScan related commands between 0x1000 and 0x10FF */
+    /* Define all GScan related commands between 0x1000 and 0x10FF */
     ANDROID_NL80211_SUBCMD_GSCAN_RANGE_START = 0x1000,
     ANDROID_NL80211_SUBCMD_GSCAN_RANGE_END   = 0x10FF,
 
-    /* define all NearbyDiscovery related commands between 0x1100 and 0x11FF */
-    ANDROID_NL80211_SUBCMD_NBD_RANGE_START = 0x1100,
-    ANDROID_NL80211_SUBCMD_NBD_RANGE_END   = 0x11FF,
-
-    /* define all RTT related commands between 0x1100 and 0x11FF */
+    /* Define all RTT related commands between 0x1100 and 0x11FF */
     ANDROID_NL80211_SUBCMD_RTT_RANGE_START = 0x1100,
     ANDROID_NL80211_SUBCMD_RTT_RANGE_END   = 0x11FF,
 
     ANDROID_NL80211_SUBCMD_LSTATS_RANGE_START = 0x1200,
     ANDROID_NL80211_SUBCMD_LSTATS_RANGE_END   = 0x12FF,
 
-    /* define all Logger related commands between 0x1400 and 0x14FF */
+    /* Define all Logger related commands between 0x1400 and 0x14FF */
     ANDROID_NL80211_SUBCMD_DEBUG_RANGE_START = 0x1400,
     ANDROID_NL80211_SUBCMD_DEBUG_RANGE_END   = 0x14FF,
 
-    /* define all wifi offload related commands between 0x1600 and 0x16FF */
+    /* Define all wifi offload related commands between 0x1600 and 0x16FF */
     ANDROID_NL80211_SUBCMD_WIFI_OFFLOAD_RANGE_START = 0x1600,
     ANDROID_NL80211_SUBCMD_WIFI_OFFLOAD_RANGE_END   = 0x16FF,
 
@@ -68,58 +70,17 @@ typedef enum {
 } ANDROID_VENDOR_SUB_COMMAND;
 
 typedef enum {
-
-    GSCAN_SUBCMD_GET_CAPABILITIES = ANDROID_NL80211_SUBCMD_GSCAN_RANGE_START,
-
-    GSCAN_SUBCMD_SET_CONFIG,                            /* 0x1001 */
-
-    GSCAN_SUBCMD_SET_SCAN_CONFIG,                       /* 0x1002 */
-    GSCAN_SUBCMD_ENABLE_GSCAN,                          /* 0x1003 */
-    GSCAN_SUBCMD_GET_SCAN_RESULTS,                      /* 0x1004 */
-    GSCAN_SUBCMD_SCAN_RESULTS,                          /* 0x1005 */
-
-    GSCAN_SUBCMD_SET_HOTLIST,                           /* 0x1006 */
-
-    GSCAN_SUBCMD_SET_SIGNIFICANT_CHANGE_CONFIG,         /* 0x1007 */
-    GSCAN_SUBCMD_ENABLE_FULL_SCAN_RESULTS,              /* 0x1008 */
-    GSCAN_SUBCMD_GET_CHANNEL_LIST,                       /* 0x1009 */
-
-    WIFI_SUBCMD_GET_FEATURE_SET,                         /* 0x100A */
-    WIFI_SUBCMD_GET_FEATURE_SET_MATRIX,                  /* 0x100B */
-    WIFI_SUBCMD_SET_PNO_RANDOM_MAC_OUI,                  /* 0x100C */
-    WIFI_SUBCMD_NODFS_SET,                               /* 0x100D */
-    WIFI_SUBCMD_SET_COUNTRY_CODE,                             /* 0x100E */
-    /* Add more sub commands here */
-    GSCAN_SUBCMD_SET_EPNO_SSID,                          /* 0x100F */
-
-    WIFI_SUBCMD_SET_SSID_WHITE_LIST,                    /* 0x1010 */
-    WIFI_SUBCMD_SET_ROAM_PARAMS,                        /* 0x1011 */
-    WIFI_SUBCMD_ENABLE_LAZY_ROAM,                       /* 0x1012 */
-    WIFI_SUBCMD_SET_BSSID_PREF,                         /* 0x1013 */
-    WIFI_SUBCMD_SET_BSSID_BLACKLIST,                     /* 0x1014 */
-
-    GSCAN_SUBCMD_ANQPO_CONFIG,                          /* 0x1015 */
-    WIFI_SUBCMD_SET_RSSI_MONITOR,                       /* 0x1016 */
-    /* Add more sub commands here */
-
-    GSCAN_SUBCMD_MAX
-
-} WIFI_SUB_COMMAND;
-
-typedef enum {
-    GSCAN_EVENT_SIGNIFICANT_CHANGE_RESULTS ,
+    GSCAN_EVENT_SIGNIFICANT_CHANGE_RESULTS,
     GSCAN_EVENT_HOTLIST_RESULTS_FOUND,
     GSCAN_EVENT_SCAN_RESULTS_AVAILABLE,
     GSCAN_EVENT_FULL_SCAN_RESULTS,
     RTT_EVENT_COMPLETE,
     GSCAN_EVENT_COMPLETE_SCAN,
     GSCAN_EVENT_HOTLIST_RESULTS_LOST,
+    WIFI_EVENT_RSSI_MONITOR,
     GSCAN_EVENT_EPNO_EVENT,
-    GOOGLE_DEBUG_RING_EVENT,
-    GOOGLE_DEBUG_MEM_DUMP_EVENT,
     GSCAN_EVENT_ANQPO_HOTSPOT_MATCH,
-    GOOGLE_RSSI_MONITOR_EVENT
-} WIFI_EVENT;
+} WIFI_VENDOR_EVENT;
 
 typedef void (*wifi_internal_event_handler) (wifi_handle handle, int events);
 
@@ -184,6 +145,27 @@ typedef struct wifi_pno_result {
     u16 flags;
     mac_addr  bssid;
 } wifi_pno_result_t;
+
+typedef struct wifi_gscan_result {
+    u64 ts;                           // Time of discovery
+    u8 ssid[DOT11_MAX_SSID_LEN+1];    // null terminated
+    mac_addr bssid;                   // BSSID
+    u32 channel;                      // channel frequency in MHz
+    s32 rssi;                         // in db
+    u64 rtt;                          // in nanoseconds
+    u64 rtt_sd;                       // standard deviation in rtt
+    u16 beacon_period;                // units are Kusec
+    u16 capability;                   // Capability information
+    u32 ie_length;
+    char ie_data[1];
+} wifi_gscan_result_t;
+
+typedef struct wifi_gscan_full_result {
+    wifi_gscan_result_t fixed;
+    u32 scan_ch_bucket;              // scan chbucket bitmask
+    u32 ie_length;                   // byte length of Information Elements
+    u8  ie_data[1];                  // IE data to follow
+} wifi_gscan_full_result_t;
 
 wifi_error wifi_register_handler(wifi_handle handle, int cmd, nl_recvmsg_msg_cb_t func, void *arg);
 wifi_error wifi_register_vendor_handler(wifi_handle handle,

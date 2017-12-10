@@ -3,4 +3,3 @@ extern "C" {
         time = (long long*)-1;
     }
 }
-

@@ -79,7 +79,7 @@
 //#include <ui/Region.h>
 #include <ui/DisplayInfo.h>
 #include <ui/GraphicBuffer.h>
-#include <ui/FramebufferNativeWindow.h>
+//#include <ui/FramebufferNativeWindow.h>
 
 #include <gui/Surface.h>
 #include <gui/SurfaceComposerClient.h>

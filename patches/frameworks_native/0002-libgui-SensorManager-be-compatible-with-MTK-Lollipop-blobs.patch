@@ -1,4 +1,4 @@
-From 55da40fc59c680b73b0d9bdb4ea398ae395ece16 Mon Sep 17 00:00:00 2001
+From 95931f15814fa41bb2cbfd1567cd85bf9869acaa Mon Sep 17 00:00:00 2001
 From: Wang Xuerui <idontknw.wang@gmail.com>
 Date: Sat, 9 Jan 2016 16:54:38 +0800
 Subject: [PATCH] libgui: SensorManager: be compatible with MTK Lollipop blobs
@@ -8,18 +8,23 @@ Change-Id: I1846c5f3c629293c0f0fc0a6762f6f7b5b9bd9b5
 libgui: SensorManager: fix
 
 Change-Id: I76e0ba036ef4e4acc15c9e6f87cb00dd37fae7c9
+
+[Ported to N by @xen0n.]
+
+Conflicts:
+	include/gui/SensorManager.h
 ---
- include/gui/SensorManager.h | 17 +++++++++++++++++
+ include/gui/SensorManager.h | 19 +++++++++++++++++++
  libs/gui/SensorManager.cpp  | 26 ++++++++++++++++++++++++++
- 2 files changed, 43 insertions(+)
+ 2 files changed, 45 insertions(+)
 
 diff --git a/include/gui/SensorManager.h b/include/gui/SensorManager.h
-index 0cff46c0762..f5007760308 100644
+index 4066181b79d..531f50d9f62 100644
 --- a/include/gui/SensorManager.h
 +++ b/include/gui/SensorManager.h
-@@ -56,7 +56,12 @@ class SensorManager :
- 
-     ssize_t getSensorList(Sensor const* const** list) const;
+@@ -61,7 +61,12 @@ class SensorManager :
+     ssize_t getSensorList(Sensor const* const** list);
+     ssize_t getDynamicSensorList(Vector<Sensor>& list);
      Sensor const* getDefaultSensor(int type);
 +#ifdef MTK_HARDWARE
 +    sp<SensorEventQueue> createEventQueue(String8 packageName, int mode = 0);
@@ -30,17 +35,19 @@ index 0cff46c0762..f5007760308 100644
      bool isDataInjectionEnabled();
  
  private:
-@@ -64,6 +69,9 @@ class SensorManager :
+@@ -69,6 +74,11 @@ class SensorManager :
      void sensorManagerDied();
  
      SensorManager(const String16& opPackageName);
++
 +#ifdef MTK_HARDWARE
 +    SensorManager();
 +#endif
-     status_t assertStateLocked() const;
++
+     status_t assertStateLocked();
  
  private:
-@@ -78,6 +86,15 @@ class SensorManager :
+@@ -95,6 +105,15 @@ class SensorManager :
      const String16 mOpPackageName;
  };
  
@@ -57,7 +64,7 @@ index 0cff46c0762..f5007760308 100644
  }; // namespace android
  
 diff --git a/libs/gui/SensorManager.cpp b/libs/gui/SensorManager.cpp
-index 33608b5bd2d..08ce28743e5 100644
+index 6a380d540e4..c43c85c3bc6 100644
 --- a/libs/gui/SensorManager.cpp
 +++ b/libs/gui/SensorManager.cpp
 @@ -39,6 +39,32 @@ namespace android {

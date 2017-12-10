@@ -1,18 +1,18 @@
-From 6b3dce931e11703d73946174e23531f3ade79a0c Mon Sep 17 00:00:00 2001
+From 74ee5bcef2dd2f2e2336a869837c5e6300571029 Mon Sep 17 00:00:00 2001
 From: vgdn1942 <vgdn1942@gmail.com>
-Date: Sun, 12 Nov 2017 23:38:19 +0300
+Date: Sat, 9 Dec 2017 01:03:40 +0300
 Subject: [PATCH] Purge emulator in build
 
-Change-Id: If8d8f7367977ea5f7b23499f4f602c33be4c2fee
+Change-Id: I591533749ccf2baf9201b19a659609aec095d798
 ---
- target/product/emulator.mk | 41 -----------------------------------------
- 1 file changed, 41 deletions(-)
+ target/product/emulator.mk | 50 ----------------------------------------------
+ 1 file changed, 50 deletions(-)
 
 diff --git a/target/product/emulator.mk b/target/product/emulator.mk
-index cca29ab..b8af74d 100644
+index 70cd597..b8af74d 100644
 --- a/target/product/emulator.mk
 +++ b/target/product/emulator.mk
-@@ -18,44 +18,3 @@
+@@ -18,53 +18,3 @@
  # emulator-related modules to PRODUCT_PACKAGES.
  #
  
@@ -24,6 +24,7 @@ index cca29ab..b8af74d 100644
 -PRODUCT_PACKAGES += \
 -    egl.cfg \
 -    gralloc.goldfish \
+-    gralloc.ranchu \
 -    libGLESv1_CM_emulation \
 -    lib_renderControl_enc \
 -    libEGL_emulation \
@@ -36,8 +37,11 @@ index cca29ab..b8af74d 100644
 -    qemud \
 -    camera.goldfish \
 -    camera.goldfish.jpeg \
+-    camera.ranchu \
+-    camera.ranchu.jpeg \
 -    lights.goldfish \
 -    gps.goldfish \
+-    gps.ranchu \
 -    fingerprint.goldfish \
 -    sensors.goldfish \
 -    audio.primary.goldfish \
@@ -49,14 +53,19 @@ index cca29ab..b8af74d 100644
 -    e2fsck
 -
 -PRODUCT_COPY_FILES += \
--    frameworks/native/data/etc/android.hardware.ethernet.xml:system/etc/permissions/android.hardware.ethernet.xml \
 -    device/generic/goldfish/fstab.goldfish:root/fstab.goldfish \
 -    device/generic/goldfish/init.goldfish.rc:root/init.goldfish.rc \
 -    device/generic/goldfish/init.goldfish.sh:system/etc/init.goldfish.sh \
 -    device/generic/goldfish/ueventd.goldfish.rc:root/ueventd.goldfish.rc \
 -    device/generic/goldfish/init.ranchu.rc:root/init.ranchu.rc \
 -    device/generic/goldfish/fstab.ranchu:root/fstab.ranchu \
--    device/generic/goldfish/ueventd.ranchu.rc:root/ueventd.ranchu.rc
+-    device/generic/goldfish/ueventd.ranchu.rc:root/ueventd.ranchu.rc \
+-    device/generic/goldfish/input/goldfish_rotary.idc:system/usr/idc/goldfish_rotary.idc \
+-    frameworks/native/data/etc/android.hardware.usb.accessory.xml:system/etc/permissions/android.hardware.usb.accessory.xml
+-
+-PRODUCT_PACKAGE_OVERLAYS := device/generic/goldfish/overlay
+-
+-PRODUCT_CHARACTERISTICS := emulator
 -- 
 2.7.4
 

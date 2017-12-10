@@ -41,13 +41,43 @@
  libnl to try and allocate ports across the entire process.
  */
 
-#define WIFI_HAL_CMD_SOCK_PORT       644
-#define WIFI_HAL_EVENT_SOCK_PORT     645
-
 #define FEATURE_SET                  0
 #define FEATURE_SET_MATRIX           1
-#define ATTR_NODFS_VALUE             3
-#define ATTR_COUNTRY_CODE            4
+
+typedef enum {
+    WIFI_SUBCMD_GET_CHANNEL_LIST = ANDROID_NL80211_SUBCMD_WIFI_RANGE_START,
+
+    WIFI_SUBCMD_GET_FEATURE_SET,                      /* 0x0002 */
+    WIFI_SUBCMD_GET_FEATURE_SET_MATRIX,               /* 0x0003 */
+    WIFI_SUBCMD_SET_PNO_RANDOM_MAC_OUI,               /* 0x0004 */
+    WIFI_SUBCMD_NODFS_SET,                            /* 0x0005 */
+    WIFI_SUBCMD_SET_COUNTRY_CODE,                     /* 0x0006 */
+
+    WIFI_SUBCMD_SET_RSSI_MONITOR,                     /* 0x0007 */
+    /* Add more sub commands here */
+
+} WIFI_SUB_COMMAND;
+
+typedef enum {
+    WIFI_ATTRIBUTE_BAND = 1,
+    WIFI_ATTRIBUTE_NUM_CHANNELS,
+    WIFI_ATTRIBUTE_CHANNEL_LIST,
+
+    WIFI_ATTRIBUTE_NUM_FEATURE_SET,
+    WIFI_ATTRIBUTE_FEATURE_SET,
+    WIFI_ATTRIBUTE_PNO_RANDOM_MAC_OUI,
+    WIFI_ATTRIBUTE_NODFS_VALUE,
+    WIFI_ATTRIBUTE_COUNTRY_CODE,
+
+    WIFI_ATTRIBUTE_MAX_RSSI,
+    WIFI_ATTRIBUTE_MIN_RSSI,
+    WIFI_ATTRIBUTE_RSSI_MONITOR_START
+
+} WIFI_ATTRIBUTE;
+
+
+#define WIFI_HAL_CMD_SOCK_PORT       644
+#define WIFI_HAL_EVENT_SOCK_PORT     645
 
 static int internal_no_seq_check(nl_msg *msg, void *arg);
 static int internal_valid_message_handler(nl_msg *msg, void *arg);
@@ -57,18 +87,6 @@ static void wifi_internal_cleanup(wifi_handle handle);
 static wifi_error wifi_start_rssi_monitoring(wifi_request_id id, wifi_interface_handle
                         iface, s8 max_rssi, s8 min_rssi, wifi_rssi_event_handler eh);
 static wifi_error wifi_stop_rssi_monitoring(wifi_request_id id, wifi_interface_handle iface);
-
-typedef enum wifi_attr {
-    ANDR_WIFI_ATTRIBUTE_NUM_FEATURE_SET,
-    ANDR_WIFI_ATTRIBUTE_FEATURE_SET,
-    ANDR_WIFI_ATTRIBUTE_PNO_RANDOM_MAC_OUI
-} wifi_attr_t;
-
-enum wifi_rssi_monitor_attr {
-    RSSI_MONITOR_ATTRIBUTE_MAX_RSSI,
-    RSSI_MONITOR_ATTRIBUTE_MIN_RSSI,
-    RSSI_MONITOR_ATTRIBUTE_START,
-};
 
 /*****************************************************************************
 * socket pair to wake up wifi_event_loop from a blocking poll for termination
@@ -119,11 +137,7 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn)
     fn->wifi_get_logger_supported_feature_set = wifi_get_logger_supported_feature_set;
     fn->wifi_get_ring_data = wifi_get_ring_data;
     fn->wifi_get_driver_version = wifi_get_driver_version;*/
-    fn->wifi_set_ssid_white_list = wifi_set_ssid_white_list;
-    fn->wifi_set_gscan_roam_params = wifi_set_gscan_roam_params;
-    fn->wifi_set_bssid_preference = wifi_set_bssid_preference;
     fn->wifi_set_bssid_blacklist = wifi_set_bssid_blacklist;
-    fn->wifi_enable_lazy_roam = wifi_enable_lazy_roam;
     fn->wifi_start_rssi_monitoring = wifi_start_rssi_monitoring;
     fn->wifi_stop_rssi_monitoring = wifi_stop_rssi_monitoring;
     fn->wifi_start_sending_offloaded_packet = wifi_start_sending_offloaded_packet;
@@ -181,7 +195,7 @@ static int wifi_add_membership(wifi_handle handle, const char *group)
 
 wifi_error wifi_initialize(wifi_handle *handle)
 {
-    ALOGD("[WIFI HAL]Wifi HAL initializing");
+    ALOGI("Wifi HAL initializing");
 
     hal_info *info = (hal_info *)malloc(sizeof(hal_info));
     if (info == NULL) {
@@ -255,8 +269,7 @@ wifi_error wifi_initialize(wifi_handle *handle)
     wifi_init_interfaces(*handle);
     ALOGD("Found %d interfaces", info->num_interfaces);
 
-    ALOGD("[WIFI HAL]Wifi HAL initialized successfully: vendor_cmd = %d, nl80211_family_id = %d, handle=%p",
-        NL80211_CMD_VENDOR, info->nl80211_family_id, handle);
+    ALOGD("Wifi HAL initialized successfully: nl80211_family_id=%d", info->nl80211_family_id);
     return WIFI_SUCCESS;
 }
 
@@ -453,10 +466,17 @@ void wifi_event_loop(wifi_handle handle)
         int result = poll(fds, 2, -1);
         if (result < 0) {
             ALOGE("wifi_event_loop: poll error result=%d, errno=%s(%d)", result, strerror(errno), errno);
+            if (errno == EINTR) /* ignore EINTR */
+                continue;
             break;
         } else if (fds[0].revents & POLLIN) {
             char sig;
-            read(fds[0].fd, &sig, sizeof(sig));
+            int sz;
+            sz = read(fds[0].fd, &sig, sizeof(sig));
+            if (sz == -1) {
+                ALOGE("read fail errno=%s(%d)\n", strerror(errno), errno);
+                break;
+            }
             if (sig == 'T') {
                 ALOGD("Wifi HAL stopped!!!");
                 break;
@@ -501,10 +521,10 @@ static int internal_valid_message_handler(nl_msg *msg, void *arg)
     if (cmd == NL80211_CMD_VENDOR) {
         vendor_id = event.get_u32(NL80211_ATTR_VENDOR_ID);
         subcmd = event.get_u32(NL80211_ATTR_VENDOR_SUBCMD);
-        ALOGD("event received %s, vendor_id = 0x%0x, subcmd = 0x%0x",
+        ALOGV("event received %s, vendor_id = 0x%0x, subcmd = 0x%0x",
                 event.get_cmdString(), vendor_id, subcmd);
     } else {
-        ALOGD("event received %s", event.get_cmdString());
+        ALOGV("event received %s", event.get_cmdString());
     }
 
     bool dispatched = false;
@@ -552,6 +572,7 @@ private:
     const char *mName;
     const char *mGroup;
     int   mId;
+
 public:
     GetMulticastIdCommand(wifi_handle handle, const char *name, const char *group)
         : WifiCommand(handle, 0)
@@ -616,246 +637,117 @@ public:
 
         return NL_SKIP;
     }
-
 };
 
-class SetPnoMacAddrOuiCommand : public WifiCommand {
+static int wifi_get_multicast_id(wifi_handle handle, const char *name, const char *group)
+{
+    GetMulticastIdCommand cmd(handle, name, group);
+    int res = cmd.requestResponse();
+    if (res < 0)
+        return res;
+    else
+        return cmd.getId();
+}
 
+class GetChannelListCommand : public WifiCommand
+{
 private:
-    byte *mOui;
-    feature_set *fset;
-    feature_set *feature_matrix;
-    int *fm_size;
-    int set_size_max;
+    wifi_channel *mChannels;
+    int mMaxChannels;
+    int *mNumOfChannel;
+    int mBand;
+
 public:
-    SetPnoMacAddrOuiCommand(wifi_interface_handle handle, oui scan_oui)
+    GetChannelListCommand(wifi_interface_handle handle, int band, int max_channels,
+        wifi_channel *channels, int *num_channels)
         : WifiCommand(handle, 0)
     {
-        mOui = scan_oui;
+        mBand = band;
+        mMaxChannels = max_channels;
+        mChannels = channels;
+        mNumOfChannel = num_channels;
+        memset(mChannels, 0, sizeof(wifi_channel) * mMaxChannels);
     }
 
-    int createRequest(WifiRequest& request, int subcmd, byte *scan_oui) {
-        int result = request.create(GOOGLE_OUI, subcmd);
-        if (result < 0) {
-            return result;
+    virtual int create() {
+        int ret;
+
+        ret = mMsg.create(GOOGLE_OUI, WIFI_SUBCMD_GET_CHANNEL_LIST);
+        if (ret < 0) {
+            return ret;
         }
 
-        nlattr *data = request.attr_start(NL80211_ATTR_VENDOR_DATA);
-        result = request.put(ANDR_WIFI_ATTRIBUTE_PNO_RANDOM_MAC_OUI, scan_oui, DOT11_OUI_LEN);
-        if (result < 0) {
-            return result;
+        ALOGI("In GetChannelList::mBand=%d", mBand);
+
+        nlattr *data = mMsg.attr_start(NL80211_ATTR_VENDOR_DATA);
+        ret = mMsg.put_u32(WIFI_ATTRIBUTE_BAND, mBand);
+        if (ret < 0) {
+            return ret;
         }
 
-        request.attr_end(data);
+        mMsg.attr_end(data);
         return WIFI_SUCCESS;
-
     }
 
-    int start() {
-        ALOGD("[WIFI HAL]Sending mac address OUI");
-        WifiRequest request(familyId(), ifaceId());
-        int result = createRequest(request, WIFI_SUBCMD_SET_PNO_RANDOM_MAC_OUI, mOui);
-        if (result != WIFI_SUCCESS) {
-            ALOGE("failed to create request; result = %d", result);
-            return result;
-        }
-
-        result = requestResponse(request);
-        if (result != WIFI_SUCCESS) {
-            ALOGE("[WIFI HAL]failed to set scanning mac OUI; result = %d", result);
-        }
-
-        return result;
-    }
 protected:
     virtual int handleResponse(WifiEvent& reply) {
-         ALOGD("Request complete!");
-        /* Nothing to do on response! */
-        return NL_SKIP;
-    }
-};
 
-class SetNodfsCommand : public WifiCommand {
+        ALOGV("In GetChannelList::handleResponse");
 
-private:
-    u32 mNoDfs;
-public:
-    SetNodfsCommand(wifi_interface_handle handle, u32 nodfs)
-        : WifiCommand(handle, 0) {
-        mNoDfs = nodfs;
-    }
-    virtual int create() {
-        int ret;
-
-        ret = mMsg.create(GOOGLE_OUI, WIFI_SUBCMD_NODFS_SET);
-        if (ret < 0) {
-            ALOGE("Can't create message to send to driver - %d", ret);
-            return ret;
+        if (reply.get_cmd() != NL80211_CMD_VENDOR) {
+            ALOGE("Ignore reply with cmd 0x%x", reply.get_cmd());
+            return NL_SKIP;
         }
 
-        nlattr *data = mMsg.attr_start(NL80211_ATTR_VENDOR_DATA);
-        ret = mMsg.put_u32(ATTR_NODFS_VALUE, mNoDfs);
-        if (ret < 0) {
-             return ret;
+        int vendor_id = reply.get_vendor_id();
+        int subcmd = reply.get_vendor_subcmd();
+        ALOGV("vendor_id = 0x%x, subcmd = 0x%x", vendor_id, subcmd);
+
+        nlattr *vendor = reply.get_attribute(NL80211_ATTR_VENDOR_DATA);
+        int len = reply.get_vendor_data_len();
+        if (vendor == NULL || len == 0) {
+            ALOGE("No vendor data in GetChannelList response, ignore it");
+            return NL_SKIP;
         }
 
-        mMsg.attr_end(data);
-        return WIFI_SUCCESS;
-    }
-};
-
-class SetCountryCodeCommand : public WifiCommand {
-private:
-    const char *mCountryCode;
-public:
-    SetCountryCodeCommand(wifi_interface_handle handle, const char *country_code)
-        : WifiCommand(handle, 0) {
-        mCountryCode = country_code;
-        }
-    virtual int create() {
-        int ret;
-
-        ret = mMsg.create(GOOGLE_OUI, WIFI_SUBCMD_SET_COUNTRY_CODE);
-        if (ret < 0) {
-             ALOGE("Can't create message to send to driver - %d", ret);
-             return ret;
-        }
-
-        nlattr *data = mMsg.attr_start(NL80211_ATTR_VENDOR_DATA);
-        ret = mMsg.put_string(ATTR_COUNTRY_CODE, mCountryCode);
-        if (ret < 0) {
-            return ret;
-        }
-
-        mMsg.attr_end(data);
-        return WIFI_SUCCESS;
-
-    }
-};
-
-class SetRSSIMonitorCommand : public WifiCommand {
-private:
-    s8 mMax_rssi;
-    s8 mMin_rssi;
-    wifi_rssi_event_handler mHandler;
-public:
-    SetRSSIMonitorCommand(wifi_request_id id, wifi_interface_handle handle,
-                s8 max_rssi, s8 min_rssi, wifi_rssi_event_handler eh)
-        : WifiCommand(handle, id), mMax_rssi(max_rssi), mMin_rssi(min_rssi), mHandler(eh)
-        {
-        }
-   int createRequest(WifiRequest& request, int enable) {
-        int result = request.create(GOOGLE_OUI, WIFI_SUBCMD_SET_RSSI_MONITOR);
-        if (result < 0) {
-            return result;
-        }
-
-        nlattr *data = request.attr_start(NL80211_ATTR_VENDOR_DATA);
-        result = request.put_u32(RSSI_MONITOR_ATTRIBUTE_MAX_RSSI, (enable ? mMax_rssi: 0));
-        if (result < 0) {
-            return result;
-        }
-        ALOGD("create request");
-        result = request.put_u32(RSSI_MONITOR_ATTRIBUTE_MIN_RSSI, (enable? mMin_rssi: 0));
-        if (result < 0) {
-            return result;
-        }
-        result = request.put_u32(RSSI_MONITOR_ATTRIBUTE_START, enable);
-        if (result < 0) {
-            return result;
-        }
-        request.attr_end(data);
-        return result;
-    }
-
-    int start() {
-        WifiRequest request(familyId(), ifaceId());
-        int result = createRequest(request, 1);
-        if (result < 0) {
-            return result;
-        }
-        result = requestResponse(request);
-        if (result < 0) {
-            ALOGI("Failed to set RSSI Monitor, result = %d", result);
-            return result;
-        }
-        ALOGI("Successfully set RSSI monitoring");
-        registerVendorHandler(GOOGLE_OUI, GOOGLE_RSSI_MONITOR_EVENT);
-
-
-        if (result < 0) {
-            unregisterVendorHandler(GOOGLE_OUI, GOOGLE_RSSI_MONITOR_EVENT);
-            return result;
-        }
-        ALOGI("Done!");
-        return result;
-    }
-
-    virtual int cancel() {
-
-        WifiRequest request(familyId(), ifaceId());
-        int result = createRequest(request, 0);
-        if (result != WIFI_SUCCESS) {
-            ALOGE("failed to create request; result = %d", result);
-        } else {
-            result = requestResponse(request);
-            if (result != WIFI_SUCCESS) {
-                ALOGE("failed to stop RSSI monitoring = %d", result);
+        int num_channels = 0;
+        for (nl_iterator it(vendor); it.has_next(); it.next()) {
+            if (it.get_type() == WIFI_ATTRIBUTE_NUM_CHANNELS) {
+                num_channels = it.get_u32();
+                ALOGI("Get channel list with %d channels", num_channels);
+                if (num_channels > mMaxChannels)
+                    num_channels = mMaxChannels;
+                *mNumOfChannel = num_channels;
+            } else if (it.get_type() == WIFI_ATTRIBUTE_CHANNEL_LIST && num_channels) {
+                memcpy(mChannels, it.get_data(), sizeof(wifi_channel) * num_channels);
+            } else {
+                ALOGW("Ignore invalid attribute type = %d, size = %d",
+                        it.get_type(), it.get_len());
             }
         }
-        unregisterVendorHandler(GOOGLE_OUI, GOOGLE_RSSI_MONITOR_EVENT);
-        return WIFI_SUCCESS;
+
+        ALOGD("mChannels[0]=%d mChannels[1]=%d", *mChannels, *(mChannels + 1));
+
+        return NL_OK;
     }
-
-    virtual int handleResponse(WifiEvent& reply) {
-        /* Nothing to do on response! */
-        return NL_SKIP;
-    }
-
-   virtual int handleEvent(WifiEvent& event) {
-        ALOGI("Got a RSSI monitor event");
-
-        nlattr *vendor_data = event.get_attribute(NL80211_ATTR_VENDOR_DATA);
-        int len = event.get_vendor_data_len();
-
-        if (vendor_data == NULL || len == 0) {
-            ALOGI("RSSI monitor: No data");
-            return NL_SKIP;
-        }
-        /* driver<->HAL event structure */
-        #define RSSI_MONITOR_EVT_VERSION   1
-        typedef struct {
-            u8 version;
-            s8 cur_rssi;
-            mac_addr BSSID;
-        } rssi_monitor_evt;
-
-        rssi_monitor_evt *data = (rssi_monitor_evt *)event.get_vendor_data();
-
-        if (data->version != RSSI_MONITOR_EVT_VERSION) {
-            ALOGI("Event version mismatch %d, expected %d", data->version, RSSI_MONITOR_EVT_VERSION);
-            return NL_SKIP;
-        }
-
-        if (*mHandler.on_rssi_threshold_breached) {
-            (*mHandler.on_rssi_threshold_breached)(id(), data->BSSID, data->cur_rssi);
-        } else {
-            ALOGW("No RSSI monitor handler registered");
-        }
-
-        return NL_SKIP;
-    }
-
 };
 
-class GetFeatureSetCommand : public WifiCommand {
+wifi_error wifi_get_valid_channels(wifi_interface_handle handle,
+        int band, int max_channels, wifi_channel *channels, int *num_channels)
+{
+    GetChannelListCommand command(handle, band, max_channels, channels, num_channels);
+    return (wifi_error) command.requestResponse();
+}
 
+class GetFeatureSetCommand : public WifiCommand
+{
 private:
     int feature_type;
     feature_set *fset;
     feature_set *feature_matrix;
     int *fm_size;
     int set_size_max;
+
 public:
     GetFeatureSetCommand(wifi_interface_handle handle, int feature, feature_set *set,
          feature_set set_matrix[], int *size, int max_size)
@@ -881,7 +773,7 @@ public:
         }
 
         if (ret < 0) {
-            ALOGE("Can't create message to send to driver - %d", ret);
+            ALOGE("Can't create subcmd message to driver, ret=%d", ret);
         }
 
         return ret;
@@ -893,50 +785,51 @@ protected:
         ALOGD("In GetFeatureSetCommand::handleResponse");
 
         if (reply.get_cmd() != NL80211_CMD_VENDOR) {
-            ALOGD("Ignoring reply with cmd = %d", reply.get_cmd());
+            ALOGD("Ignore reply with cmd 0x%x", reply.get_cmd());
             return NL_SKIP;
         }
 
-        int id = reply.get_vendor_id();
+        int vendor_id = reply.get_vendor_id();
         int subcmd = reply.get_vendor_subcmd();
+        ALOGD("vendor_id = 0x%x, subcmd = 0x%x", vendor_id, subcmd);
 
         nlattr *vendor_data = reply.get_attribute(NL80211_ATTR_VENDOR_DATA);
         int len = reply.get_vendor_data_len();
-
-        ALOGD("Id = %0x, subcmd = %d, len = %d", id, subcmd, len);
         if (vendor_data == NULL || len == 0) {
-            ALOGE("no vendor data in GetFeatureSetCommand response; ignoring it");
+            ALOGE("No vendor data in GetFeatureSetCommand response, ignore it");
             return NL_SKIP;
         }
-        if(feature_type == FEATURE_SET) {
+
+        if (feature_type == FEATURE_SET) {
             void *data = reply.get_vendor_data();
-            if(!fset) {
-                ALOGE("Buffers pointers not set");
+            if (!fset) {
+                ALOGE("feature_set pointer is not set");
                 return NL_SKIP;
             }
             memcpy(fset, data, min(len, (int) sizeof(*fset)));
-        } else {
+        }
+        else {
             int num_features_set = 0;
             int i = 0;
 
             if(!feature_matrix || !fm_size) {
-                ALOGE("Buffers pointers not set");
+                ALOGE("feature_set pointer is not set");
                 return NL_SKIP;
             }
 
             for (nl_iterator it(vendor_data); it.has_next(); it.next()) {
-                if (it.get_type() == ANDR_WIFI_ATTRIBUTE_NUM_FEATURE_SET) {
+                if (it.get_type() == WIFI_ATTRIBUTE_NUM_FEATURE_SET) {
                     num_features_set = it.get_u32();
-                    ALOGI("Got feature list with %d concurrent sets", num_features_set);
+                    ALOGI("Get feature list with %d concurrent sets", num_features_set);
                     if(set_size_max && (num_features_set > set_size_max))
                         num_features_set = set_size_max;
                     *fm_size = num_features_set;
-                } else if ((it.get_type() == ANDR_WIFI_ATTRIBUTE_FEATURE_SET) &&
+                } else if ((it.get_type() == WIFI_ATTRIBUTE_FEATURE_SET) &&
                              i < num_features_set) {
                     feature_matrix[i] = it.get_u32();
                     i++;
                 } else {
-                    ALOGW("Ignoring invalid attribute type = %d, size = %d",
+                    ALOGW("Ignore invalid attribute type = %d, size = %d",
                             it.get_type(), it.get_len());
                 }
             }
@@ -945,16 +838,6 @@ protected:
         return NL_OK;
     }
 };
-
-static int wifi_get_multicast_id(wifi_handle handle, const char *name, const char *group)
-{
-    GetMulticastIdCommand cmd(handle, name, group);
-    int res = cmd.requestResponse();
-    if (res < 0)
-        return res;
-    else
-        return cmd.getId();
-}
 
 wifi_error wifi_get_supported_feature_set(wifi_interface_handle handle, feature_set *pset)
 {
@@ -970,6 +853,7 @@ wifi_error wifi_get_supported_feature_set(wifi_interface_handle handle, feature_
         set |= WIFI_FEATURE_INFRA_5G;
 
     set |= WIFI_FEATURE_P2P;
+    set |= WIFI_FEATURE_SOFT_AP;
     set |= WIFI_FEATURE_TDLS;
 
 #ifdef CONFIG_PNO_SUPPORT
@@ -990,6 +874,64 @@ wifi_error wifi_get_concurrency_matrix(wifi_interface_handle handle, int set_siz
     return (wifi_error)command.requestResponse();
 }
 
+class SetPnoMacAddrOuiCommand : public WifiCommand
+{
+private:
+    byte *mOui;
+    feature_set *fset;
+    feature_set *feature_matrix;
+    int *fm_size;
+    int set_size_max;
+
+public:
+    SetPnoMacAddrOuiCommand(wifi_interface_handle handle, oui scan_oui)
+        : WifiCommand(handle, 0)
+    {
+        mOui = scan_oui;
+    }
+
+    int createRequest(WifiRequest& request, int subcmd, byte *scan_oui) {
+        int result = request.create(GOOGLE_OUI, subcmd);
+        if (result < 0) {
+            return result;
+        }
+
+        nlattr *data = request.attr_start(NL80211_ATTR_VENDOR_DATA);
+        result = request.put(WIFI_ATTRIBUTE_PNO_RANDOM_MAC_OUI, scan_oui, DOT11_OUI_LEN);
+        if (result < 0) {
+            return result;
+        }
+
+        request.attr_end(data);
+        return WIFI_SUCCESS;
+
+    }
+
+    int start() {
+        ALOGD("[WIFI HAL]Sending mac address OUI");
+        WifiRequest request(familyId(), ifaceId());
+        int result = createRequest(request, WIFI_SUBCMD_SET_PNO_RANDOM_MAC_OUI, mOui);
+        if (result != WIFI_SUCCESS) {
+            ALOGE("Failed to create request, result=%d", result);
+            return result;
+        }
+
+        result = requestResponse(request);
+        if (result != WIFI_SUCCESS) {
+            ALOGE("[WIFI HAL]Failed to set scanning mac OUI, result=%d", result);
+        }
+
+        return result;
+    }
+
+protected:
+    virtual int handleResponse(WifiEvent& reply) {
+         ALOGD("Request complete!");
+        /* Nothing to do on response! */
+        return NL_SKIP;
+    }
+};
+
 wifi_error wifi_set_scanning_mac_oui(wifi_interface_handle handle, oui scan_oui)
 {
 #if 0
@@ -999,6 +941,38 @@ wifi_error wifi_set_scanning_mac_oui(wifi_interface_handle handle, oui scan_oui)
     return WIFI_ERROR_NOT_SUPPORTED;
 #endif
 }
+
+class SetNodfsCommand : public WifiCommand
+{
+private:
+    u32 mNoDfs;
+
+public:
+    SetNodfsCommand(wifi_interface_handle handle, u32 nodfs)
+        : WifiCommand(handle, 0)
+    {
+        mNoDfs = nodfs;
+    }
+
+    virtual int create() {
+        int ret;
+
+        ret = mMsg.create(GOOGLE_OUI, WIFI_SUBCMD_NODFS_SET);
+        if (ret < 0) {
+            ALOGE("Can't create subcmd message to driver, ret=%d", ret);
+            return ret;
+        }
+
+        nlattr *data = mMsg.attr_start(NL80211_ATTR_VENDOR_DATA);
+        ret = mMsg.put_u32(WIFI_ATTRIBUTE_NODFS_VALUE, mNoDfs);
+        if (ret < 0) {
+             return ret;
+        }
+
+        mMsg.attr_end(data);
+        return WIFI_SUCCESS;
+    }
+};
 
 wifi_error wifi_set_nodfs_flag(wifi_interface_handle handle, u32 nodfs)
 {
@@ -1010,38 +984,196 @@ wifi_error wifi_set_nodfs_flag(wifi_interface_handle handle, u32 nodfs)
 #endif
 }
 
+class SetCountryCodeCommand : public WifiCommand
+{
+private:
+    const char *mCountryCode;
+
+public:
+    SetCountryCodeCommand(wifi_interface_handle handle, const char *country_code)
+        : WifiCommand(handle, 0)
+    {
+        mCountryCode = country_code;
+    }
+
+    virtual int create() {
+        int ret;
+
+        ret = mMsg.create(GOOGLE_OUI, WIFI_SUBCMD_SET_COUNTRY_CODE);
+        if (ret < 0) {
+             ALOGE("Can't create subcmd message to driver, ret=%d", ret);
+             return ret;
+        }
+
+        nlattr *data = mMsg.attr_start(NL80211_ATTR_VENDOR_DATA);
+        ret = mMsg.put_string(WIFI_ATTRIBUTE_COUNTRY_CODE, mCountryCode);
+        if (ret < 0) {
+            return ret;
+        }
+
+        mMsg.attr_end(data);
+        return WIFI_SUCCESS;
+    }
+};
+
 wifi_error wifi_set_country_code(wifi_interface_handle handle, const char *country_code)
 {
     SetCountryCodeCommand command(handle, country_code);
     return (wifi_error) command.requestResponse();
 }
 
+class SetRSSIMonitorCommand : public WifiCommand
+{
+private:
+    s8 mMax_rssi;
+    s8 mMin_rssi;
+    wifi_rssi_event_handler mHandler;
+
+public:
+    SetRSSIMonitorCommand(wifi_request_id id, wifi_interface_handle handle,
+                s8 max_rssi, s8 min_rssi, wifi_rssi_event_handler eh)
+        : WifiCommand(handle, id), mMax_rssi(max_rssi), mMin_rssi(min_rssi), mHandler(eh)
+    {
+    }
+
+    int createRequest(WifiRequest& request, int enable) {
+        int result = request.create(GOOGLE_OUI, WIFI_SUBCMD_SET_RSSI_MONITOR);
+        if (result < 0) {
+            return result;
+        }
+
+        ALOGI("set RSSI Monitor, mMax_rssi=%d, mMin_rssi=%d, enable=%d", mMax_rssi, mMin_rssi, enable);
+
+        nlattr *data = request.attr_start(NL80211_ATTR_VENDOR_DATA);
+        result = request.put_u32(WIFI_ATTRIBUTE_MAX_RSSI, (enable? mMax_rssi: 0));
+        if (result < 0) {
+            return result;
+        }
+        result = request.put_u32(WIFI_ATTRIBUTE_MIN_RSSI, (enable? mMin_rssi: 0));
+        if (result < 0) {
+            return result;
+        }
+        result = request.put_u32(WIFI_ATTRIBUTE_RSSI_MONITOR_START, enable);
+        if (result < 0) {
+            return result;
+        }
+
+        request.attr_end(data);
+        return result;
+    }
+
+    int start() {
+        WifiRequest request(familyId(), ifaceId());
+        int result = createRequest(request, 1);
+        if (result < 0) {
+            return result;
+        }
+
+        result = requestResponse(request);
+        if (result < 0) {
+            ALOGE("Failed to set RSSI Monitor, result=%d", result);
+            return result;
+        }
+        ALOGD("Successfully set RSSI monitoring");
+
+        registerVendorHandler(GOOGLE_OUI, WIFI_EVENT_RSSI_MONITOR);
+
+        if (result < 0) {
+            unregisterVendorHandler(GOOGLE_OUI, WIFI_EVENT_RSSI_MONITOR);
+            return result;
+        }
+
+        return result;
+    }
+
+    virtual int cancel() {
+        WifiRequest request(familyId(), ifaceId());
+        int result = createRequest(request, 0);
+        if (result != WIFI_SUCCESS) {
+            ALOGE("Failed to create request, result=%d", result);
+        } else {
+            result = requestResponse(request);
+            if (result != WIFI_SUCCESS) {
+                ALOGE("Failed to stop RSSI monitoring, result=%d", result);
+            }
+        }
+        unregisterVendorHandler(GOOGLE_OUI, WIFI_EVENT_RSSI_MONITOR);
+        return WIFI_SUCCESS;
+    }
+
+    virtual int handleResponse(WifiEvent& reply) {
+        /* Nothing to do on response! */
+        return NL_SKIP;
+    }
+
+    virtual int handleEvent(WifiEvent& event) {
+        ALOGD("Got a RSSI monitor event");
+
+        //nlattr *vendor_data = event.get_attribute(NL80211_ATTR_VENDOR_DATA);
+        struct nlattr *vendor_data = (struct nlattr *)event.get_vendor_data();
+        int len = event.get_vendor_data_len();
+
+        if (vendor_data == NULL || len == 0) {
+            ALOGE("RSSI monitor: No data");
+            return NL_SKIP;
+        }
+        /* driver<->HAL event structure */
+        #define RSSI_MONITOR_EVT_VERSION   1
+        typedef struct {
+            u8 version;
+            s8 cur_rssi;
+            mac_addr BSSID;
+        } rssi_monitor_evt;
+
+        rssi_monitor_evt *data = NULL;
+        if (vendor_data->nla_type == WIFI_EVENT_RSSI_MONITOR)
+            data = (rssi_monitor_evt *)nla_data(vendor_data);
+        else
+            return NL_SKIP;
+
+        ALOGI("data: version=%d, cur_rssi=%d BSSID=" MACSTR "\r\n",
+            data->version, data->cur_rssi, MAC2STR(data->BSSID));
+
+        if (data->version != RSSI_MONITOR_EVT_VERSION) {
+            ALOGE("Event version mismatch %d, expected %d", data->version, RSSI_MONITOR_EVT_VERSION);
+            return NL_SKIP;
+        }
+
+        if (*mHandler.on_rssi_threshold_breached) {
+            (*mHandler.on_rssi_threshold_breached)(id(), data->BSSID, data->cur_rssi);
+        } else {
+            ALOGW("No RSSI monitor handler registered");
+        }
+
+        return NL_SKIP;
+    }
+};
+
 static wifi_error wifi_start_rssi_monitoring(wifi_request_id id, wifi_interface_handle
                         iface, s8 max_rssi, s8 min_rssi, wifi_rssi_event_handler eh)
 {
-    ALOGD("Start RSSI monitor %d", id);
+    ALOGD("Start RSSI monitoring %d", id);
     wifi_handle handle = getWifiHandle(iface);
     SetRSSIMonitorCommand *cmd = new SetRSSIMonitorCommand(id, iface, max_rssi, min_rssi, eh);
     wifi_register_cmd(handle, id, cmd);
     return (wifi_error)cmd->start();
 }
 
-
 static wifi_error wifi_stop_rssi_monitoring(wifi_request_id id, wifi_interface_handle iface)
 {
-    ALOGD("Stopping RSSI monitor");
+    ALOGD("Stopping RSSI monitoring");
 
-    if(id == -1) {
+    if (id == -1) {
         wifi_rssi_event_handler handler;
         s8 max_rssi = 0, min_rssi = 0;
         wifi_handle handle = getWifiHandle(iface);
         memset(&handler, 0, sizeof(handler));
-        SetRSSIMonitorCommand *cmd = new SetRSSIMonitorCommand(id, iface,
-                                                    max_rssi, min_rssi, handler);
+        SetRSSIMonitorCommand *cmd = new SetRSSIMonitorCommand(id, iface, max_rssi, min_rssi, handler);
         cmd->cancel();
         cmd->releaseRef();
         return WIFI_SUCCESS;
     }
+
     return wifi_cancel_cmd(id, iface);
 }
 

@@ -1,4 +1,4 @@
-From da39b9efd1a3539a5cfa82520f70e6c82eeeebc5 Mon Sep 17 00:00:00 2001
+From 5b05e7bf8edf89e4dd98c5c95bbede96442ef827 Mon Sep 17 00:00:00 2001
 From: Wang Xuerui <idontknw.wang@gmail.com>
 Date: Tue, 8 Dec 2015 15:31:04 +0800
 Subject: [PATCH] libui: add MTK bits
@@ -62,7 +62,7 @@ index 99006248275..52eba1ce7f9 100644
 --- a/include/ui/GraphicBufferMapper.h
 +++ b/include/ui/GraphicBufferMapper.h
 @@ -72,6 +72,15 @@ class GraphicBufferMapper : public Singleton<GraphicBufferMapper>
-     gralloc_module_t const *mAllocMod;
+     std::unique_ptr<Gralloc1::Device> mDevice;
  };
  
 +#ifdef MTK_HARDWARE
@@ -202,10 +202,10 @@ index 00000000000..84315443adf
 +};
 +#endif
 diff --git a/libs/ui/Android.mk b/libs/ui/Android.mk
-index a8eb67b348e..25f122ab3dd 100644
+index d8cabad9fd1..f2cd4c22f07 100644
 --- a/libs/ui/Android.mk
 +++ b/libs/ui/Android.mk
-@@ -45,6 +45,16 @@ LOCAL_SRC_FILES := \
+@@ -46,6 +46,16 @@ LOCAL_SRC_FILES := \
  	Region.cpp \
  	UiConfig.cpp
  
@@ -220,9 +220,9 @@ index a8eb67b348e..25f122ab3dd 100644
 +endif
 +
  LOCAL_SHARED_LIBRARIES := \
+ 	libbinder \
  	libcutils \
- 	libhardware \
-@@ -52,6 +62,11 @@ LOCAL_SHARED_LIBRARIES := \
+@@ -54,6 +64,11 @@ LOCAL_SHARED_LIBRARIES := \
  	libutils \
  	liblog
  
@@ -239,7 +239,7 @@ index 0580e160f61..0b871b95b16 100644
 --- a/libs/ui/GraphicBufferMapper.cpp
 +++ b/libs/ui/GraphicBufferMapper.cpp
 @@ -77,6 +77,28 @@ status_t GraphicBufferMapper::unregisterBuffer(buffer_handle_t handle)
-     return err;
+     return outRect;
  }
  
 +#ifdef MTK_HARDWARE
@@ -264,8 +264,8 @@ index 0580e160f61..0b871b95b16 100644
 +}
 +#endif
 +
- status_t GraphicBufferMapper::lock(buffer_handle_t handle,
-         uint32_t usage, const Rect& bounds, void** vaddr)
+ status_t GraphicBufferMapper::lock(buffer_handle_t handle, uint32_t usage,
+         const Rect& bounds, void** vaddr)
  {
 diff --git a/libs/ui/mediatek/Fence.cpp b/libs/ui/mediatek/Fence.cpp
 new file mode 100644

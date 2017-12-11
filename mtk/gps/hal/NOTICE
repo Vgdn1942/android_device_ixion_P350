@@ -7,7 +7,7 @@
  * any reproduction, modification, use or disclosure of MediaTek Software,
  * and information contained herein, in whole or in part, shall be strictly prohibited.
  *
- * MediaTek Inc. (C) 2016. All rights reserved.
+ * MediaTek Inc. (C) 2010. All rights reserved.
  *
  * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
  * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
@@ -32,64 +32,3 @@
  * have been modified by MediaTek Inc. All revisions are subject to any receiver's
  * applicable license agreements with MediaTek Inc.
  */
-#ifndef __GPS_HAL_H__
-#define __GPS_HAL_H__
-
-#include "hardware/gps_mtk.h"
-#include <pthread.h>
-
-//=========================================================
-
-#define MAX_EPOLL_EVENT 50
-
-//=========================================================
-
-typedef enum {  // state order is important
-    GPSHAL_STATE_UNKNOWN,
-    GPSHAL_STATE_RESOURCE,
-    GPSHAL_STATE_CLEANUP,
-    GPSHAL_STATE_INIT,    // == STOP
-    GPSHAL_STATE_STOP,    // == INIT
-    GPSHAL_STATE_START
-} gpshal_state;
-
-typedef struct {
-    int       fd_mnl2hal;
-    int       fd_worker_epoll;
-    pthread_t thd_worker;
-
-    pthread_mutex_t mutex_gps_state_intent;
-    gpshal_state    gps_state_intent;  // what we want
-    gpshal_state    gps_state;  // what we are, but we may fail to change it
-
-    GpsCallbacks* gps_cbs;
-    AGpsCallbacks*    agps_cbs;
-    GpsNiCallbacks*   gpsni_cbs;
-    AGpsRilCallbacks* agpsril_cbs;
-    GpsMeasurementCallbacks*       meas_cbs;
-    GpsNavigationMessageCallbacks* navimsg_cbs;
-} gpshal_context_t;
-
-//=========================================================
-
-extern gpshal_context_t g_gpshal_ctx;
-extern const AGpsInterface mtk_agps_inf;
-extern const GpsNiInterface  mtk_gps_ni_inf;
-extern const AGpsRilInterface mtk_agps_ril_inf;
-
-//=========================================================
-
-extern const char* gpshal_state_to_string(gpshal_state state);
-
-extern int gpshal_gpscbs_save(GpsCallbacks* src);
-
-extern void gpshal_set_gps_state_intent(gpshal_state newState);
-
-extern void gpshal2mnl_gps_init();
-extern void gpshal2mnl_gps_start();
-extern void gpshal2mnl_gps_stop();
-extern void gpshal2mnl_gps_cleanup();
-
-extern void gpshal_worker_thread(void *arg);
-
-#endif  //  __GPS_HAL_DEBUG_H__

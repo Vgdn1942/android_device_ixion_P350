@@ -185,6 +185,10 @@ PRODUCT_COPY_FILES += \
 	$(LOCAL_PATH)/root/sbin/busybox:root/sbin/busybox \
 	$(LOCAL_KERNEL):kernel
 
+# Hack for disable deep sleep reboots
+PRODUCT_COPY_FILES += \
+	$(LOCAL_PATH)/configs/99wakelock_for_no_reboots:system/etc/init.d/99wakelock_for_no_reboots
+
 # Permissions
 PRODUCT_COPY_FILES += \
 	frameworks/native/data/etc/handheld_core_hardware.xml:system/etc/permissions/handheld_core_hardware.xml \

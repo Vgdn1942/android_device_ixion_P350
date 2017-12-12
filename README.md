@@ -28,7 +28,7 @@ Working:
 - SD-Card
 
 Not working/Bugs:
-- Reboot when screen off
+- Reboots after deepsleep (when screen off) (temporary fix 99wakelock_for_no_reboots script, but the processor does not go to sleep)
 - Wi-Fi
 - SMS
 - USSD

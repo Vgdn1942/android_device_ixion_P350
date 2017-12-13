@@ -240,6 +240,14 @@ PRODUCT_PROPERTY_OVERRIDES += \
 	ro.product.locale.region=RU \
 	ro.product.locale.language=ru
 
+# Extended JNI checks
+# The extended JNI checks will cause the system to run more slowly, but they can spot a variety of nasty bugs 
+# before they have a chance to cause problems.
+# Default=true for development builds, set by android buildsystem.
+PRODUCT_PROPERTY_OVERRIDES += \
+	ro.kernel.android.checkjni=0 \
+	dalvik.vm.checkjni=false
+
 # Screen density
 PRODUCT_AAPT_CONFIG := normal
 PRODUCT_AAPT_PREF_CONFIG := xhdpi

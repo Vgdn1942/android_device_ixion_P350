@@ -45,7 +45,7 @@ persist.radio.fd.r8.counter=15
 persist.radio.fd.off.r8.counter=5
 
 mux.debuglog.enable=0
-rild.libpath=/system/lib/mtk-ril.so
+rild.libpath=mtk-ril.so
 rild.libargs=-d /dev/ttyC0
 ril.specific.sm_cause=0
 ril.external.md=0
@@ -56,7 +56,7 @@ ril.telephony.mode=0
 ril.radiooff.poweroffMD=0
 
 ro.telephony.sim.count=2
-ro.telephony.ril_class=MT6580
+ro.telephony.ril_class=MediaTekRIL
 ro.telephony.ril.config=signalstrength
 
 ro.mediatek.gemini_support=true

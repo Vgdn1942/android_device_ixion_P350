@@ -1,0 +1,44 @@
+From 557b34077440350bbad418c11a4fd39b51afd5f8 Mon Sep 17 00:00:00 2001
+From: vgdn1942 <vgdn1942@gmail.com>
+Date: Wed, 13 Dec 2017 23:39:09 +0300
+Subject: [PATCH] l -> L
+
+Change-Id: Ic5599267a30b875e7819a12b4b28d90bc08f277e
+---
+ src/java/com/android/internal/telephony/RIL.java | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/java/com/android/internal/telephony/RIL.java b/src/java/com/android/internal/telephony/RIL.java
+index 4101463..efb36c3 100644
+--- a/src/java/com/android/internal/telephony/RIL.java
++++ b/src/java/com/android/internal/telephony/RIL.java
+@@ -3211,7 +3211,7 @@ public class RIL extends BaseCommands implements CommandsInterface {
+             case RIL_UNSOL_RINGBACK_TONE: ret = responseInts(p); break;
+             case RIL_UNSOL_RESEND_INCALL_MUTE: ret = responseVoid(p); break;
+             case RIL_UNSOL_CDMA_SUBSCRIPTION_SOURCE_CHANGED: ret = responseInts(p); break;
+-            case RIL_UNSOl_CDMA_PRL_CHANGED: ret = responseInts(p); break;
++            case RIL_UNSOL_CDMA_PRL_CHANGED: ret = responseInts(p); break;
+             case RIL_UNSOL_EXIT_EMERGENCY_CALLBACK_MODE: ret = responseVoid(p); break;
+             case RIL_UNSOL_RIL_CONNECTED: ret = responseInts(p); break;
+             case RIL_UNSOL_VOICE_RADIO_TECH_CHANGED: ret =  responseInts(p); break;
+@@ -3569,7 +3569,7 @@ public class RIL extends BaseCommands implements CommandsInterface {
+                 }
+                 break;
+ 
+-            case RIL_UNSOl_CDMA_PRL_CHANGED:
++            case RIL_UNSOL_CDMA_PRL_CHANGED:
+                 if (RILJ_LOGD) unsljLogRet(response, ret);
+ 
+                 if (mCdmaPrlChangedRegistrants != null) {
+@@ -4727,7 +4727,7 @@ public class RIL extends BaseCommands implements CommandsInterface {
+             case RIL_UNSOL_RINGBACK_TONE: return "UNSOL_RINGBACK_TONE";
+             case RIL_UNSOL_RESEND_INCALL_MUTE: return "UNSOL_RESEND_INCALL_MUTE";
+             case RIL_UNSOL_CDMA_SUBSCRIPTION_SOURCE_CHANGED: return "CDMA_SUBSCRIPTION_SOURCE_CHANGED";
+-            case RIL_UNSOl_CDMA_PRL_CHANGED: return "UNSOL_CDMA_PRL_CHANGED";
++            case RIL_UNSOL_CDMA_PRL_CHANGED: return "UNSOL_CDMA_PRL_CHANGED";
+             case RIL_UNSOL_EXIT_EMERGENCY_CALLBACK_MODE: return "UNSOL_EXIT_EMERGENCY_CALLBACK_MODE";
+             case RIL_UNSOL_RIL_CONNECTED: return "UNSOL_RIL_CONNECTED";
+             case RIL_UNSOL_VOICE_RADIO_TECH_CHANGED: return "UNSOL_VOICE_RADIO_TECH_CHANGED";
+-- 
+2.7.4
+

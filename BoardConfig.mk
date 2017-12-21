@@ -49,7 +49,7 @@ EXPERIMENTAL_USE_JAVA8 := true
 BOARD_KERNEL_CMDLINE += \
 	bootopt=64S3,32S1,32S1 \
 	androidboot.hardware=mt6580 \
-	androidboot.selinux=disabled
+	androidboot.selinux=permissive
 
 BOARD_KERNEL_BASE := 0x80000000
 BOARD_KERNEL_PAGESIZE := 2048

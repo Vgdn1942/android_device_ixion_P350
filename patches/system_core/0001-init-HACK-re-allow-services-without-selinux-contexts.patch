@@ -1,0 +1,60 @@
+From 68edd99f657afff7c693f7cac2eedaa9e985283b Mon Sep 17 00:00:00 2001
+From: vgdn1942 <vgdn1942@gmail.com>
+Date: Thu, 21 Dec 2017 22:42:31 +0300
+Subject: [PATCH] init: HACK re-allow services without selinux contexts defined
+
+Change-Id: I14eb7eb7a8f1195f8315b412cd5fc93729ed6af4
+---
+ init/init.cpp    | 5 ++++-
+ init/service.cpp | 2 ++
+ 2 files changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/init/init.cpp b/init/init.cpp
+index 7a37059..beda5fc 100755
+--- a/init/init.cpp
++++ b/init/init.cpp
+@@ -440,6 +440,7 @@ static void selinux_init_all_handles(void)
+     sehandle_prop = selinux_android_prop_context_handle();
+ }
+ 
++#if 0
+ enum selinux_enforcing_status { SELINUX_PERMISSIVE, SELINUX_ENFORCING };
+ 
+ static selinux_enforcing_status selinux_status_from_cmdline() {
+@@ -453,11 +454,13 @@ static selinux_enforcing_status selinux_status_from_cmdline() {
+ 
+     return status;
+ }
++#endif
+ 
+ static bool selinux_is_enforcing(void)
+ {
+     if (ALLOW_PERMISSIVE_SELINUX) {
+-        return selinux_status_from_cmdline() == SELINUX_ENFORCING;
++        // return selinux_status_from_cmdline() == SELINUX_ENFORCING;
++        return false;
+     }
+     return true;
+ }
+diff --git a/init/service.cpp b/init/service.cpp
+index 8127e70..a09fd8f 100644
+--- a/init/service.cpp
++++ b/init/service.cpp
+@@ -371,12 +371,14 @@ bool Service::Start() {
+             scon = ret_scon;
+             free(ret_scon);
+         }
++#if 0
+         if (rc == 0 && scon == mycon) {
+             ERROR("Service %s does not have a SELinux domain defined.\n", name_.c_str());
+             free(mycon);
+             free(fcon);
+             return false;
+         }
++#endif
+         free(mycon);
+         free(fcon);
+         if (rc < 0) {
+-- 
+2.7.4
+

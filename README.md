@@ -17,11 +17,16 @@ Camera  | 8MPx, LED Flash
 ![DEXP](https://content2.onliner.by/catalog/device/main/28756eabf91d930d247cb06211958125.jpeg "DEXP Ixion P350 Tundra Black")
 
 Working:
-- Modem
+- Wi-Fi
+- Modem/RIL
 - Voice
+- Mobile data
+- SMS
+- USSD
 - Bluetooth
 - Audio
-- Video play
+- Wi-Fi tethering
+- Second SIM
 - Sensors
 - Lights
 - USB connection (ADB/MTP/PTP)
@@ -29,14 +34,9 @@ Working:
 
 Not working/Bugs:
 - Reboots after deepsleep (when screen off) (temporary fix 99wakelock_for_no_reboots script, but the processor does not go to sleep)
-- Wi-Fi
-- SMS
-- USSD
-- Mobile data
 - Camera
 - GPS
-- Wi-Fi tethering
-- Second SIM
+- Video record/play
 - Poweroff charge
 - YouTube 720p
 
@@ -48,7 +48,6 @@ Not working/Bugs:
 * ferhung
 * fire855
 * mishkannn (4pda, fix YouTube 720p)
-* nofearnohappy (4pda, fix USSD)
 * varunchitre15
 * xen0n
 * Zormax (4pda, add EngineerMode)

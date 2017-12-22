@@ -160,8 +160,12 @@ BOARD_CONNECTIVITY_VENDOR := MediaTek
 #TARGET_POWER_SET_FEATURE_LIB := power-feature-mt6580
 
 # Odex
-WITH_DEXPREOPT := true
-DISABLE_DEXPREOPT := false
+#WITH_DEXPREOPT := true
+#DISABLE_DEXPREOPT := false
+
+# Deodex
+WITH_DEXPREOPT := false
+DISABLE_DEXPREOPT := true
 
 # system.prop
 TARGET_SYSTEM_PROP := $(LOCAL_PATH)/system.prop

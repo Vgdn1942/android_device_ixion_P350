@@ -37,6 +37,9 @@ ro.mtk_tetheringipv6_support=1
 ro.camera.sound.forced=0
 ro.audio.silent=0
 
+# Camera
+media.stagefright.legacyencoder=true
+media.stagefright.less-secure=true
 
 # Telephony
 persist.radio.fd.counter=15

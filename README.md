@@ -31,13 +31,13 @@ Working:
 - Lights
 - USB connection (ADB/MTP/PTP)
 - SD-Card
+- Poweroff charge
 
 Not working/Bugs:
 - Reboots after deepsleep (when screen off) (temporary fix 99wakelock_for_no_reboots script, but the processor does not go to sleep)
 - Camera
 - GPS
 - Video record/play
-- Poweroff charge
 - YouTube 720p
 
 # Acknowledgements

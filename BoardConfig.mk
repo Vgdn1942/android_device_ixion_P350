@@ -118,11 +118,12 @@ BOARD_PROVIDES_RILD := true
 BOARD_RIL_CLASS := ../../../$(LOCAL_PATH)/ril/
 
 # CMHW
-#BOARD_USES_CYANOGEN_HARDWARE := true
-#BOARD_HARDWARE_CLASS := $(LOCAL_PATH)/cmhw
+BOARD_USES_CYANOGEN_HARDWARE := true
+BOARD_HARDWARE_CLASS := $(LOCAL_PATH)/cmhw
+BOARD_HARDWARE_CLASS += hardware/cyanogen/cmhw
 
 # Tap to Wake
-#TARGET_TAP_TO_WAKE_NODE := "/sys/class/tpd_gesture/gesture_mode"
+TARGET_TAP_TO_WAKE_NODE := "/sys/class/tpd_gesture/gesture_mode"
 
 # Include
 TARGET_SPECIFIC_HEADER_PATH := $(LOCAL_PATH)/include
@@ -154,10 +155,6 @@ BOARD_CONNECTIVITY_MODULE := conn_soc
 # GPS
 BOARD_GPS_LIBRARIES := true
 BOARD_CONNECTIVITY_VENDOR := MediaTek
-
-# Power and native tap-to-wake
-#TARGET_POWERHAL_VARIANT := mtk-xen0n
-#TARGET_POWER_SET_FEATURE_LIB := power-feature-mt6580
 
 # Odex
 #WITH_DEXPREOPT := true

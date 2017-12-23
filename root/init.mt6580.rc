@@ -765,6 +765,9 @@ on boot
     chown bluetooth radio /dev/ttyGS2
     chmod 0660 /dev/ttyGS2
 
+# Gestures
+    chown system system /sys/class/tpd_gesture/gesture_mode
+
 on property:ro.board.platform=mt6753
     chown system system /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq
     chmod 0660 /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq

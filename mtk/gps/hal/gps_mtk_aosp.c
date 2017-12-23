@@ -31,15 +31,6 @@
  * The following software/firmware and/or related documentation ("MediaTek Software")
  * have been modified by MediaTek Inc. All revisions are subject to any receiver's
  * applicable license agreements with MediaTek Inc.
- *
- * 2016/12/9:	modified by daniel_hk(https://github.com/danielhk)
- * 2016/12/9:	Match Nougat callbacks
- * 2016/12/10:	Adapted for Nougat's gnss struct
- * 2017/2/8:	Try matching other fields in the new gnss struct
- * 2017/2/10:	Try backward compatible with gps_status support (WIP)
- * 2017/2/10:	Add override build property to select (gnss/gps)
- * 2017/2/16:	Set constellation type according to svid (need extra info.)
- *
  */
 #define MTK_LOG_ENABLE 1
 #include <errno.h>
@@ -66,13 +57,14 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
-#include "include/linux/mtk_agps_common.h"
+#include <linux/mtk_agps_common.h>
 #include <private/android_filesystem_config.h>
 // #include <linux/mtgpio.h>
 
 #if EPO_SUPPORT
-#include <curl/curl.h>
-#include <curl/easy.h>
+   // for EPO file
+#include "curl.h"
+#include "easy.h"
 
 #define EPO_FILE "/data/misc/gps/EPO.DAT"
 #define EPO_FILE_HAL "/data/misc/gps/EPOHAL.DAT"
@@ -99,7 +91,7 @@
 #include <sys/_system_properties.h>
 #endif
 
-#include "include/hardware/gps_mtk.h"
+#include <hardware/gps_mtk.h>
 
 /* the name of the controlled socket */
 #define  GPS_CHANNEL_NAME       "/dev/gps"
@@ -113,7 +105,7 @@
 #define  GNSS_OP  "AT%GNSS"
 #define  GPS_AT_ACK_SIZE        60
 
-#define  GPS_DEBUG  1
+#define  GPS_DEBUG  0
 #define  NEMA_DEBUG 0   /*the flag works if GPS_DEBUG is defined*/
 #if GPS_DEBUG
 #define  TRC(f)       ALOGD("%s", __func__)
@@ -122,6 +114,9 @@
 #define DBG(f, ...) ALOGD("%s: line = %d" f, __func__, __LINE__, ##__VA_ARGS__)
 #define VER(f, ...) ((void)0)    // ((void)0)   //
 #else
+#  define TRC(...)    ((void)0)
+#  define ERR(...)    ((void)0)
+#  define WAN(...)    ((void)0)
 #  define DBG(...)    ((void)0)
 #  define VER(...)    ((void)0)
 #endif
@@ -146,19 +141,19 @@ typedef struct {
     AGpsRilCallbacks* agps_ril_callbacks;
 } agps_context;
 
-typedef  unsigned int		UINT4;
-typedef  signed int		INT4;
+typedef  unsigned int             UINT4;
+typedef  signed int               INT4;
 
-typedef unsigned char		UINT8;
-typedef signed char		INT8;
+typedef unsigned char           UINT8;
+typedef signed char             INT8;
 
-typedef unsigned short int	UINT16;
-typedef signed short int	INT16;
+typedef unsigned short int      UINT16;
+typedef signed short int        INT16;
 
-typedef unsigned int		UINT32;
-typedef signed int		INT32;
+typedef unsigned int            UINT32;
+typedef signed int              INT32;
 
-typedef signed long long	INT64;
+typedef signed long long       INT64;
 
 #pragma pack(4)    //  Align by 4 byte
 typedef struct
@@ -168,33 +163,33 @@ typedef struct
    INT8 PRN;
    double TimeOffsetInNs;
    UINT16 state;
-   INT64 ReGpsTowInNs;			// Re: Received
-   INT64 ReGpsTowUnInNs;		// Re: Received, Un:Uncertainty
+   INT64 ReGpsTowInNs;                       // Re: Received
+   INT64 ReGpsTowUnInNs;                  // Re: Received, Un:Uncertainty
    double Cn0InDbHz;
-   double PRRateInMeterPreSec;		//  PR: Pseuderange
-   double PRRateUnInMeterPreSec;	//  PR: Pseuderange Un:Uncertainty
-   UINT16 AcDRState10;			//  Ac:Accumulated, DR:Delta Range
-   double AcDRInMeters;			//  Ac:Accumulated, DR:Delta Range
-   double AcDRUnInMeters;		//  Ac:Accumulated, DR:Delta Range, Un:Uncertainty
-   double PRInMeters;			//  PR: Pseuderange
+   double PRRateInMeterPreSec;          //  PR: Pseuderange
+   double PRRateUnInMeterPreSec;      //  PR: Pseuderange Un:Uncertainty
+   UINT16 AcDRState10;                         //  Ac:Accumulated, DR:Delta Range
+   double AcDRInMeters;                       //  Ac:Accumulated, DR:Delta Range
+   double AcDRUnInMeters;                   //  Ac:Accumulated, DR:Delta Range, Un:Uncertainty
+   double PRInMeters;                           //  PR: Pseuderange
    double PRUnInMeters;
-   double CPInChips;			//  CP: Code Phase
-   double CPUnInChips;			//  CP: Code Phase
-   float CFInhZ;			//  CP: Carrier Frequency
+   double CPInChips;                             //  CP: Code Phase
+   double CPUnInChips;                         //  CP: Code Phase
+   float CFInhZ;                                     //  CP: Carrier Frequency
    INT64 CarrierCycle;
    double CarrierPhase;
-   double CarrierPhaseUn;		//  Un:Uncertainty
+   double CarrierPhaseUn;                    //  Un:Uncertainty
    UINT8 LossOfLock;
    INT32 BitNumber;
    INT16 TimeFromLastBitInMs;
    double DopperShiftInHz;
-   double DopperShiftUnInHz;		//  Un:Uncertainty
+   double DopperShiftUnInHz;              //  Un:Uncertainty
    UINT8 MultipathIndicater;
    double SnrInDb;
-   double ElInDeg;			//  El: elevation
-   double ElUnInDeg;			//  El: elevation, Un:Uncertainty
-   double AzInDeg;			//  Az: Azimuth
-   double AzUnInDeg;			//  Az: Azimuth
+   double ElInDeg;                                //  El: elevation
+   double ElUnInDeg;                            //  El: elevation, Un:Uncertainty
+   double AzInDeg;                               //  Az: Azimuth
+   double AzUnInDeg;                           //  Az: Azimuth
    char UsedInFix;
 }MTK_GPS_MEASUREMENT;
 
@@ -222,20 +217,6 @@ typedef struct
    UINT32 length;
    UINT8 data[40];
 } MTK_GPS_NAVIGATION_EVENT;
-
-// work arround for AgpsStatus
-typedef struct {
-    size_t	size;
-    AGpsType	type;
-    AGpsStatusValue status;
-} AGpsStatus_v1;
-
-typedef struct {
-    size_t	size;
-    AGpsType	type;
-    AGpsStatusValue status;
-    uint32_t	ipaddr;
-} AGpsStatus_v2;
 #pragma pack()
 typedef struct{
     GpsUtcTime time;
@@ -257,7 +238,7 @@ agps_context g_agps_ctx;
 
 #if EPO_SUPPORT
 #define  GPS_EPO_FILE_LEN  20
-#define C_INVALID_TIMER -1  /*invalid timer */
+#define C_INVALID_TIMER ((timer_t)(-1)) /*invalid timer */
 static int gps_epo_period = 3;
 static int wifi_epo_period = 1;
 static int gps_epo_download_days = 30;
@@ -407,12 +388,12 @@ typedef struct sync_lock
     pthread_cond_t con;
     int condtion;
 }SYNC_LOCK_T;
-static SYNC_LOCK_T lock_for_sync[] =   {{PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, 0},
-					{PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, 0},
-					{PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, 0},
-					{PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, 0},
-					{PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, 0},
-					{PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, 0}};
+static SYNC_LOCK_T lock_for_sync[] = {{PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, 0},
+                                {PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, 0},
+                                {PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, 0},
+                                {PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, 0},
+                                {PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, 0},
+                                {PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, 0}};
 
 const char* gps_native_thread = "GPS NATIVE THREAD";
 static GpsCallbacks_mtk callback_backup_mtk;
@@ -445,7 +426,6 @@ EpoData epo_data;
 static int epo_download_failed = 0;
 static int epo_download_retry = 1;
 char chip_id[PROPERTY_VALUE_MAX];
-static int gps_mode = -1;
 
 #endif
 /*---------------------------------------------------------------------------*/
@@ -500,6 +480,7 @@ struct sockaddr_un cmd_local;
 struct sockaddr_un remote;
 socklen_t remotelen;
 
+
 /*****************************************************************************/
 /*AT command test state*/
 static int MNL_AT_TEST_FLAG = 0;
@@ -510,6 +491,7 @@ static int MNL_AT_SIGNAL_TEST_BEGIN = 0;
 
 int MNL_AT_SET_ALARM       = 0;
 int MNL_AT_CANCEL_ALARM    = 0;
+
 
 enum {
     MNL_AT_TEST_UNKNOWN = -1,
@@ -709,7 +691,6 @@ int mtk_daemon_send(int sockfd, void* dest, char* buf, int size) {
        // unlink(soc_addr.sun_path);
     return ret;
 }
-
 static void mtk_gps_update_location(nlp_context * location)
 {
     FILE *fp = NULL;
@@ -962,11 +943,14 @@ void gps_ni_respond(int notif_id, GpsUserResponseType user_response) {
     mtk_daemon_send(g_agps_ctx.send_fd, MTK_HAL2MNLD, buff, sizeof(buff));
 }
 
+
+
 static const GpsNiInterface  mtkGpsNiInterface = {
     sizeof(GpsNiInterface),
     gps_ni_init,
     gps_ni_respond,
 };
+
 
 void agps_ril_init(AGpsRilCallbacks* callbacks) {
     DBG("agps_ril_init\n");
@@ -1102,7 +1086,7 @@ int mtk_start_daemon() { /*gps driver must exist before running the function*/
     sched_yield();
 
     while (count-- > 0) {
-#ifdef HAVE_LIBC_SYSTEM_PROPERTIES
+ #ifdef HAVE_LIBC_SYSTEM_PROPERTIES
         if (pi == NULL) {
             pi = __system_property_find(GPS_MNL_DAEMON_PROP);
         }
@@ -1495,6 +1479,7 @@ nmea_reader_update_utc_diff(NmeaReader* const r)
     r->utc_diff = time_utc - time_local;
 }
 
+
 static void
 nmea_reader_init(NmeaReader* const r)
 {
@@ -1557,6 +1542,7 @@ nmea_reader_set_callback(NmeaReader* const r, GpsCallbacks* const cbs)
     }
 }
 
+
 static int
 nmea_reader_update_time(NmeaReader* const r, Token  tok)
 {
@@ -1598,7 +1584,7 @@ nmea_reader_update_time(NmeaReader* const r, Token  tok)
     localtime_r(&fix_time, &tm_local);
 
     fix_time += tm_local.tm_gmtoff;
-    DBG("fix_time: %ld\n", fix_time);
+    DBG("fix_time: %d\n", fix_time);
     r->fix.timestamp = (long long)fix_time * 1000;
     return 0;
 }
@@ -1628,6 +1614,7 @@ nmea_reader_update_date(NmeaReader* const r, Token  date, Token  time)
 
     return nmea_reader_update_time(r, time);
 }
+
 
 static double
 convert_from_hhmm(Token  tok)
@@ -1700,7 +1687,37 @@ typedef struct {
 
 static GpsState  _gps_state[1];
 #ifdef GPS_AT_COMMAND
+/*
+static int
+nmea_reader_update_at_test_result(NmeaReader* const r,
+                                  int Err_Code,
+                                  int Success_Num,
+                                  int Completed_Num,
+                                  int Avg_CNo,
+                                  int Dev_CNo)
+{
+    if (r==NULL) {
+        DBG("**NmeaReader is NULL !!");
+        return 0;
+    }
 
+    r->test_result.error_code = Err_Code;
+    r->test_result.theta = 0;
+    r->test_result.phi = 0;
+    r->test_result.success_num = Success_Num;
+    r->test_result.completed_num = Completed_Num;
+    r->test_result.avg_cno = Avg_CNo;
+    r->test_result.dev_cno = Dev_CNo;
+    r->test_result.avg_speed = 0;
+   /* if (r->callbacks.test_cb) {
+        r->callbacks.test_cb(&r->test_result);
+        DBG("**AT command test set callback!!");
+    } else {
+        VER("**AT Command test: no test result callback !!");
+    }
+    return 0;
+}
+*/
 static void
 sms_airtest_no_signal_report(int Err_Code,
                                   int Success_Num,
@@ -1762,6 +1779,7 @@ nmea_reader_update_bearing(NmeaReader* const r,
     r->fix.bearing  = str2float(tok.p, tok.end);
     return 0;
 }
+
 
 static int
 nmea_reader_update_speed(NmeaReader* const r,
@@ -1953,48 +1971,37 @@ nmea_reader_update_sv_status_gps(NmeaReader* r, int sv_index,
 
 static int
 nmea_reader_update_sv_status_gnss(NmeaReader* r, int sv_index,
-				int id, Token elevation,
-				Token azimuth, Token snr)
+                              int id, Token elevation,
+                              Token azimuth, Token snr)
 {
        // int prn = str2int(id.p, id.end);
     int prn = id;
-    GnssConstellationType ct;
 
     if ((prn <= 0) || (prn < 65 && prn > GPS_MAX_SVS)|| ((prn > 96) && (prn < 200))
        || (prn > 232) || (r->sv_count >= GNSS_MAX_SVS)) {
         VER("sv_status_gnss: ignore (%d)", prn);
         return 0;
     }
-
     sv_index = r->sv_count+r->sv_status_gnss.num_svs;
     if (GNSS_MAX_SVS <= sv_index) {
         ERR("ERR: sv_index=[%d] is larger than GNSS_MAX_SVS.\n", sv_index);
         return 0;
     }
-    ct = GNSS_CONSTELLATION_GLONASS;	// 65..96	:GLONASS
-    if (id < 33)
-	ct = GNSS_CONSTELLATION_GPS;	// 1..32	:GPS
-    else if (id > 200)
-	ct = GNSS_CONSTELLATION_BEIDOU;	// 201..232	:BEIDOU
-
     r->sv_status_gnss.gnss_sv_list[sv_index].svid = prn;
     r->sv_status_gnss.gnss_sv_list[sv_index].c_n0_dbhz = str2float(snr.p, snr.end);
-    r->sv_status_gnss.gnss_sv_list[sv_index].constellation = ct;
     r->sv_status_gnss.gnss_sv_list[sv_index].elevation = str2int(elevation.p, elevation.end);
     r->sv_status_gnss.gnss_sv_list[sv_index].azimuth = str2int(azimuth.p, azimuth.end);
     r->sv_status_gnss.gnss_sv_list[sv_index].flags = GNSS_SV_FLAGS_NONE;
     if (1 == sv_used_in_fix[prn]) {
-	r->sv_status_gnss.gnss_sv_list[sv_index].flags |= GNSS_SV_FLAGS_USED_IN_FIX;
+        r->sv_status_gnss.gnss_sv_list[sv_index].flags |= GNSS_SV_FLAGS_USED_IN_FIX;
     }
-
     r->sv_count++;
-    VER("sv_status_gnss(%2d): %2d, %2f, %3f, %2f, %x",
-	sv_index, r->sv_status_gnss.gnss_sv_list[sv_index].prn,
-	r->sv_status_gnss.gnss_sv_list[sv_index].elevation,
-	r->sv_status_gnss.gnss_sv_list[sv_index].azimuth,
-	r->sv_status_gnss.gnss_sv_list[sv_index].c_n0_dbhz,
-	r->sv_status_gnss.gnss_sv_list[sv_index].flags
-	);
+    VER("sv_status_gnss(%2d): %2d, %2f, %3f, %2f, %2d",
+       sv_index, r->sv_status_gnss.sv_list[sv_index].prn,
+       r->sv_status_gnss.sv_list[sv_index].elevation,
+       r->sv_status_gnss.sv_list[sv_index].azimuth,
+       r->sv_status_gnss.sv_list[sv_index].snr,
+       r->sv_status_gnss.sv_list[sv_index].used_in_fix);
     return 0;
 }
 
@@ -2134,7 +2141,7 @@ nmea_reader_parse(NmeaReader* const r)
                                       tok_longitudeHemi.p[0]);
         nmea_reader_update_altitude(r, tok_altitude, tok_altitudeUnits);
 
-    } else if ((gps_mode == 0) &&
+    } else if ((callback_backup_mtk.base.size == sizeof(GpsCallbacks_mtk)) &&
                (!memcmp(mtok.p, "GPGSA", 5)||!memcmp(mtok.p, "BDGSA", 5)||!memcmp(mtok.p, "GLGSA", 5))) {
         Token tok_fix = nmea_tokenizer_get(tzer, 2);
         int idx, max = 12;  /*the number of satellites in GPGSA*/
@@ -2171,7 +2178,7 @@ nmea_reader_parse(NmeaReader* const r)
                 DBG("GSA:sv_used_in_fix[%d] = %d\n", sate_id, sv_used_in_fix[sate_id]);
             }
         }
-    } else if ((gps_mode == 1) &&
+    } else if ((callback_backup_mtk.base.size == sizeof(GpsCallbacks)) &&
                (!memcmp(mtok.p, "GPGSA", 5))) {
         Token tok_fix = nmea_tokenizer_get(tzer, 2);
         int idx, max = 12;  /*the number of satellites in GPGSA*/
@@ -2192,11 +2199,11 @@ nmea_reader_parse(NmeaReader* const r)
                         if (sate_id >= 193 && sate_id <= 197) {
                             DBG("[debug mask]QZSS, just ignore. satellite id is %d\n ", sate_id);
                             continue;
-                        } else {
+                        } /*else {
                             r->sv_status_gps.used_in_fix_mask = 0;
                             DBG("[debug mask] satellite is invalid & mask = %d\n",
                                r->sv_status_gps.used_in_fix_mask);
-                        }
+                        }*/
                         VER("GPGSA: invalid sentence, ignore!!");
                         break;
                 }
@@ -2228,7 +2235,7 @@ nmea_reader_parse(NmeaReader* const r)
             nmea_reader_update_bearing(r, tok_bearing);
             nmea_reader_update_speed(r, tok_speed);
         }
-    } else if ((gps_mode == 0) &&
+    } else if ((callback_backup_mtk.base.size == sizeof(GpsCallbacks_mtk)) &&
                (!memcmp(tok.p, "GSV", 3))) {
         Token tok_num = nmea_tokenizer_get(tzer, 1);    // number of messages
         Token tok_seq = nmea_tokenizer_get(tzer, 2);    // sequence number
@@ -2277,7 +2284,7 @@ nmea_reader_parse(NmeaReader* const r)
                 r->sv_count = r->sv_status_gnss.num_svs = 0;
             }
         }
-    } else if ((gps_mode == 1) &&
+    } else if ((callback_backup_mtk.base.size == sizeof(GpsCallbacks)) &&
                (!memcmp(mtok.p, "GPGSV", 5)||!memcmp(mtok.p, "GLGSV", 5))) {
         Token tok_num = nmea_tokenizer_get(tzer, 1);    // number of messages
         Token tok_seq = nmea_tokenizer_get(tzer, 2);    // sequence number
@@ -2396,14 +2403,10 @@ nmea_reader_parse(NmeaReader* const r)
     r->fix.flags = 0;
     }
 
-    if (gps_mode == 0) {
-	//TODO: transform GnssSvStatus_mtk to GnssSvStatus ??
+    if (callback_backup_mtk.base.size == sizeof(GpsCallbacks_mtk)) {
         if (r->sv_status_gnss.num_svs != 0 && gps_nmea_end_tag) {
-//	    GnssSvStatus gnss_status;
             DBG("r->sv_status_gnss.num_svs = %d, gps_nmea_end_tag = %d", r->sv_status_gnss.num_svs, gps_nmea_end_tag);
-	    r->sv_status_gnss.size = sizeof(GnssSvStatus);
-//	    gnss_status.size = sizeof(GnssSvStatus);
-//	    mtk2aosp_GnssSvInfo(r->sv_status_gnss.sv_list, gnss_status.sv_list, r->sv_count);
+            r->sv_status_gnss.size = sizeof(GnssSvStatus);
             callback_backup_mtk.base.gnss_sv_status_cb(&r->sv_status_gnss);
             r->sv_count = r->sv_status_gnss.num_svs = 0;
             memset(sv_used_in_fix, 0, 256*sizeof(int));
@@ -3496,6 +3499,7 @@ void mnld_to_gps_handler(int fd, GpsState* s) {   // from AGPSD->MNLD->HAL->FWK
             DBG("HAL_CMD_MEASUREMENT message recieved\n");
             if (gpsmeasurement_init_flag == 1) {
             int i = 0;
+            int num = 0;
             MTK_GPS_MEASUREMENT mtk_gps_measurement[32];
             buff_get_struct(mtk_gps_measurement, 32*sizeof(MTK_GPS_MEASUREMENT), buff, &offset);
             MTK_GPS_CLOCK mtk_gps_clock;
@@ -3518,42 +3522,51 @@ void mnld_to_gps_handler(int fd, GpsState* s) {   // from AGPSD->MNLD->HAL->FWK
             memset(&gpsdata, 0, sizeof(GpsData));
             gpsdata.size = sizeof(GpsData);
 
-            for (i = 0; i < 1; i++) {
-                DBG("gpsdata measurements[%d] memcpy completed", i);
-                gpsdata.measurements[i].size = sizeof(GpsMeasurement);
-                gpsdata.measurements[i].accumulated_delta_range_m = mtk_gps_measurement[i].AcDRInMeters;
-                gpsdata.measurements[i].accumulated_delta_range_state = mtk_gps_measurement[i].AcDRState10;
-                gpsdata.measurements[i].accumulated_delta_range_uncertainty_m = mtk_gps_measurement[i].AcDRUnInMeters;
-                gpsdata.measurements[i].azimuth_deg = mtk_gps_measurement[i].AzInDeg;
-                gpsdata.measurements[i].azimuth_uncertainty_deg = mtk_gps_measurement[i].AzUnInDeg;
-                gpsdata.measurements[i].bit_number = mtk_gps_measurement[i].BitNumber;
-                gpsdata.measurements[i].carrier_cycles = mtk_gps_measurement[i].CarrierCycle;
-                gpsdata.measurements[i].carrier_phase = mtk_gps_measurement[i].CarrierPhase;
-                gpsdata.measurements[i].carrier_phase_uncertainty = mtk_gps_measurement[i].CarrierPhaseUn;
-                gpsdata.measurements[i].carrier_frequency_hz = mtk_gps_measurement[i].CFInhZ;
-                gpsdata.measurements[i].c_n0_dbhz = mtk_gps_measurement[i].Cn0InDbHz;
-                gpsdata.measurements[i].code_phase_chips = mtk_gps_measurement[i].CPInChips;
-                gpsdata.measurements[i].code_phase_uncertainty_chips = mtk_gps_measurement[i].CPUnInChips;
-                gpsdata.measurements[i].doppler_shift_hz = mtk_gps_measurement[i].DopperShiftInHz;
-                gpsdata.measurements[i].doppler_shift_uncertainty_hz = mtk_gps_measurement[i].DopperShiftUnInHz;
-                gpsdata.measurements[i].elevation_deg = mtk_gps_measurement[i].ElInDeg;
-                gpsdata.measurements[i].elevation_uncertainty_deg = mtk_gps_measurement[i].ElUnInDeg;
-                gpsdata.measurements[i].flags = mtk_gps_measurement[i].flag;
-                gpsdata.measurements[i].loss_of_lock = mtk_gps_measurement[i].LossOfLock;
-                gpsdata.measurements[i].multipath_indicator = mtk_gps_measurement[i].MultipathIndicater;
-                gpsdata.measurements[i].pseudorange_m = mtk_gps_measurement[i].PRInMeters;
-                gpsdata.measurements[i].prn = mtk_gps_measurement[i].PRN;
-                gpsdata.measurements[i].pseudorange_rate_mps = mtk_gps_measurement[i].PRRateInMeterPreSec;
-                gpsdata.measurements[i].pseudorange_rate_uncertainty_mps = mtk_gps_measurement[i].PRRateUnInMeterPreSec;
-                gpsdata.measurements[i].pseudorange_uncertainty_m = mtk_gps_measurement[i].PRUnInMeters;
-                gpsdata.measurements[i].received_gps_tow_ns = mtk_gps_measurement[i].ReGpsTowInNs;
-                gpsdata.measurements[i].received_gps_tow_uncertainty_ns = mtk_gps_measurement[i].ReGpsTowUnInNs;
-                gpsdata.measurements[i].snr_db = mtk_gps_measurement[i].SnrInDb;
-                gpsdata.measurements[i].state = mtk_gps_measurement[i].state;
-                gpsdata.measurements[i].time_from_last_bit_ms = mtk_gps_measurement[i].TimeFromLastBitInMs;
-                gpsdata.measurements[i].time_offset_ns = mtk_gps_measurement[i].TimeOffsetInNs;
-                gpsdata.measurements[i].used_in_fix = mtk_gps_measurement[i].UsedInFix;
-                if (gpsdata.measurements[i].prn != 0) {
+            for (i = 0; i < 32; i++) {
+                if (mtk_gps_measurement[i].PRN != 0) {
+                    num = gpsdata.measurement_count;
+
+                    gpsdata.measurements[num].size = sizeof(GpsMeasurement);
+                    gpsdata.measurements[num].accumulated_delta_range_m = mtk_gps_measurement[i].AcDRInMeters;
+                    gpsdata.measurements[num].accumulated_delta_range_state = mtk_gps_measurement[i].AcDRState10;
+                    gpsdata.measurements[num].accumulated_delta_range_uncertainty_m = \
+                    mtk_gps_measurement[i].AcDRUnInMeters;
+                    gpsdata.measurements[num].azimuth_deg = mtk_gps_measurement[i].AzInDeg;
+                    gpsdata.measurements[num].azimuth_uncertainty_deg = mtk_gps_measurement[i].AzUnInDeg;
+                    gpsdata.measurements[num].bit_number = mtk_gps_measurement[i].BitNumber;
+                    gpsdata.measurements[num].carrier_cycles = mtk_gps_measurement[i].CarrierCycle;
+                    gpsdata.measurements[num].carrier_phase = mtk_gps_measurement[i].CarrierPhase;
+                    gpsdata.measurements[num].carrier_phase_uncertainty = mtk_gps_measurement[i].CarrierPhaseUn;
+                    gpsdata.measurements[num].carrier_frequency_hz = mtk_gps_measurement[i].CFInhZ;
+                    gpsdata.measurements[num].c_n0_dbhz = mtk_gps_measurement[i].Cn0InDbHz;
+                    gpsdata.measurements[num].code_phase_chips = mtk_gps_measurement[i].CPInChips;
+                    gpsdata.measurements[num].code_phase_uncertainty_chips = mtk_gps_measurement[i].CPUnInChips;
+                    gpsdata.measurements[num].doppler_shift_hz = mtk_gps_measurement[i].DopperShiftInHz;
+                    gpsdata.measurements[num].doppler_shift_uncertainty_hz = mtk_gps_measurement[i].DopperShiftUnInHz;
+                    gpsdata.measurements[num].elevation_deg = mtk_gps_measurement[i].ElInDeg;
+                    gpsdata.measurements[num].elevation_uncertainty_deg = mtk_gps_measurement[i].ElUnInDeg;
+                    gpsdata.measurements[num].flags = mtk_gps_measurement[i].flag;
+                    gpsdata.measurements[num].loss_of_lock = mtk_gps_measurement[i].LossOfLock;
+                    gpsdata.measurements[num].multipath_indicator = mtk_gps_measurement[i].MultipathIndicater;
+                    gpsdata.measurements[num].pseudorange_m = mtk_gps_measurement[i].PRInMeters;
+                    gpsdata.measurements[num].prn = mtk_gps_measurement[i].PRN;
+                    gpsdata.measurements[num].pseudorange_rate_mps = mtk_gps_measurement[i].PRRateInMeterPreSec;
+                    gpsdata.measurements[num].pseudorange_rate_uncertainty_mps = \
+                    mtk_gps_measurement[i].PRRateUnInMeterPreSec;
+                    gpsdata.measurements[num].pseudorange_uncertainty_m = mtk_gps_measurement[i].PRUnInMeters;
+                    gpsdata.measurements[num].received_gps_tow_ns = mtk_gps_measurement[i].ReGpsTowInNs;
+                    gpsdata.measurements[num].received_gps_tow_uncertainty_ns = mtk_gps_measurement[i].ReGpsTowUnInNs;
+                    gpsdata.measurements[num].snr_db = mtk_gps_measurement[i].SnrInDb;
+                    gpsdata.measurements[num].state = mtk_gps_measurement[i].state;
+                    gpsdata.measurements[num].time_from_last_bit_ms = mtk_gps_measurement[i].TimeFromLastBitInMs;
+                    gpsdata.measurements[num].time_offset_ns = mtk_gps_measurement[i].TimeOffsetInNs;
+                    gpsdata.measurements[num].used_in_fix = mtk_gps_measurement[i].UsedInFix;
+                    if (gpsdata.measurements[num].state == 0) {
+                        gpsdata.measurements[num].received_gps_tow_ns = 0;
+                        gpsdata.measurements[num].pseudorange_rate_mps = 1;
+                    }
+                    DBG("gpsdata measurements[%d] memcpy completed, old _num = %d, prn = %d\n",
+                        num, i, gpsdata.measurements[num].prn);
                     gpsdata.measurement_count++;
                 }
             }
@@ -4110,11 +4123,14 @@ copy_GpsCallbacks_mtk(GpsCallbacks_mtk* dst, GpsCallbacks_mtk* src)
         DBG("Use GpsCallbacks_mtk\n");
         return 0;
     }
+#if 0
     if (src->base.size == sizeof(GpsCallbacks)) {
-	dst->base = src->base;
+        dst->base = src->base;
+        dst->gnss_sv_status_cb = NULL;
         DBG("Use GpsCallbacks\n");
-	return 0;
+        return 0;
     }
+#endif
     ERR("Bad callback, size: %d, expected: %d or %d", src->base.size, sizeof(GpsCallbacks_mtk), sizeof(GpsCallbacks));
     return -1;    //  error
 }
@@ -4143,19 +4159,6 @@ mtk_gps_init(GpsCallbacks* callbacks)
     s->init = 1;
     DBG("Set GPS_CAPABILITY_SCHEDULING \n");
     callback_backup_mtk.base.set_capabilities_cb(GPS_CAPABILITY_SCHEDULING);
-    res = property_get("persist.force.gps.mode", chip_id, NULL);
-    if (res) {
-	if (strcmp(chip_id, "gnss") == 0)
-	    gps_mode = 0;
-	else if (strcmp(chip_id, "gps") == 0)
-	    gps_mode = 1;
-    }
-    if (gps_mode < 0) {
-	if (callback_backup_mtk.base.size == sizeof(GpsCallbacks_mtk))
-	    gps_mode = 0;
-	else if (callback_backup_mtk.base.size == sizeof(GpsCallbacks))
-	    gps_mode = 1;
-    }
 #if EPO_SUPPORT
     // get chipid here
     while ((get_time--!= 0) && ((res = property_get("persist.mtk.wcn.combo.chipid", chip_id, NULL)) < 6)) {
@@ -4621,14 +4624,14 @@ static int set_retry_alarm_handler(int timeout)
 {
     int err = 0;
 
-    if (retry_timer.fd != (timer_t)C_INVALID_TIMER) {
+    if (retry_timer.fd != C_INVALID_TIMER) {
         if (err = timer_delete(retry_timer.fd)) {
             DBG("timer_delete(%d) = %d (%s)\n", retry_timer.fd, errno, strerror(errno));
             return -1;
         }
-        retry_timer.fd = (timer_t)C_INVALID_TIMER;
+        retry_timer.fd = C_INVALID_TIMER;
     }
-    if (retry_timer.fd == (timer_t)C_INVALID_TIMER) {
+    if (retry_timer.fd == C_INVALID_TIMER) {
         memset(&retry_timer.evt, 0x00, sizeof(retry_timer.evt));
         retry_timer.evt.sigev_value.sival_ptr = &retry_timer.fd;
         retry_timer.evt.sigev_value.sival_int = timeout;
@@ -4764,7 +4767,7 @@ int mtk_gps_epo_interface_init(GpsXtraCallbacks* callbacks) {
         mGpsXtraCallbacks = *callbacks;
         ret = 0;
     }
-    retry_timer.fd = (timer_t)C_INVALID_TIMER;
+    retry_timer.fd = C_INVALID_TIMER;
 
     // start thread to write data to file
     ret = pthread_create(&s->thread_epo, NULL, thread_epo_file_update, s);
@@ -5263,7 +5266,7 @@ CURLcode curl_easy_download_epo(void)
     strcat(gps_epo_md_file_temp, "/data/misc/gps/");
     strcat(gps_epo_md_file_temp, gps_epo_md_file_name);
     // DBG("gps_epo_md_file_name = %s\n", gps_epo_md_file_name);
-    strcpy(gps_epo_md_key, "0000000000000000");
+	strcpy(gps_epo_md_key, "0000000000000000");
     memset(count_str,0,sizeof(count_str));
     sprintf(count_str,"%d", counter);
     strcat(gps_epo_md_key, "&counter=");
@@ -5713,6 +5716,6 @@ struct hw_module_t HAL_MODULE_INFO_SYM = {
     .version_minor = 0,
     .id = GPS_HARDWARE_MODULE_ID,
     .name = "Hardware GPS Module",
-    .author = "The MTK GPS Source Project(modified by daniel_hk)",
+    .author = "The MTK GPS Source Project",
     .methods = &gps_module_methods,
 };

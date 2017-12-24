@@ -156,6 +156,7 @@ on post-fs-data
 # GPS
     mkdir /data/gps_mnl 0771 gps system
     mkdir /data/misc/gps 0770 gps system
+    chown gps system /data/mpe_mnl
 
     # NFC
     mkdir /data/nfc_socket 0771 nfc radio
@@ -1173,7 +1174,7 @@ service wifi2agps /vendor/bin/wifi2agps
 service mnld /vendor/bin/mnld
     class main
     user gps
-    group gps inet misc sdcard_rw sdcard_r media_rw system
+    group gps inet misc sdcard_rw sdcard_r media_rw system radio
     socket mnld stream 660 gps system
 
 service slpd /vendor/bin/slpd

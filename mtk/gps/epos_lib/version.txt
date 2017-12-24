@@ -1,0 +1,271 @@
+commit a154e05aefe2368b8965f88718743a73c2b7f63a
+Author: Ben Lai <ben.lai@mediatek.com>
+Date:   Fri Mar 11 16:09:27 2016 +0800
+
+    [ALPS02607466] Apply V1 & V2 devinfo driver
+    
+    [Detail]
+    Everest(6797): v1 devinfo driver
+    Olympus(6757): v2 devinfo driver
+    
+    Change-Id: I6c557d7f34cf263f370d1daa59fd1efe55da03b8
+    CR-Id: ALPS02607466
+    Feature: Others
+    (cherry picked from commit 9185fcaf5a8b5dfa2cce2a5b60ba3e3d363ced39)
+
+commit 88f4d1300719bae316fbcdc7bc6a1b75baaaf143
+Author: Ben Lai <ben.lai@mediatek.com>
+Date:   Thu Mar 3 19:43:49 2016 +0800
+
+    [ALPS02595749] [EPOS] Apply V2 devinfo driver
+    
+    [Detail]
+    sysfs Device node: /proc/device-tree/chosen/atag,devinfo
+    
+    Change-Id: I58d2e8bb44a06c8e134b908e1af9e685d8460e92
+    CR-Id: ALPS02595749
+    Feature: Others
+
+commit f1257713ab4959cb5584185e75d75cfe22bd0cfe
+Author: Ben Lai <ben.lai@mediatek.com>
+Date:   Tue Nov 17 10:15:48 2015 +0800
+
+    [ALPS02360199] Coverity 34433: String not null terminated
+    
+    [Detail]
+    Terminates array by the total bytes returned by fread().
+    
+    [Solution]
+    Terminates array by the total bytes returned by fread().
+    
+    Change-Id: I64a2b453a1cc2c54b12cb403a8668b76f83fcac8
+    CR-Id: ALPS02360199
+    Feature: Others
+
+commit e3d74dee7917db565fa04a8a82bcdb6d7f07e305
+Author: Ben Lai <ben.lai@mediatek.com>
+Date:   Tue Nov 3 12:13:24 2015 +0800
+
+    [ALPS02360199] Coverity 34433: String not null terminated
+    
+    [Detail]
+    Use the returned value of fread() to replace strlen function.
+    
+    [Solution]
+    Use the returned value of fread() to replace strlen function.
+    
+    [Feature] null
+    
+    Change-Id: I3f8e5eea20695cdaa0d4393b73c660bb84189b5d
+    CR-Id: ALPS02360199
+
+commit 6d578af5df8e5dac120ec1a88709aa992b14ac64
+Author: Ben Lai <ben.lai@mediatek.com>
+Date:   Tue Sep 8 18:44:43 2015 +0800
+
+    [ALPS02298172] Coverity 34433 String not null terminated
+    
+    [Detail]
+    The function may iterate past the end of the buffer looking for a null terminator.
+    
+    [Solution]
+    Init array elements before accessing.
+    
+    [Feature] Others
+    
+    Change-Id: I4859bb0e8f094621305974812b603e31d69fb44b
+    CR-Id: ALPS02298172
+
+commit a40e81089e62f731bd14fff23195d7b3f5c9dd9e
+Author: Ben Lai <ben.lai@mediatek.com>
+Date:   Tue Sep 8 18:40:34 2015 +0800
+
+    [ALPS02298181] Coverity 28518 Out-of-bounds access
+    
+    [Detail]
+    Access of memory not owned by this buffer may cause crashes or incorrect computations.
+    
+    [Solution]
+    Declare array's length to ERR_ERROR_STRING_BUF_LEN(256).
+    
+    [Feature] Others
+    
+    Change-Id: I2146b71c3dce9e2979bafda48091219c0ca781ae
+    CR-Id: ALPS02298181
+
+commit ebcc06b24497f191f772d7d881b0996cd4b05737
+Author: Ben Lai <ben.lai@mediatek.com>
+Date:   Tue Sep 8 18:37:53 2015 +0800
+
+    [ALPS02298173] Coverity 32892 Uninitialized scalar variable
+    
+    [Detail]
+    The variable will contain an arbitrary value left from earlier computations.
+    
+    [Solution]
+    Remove the useless variable.
+    
+    [Feature] Others
+    
+    Change-Id: I57b1a1046ebd11569a0b86aaffa605ade0345cb4
+    CR-Id: ALPS02298173
+
+commit 0d71bbf92695da5edc38ad1827896b26db92aaa4
+Author: Ben Lai <ben.lai@mediatek.com>
+Date:   Fri Sep 4 18:22:50 2015 +0800
+
+    [ALPS02286408] Update EPOS url & add counter support(2)
+    
+    [Detail]
+    Modify Regular expression to match "dkey=12345abcde"
+    
+    [Solution]
+    Modify Regular expression to match "dkey=12345abcde"
+    
+    [Feature] null
+    
+    Change-Id: I68992301c82e4fb13c9e30e4ff39930ca689cd9b
+    CR-Id: ALPS02286408
+
+commit 5c177c08999611ad24d0862b1aa8d717016c2783
+Author: Ben Lai <ben.lai@mediatek.com>
+Date:   Tue Sep 1 15:21:09 2015 +0800
+
+    [ALPS02286408] Update EPOS url & add counter support
+    
+    [Detail]
+    Support counter parameter to be appended after url
+    
+    [Solution]
+    Parse "dkey" & "counter" strings in parameter and append info after return url
+    
+    [Feature] null
+    
+    Change-Id: I8a0499fe591fc79f74f3c0ec8f1a877f202ed7f8
+    CR-Id: ALPS02286408
+
+commit c09dbf8fb7298a0bfac458391786c019a5bc023c
+Author: sm_admin <sm_admin@mediatek.com>
+Date:   Tue Aug 4 21:02:18 2015 +0800
+
+    [ALPS02227924]remove unnecessary PROPRIETARY_LICENSE file
+    
+    [Detail]
+    Remove unnecessary PROPRIETARY_LICENSE file
+    [Solution]
+    Remove unnecessary PROPRIETARY_LICENSE file
+    [Feature]Others
+    
+    Change-Id: Ic8963cd6face326428fce20a939c5cfda958fabb
+    CR-Id: ALPS02227924
+
+commit 538a8a32f5f6701adb755c07c8fa69ef90cc52b4
+Author: sm_admin <sm_admin@mediatek.com>
+Date:   Tue Aug 4 20:35:50 2015 +0800
+
+    [ALPS02227923]remove unnecessary NOTICE file
+    
+    [Detail]
+    Remove unnecessary NOTICE file
+    [Solution]
+    Remove unnecessary NOTICE file
+    [Feature]Others
+    
+    Change-Id: I3cf4d50bd4879a2f2521c57f4fe11baf168146c4
+    CR-Id: ALPS02227923
+
+commit 8530b290e279b4e3f7a69600452174b86efee0d2
+Author: Ben Lai <ben.lai@mediatek.com>
+Date:   Tue Aug 4 10:34:37 2015 +0800
+
+    [ALPS02229392] Update EPOS content list, key & url
+    
+    [Detail]
+    Update EPOS content list, key & url for M0 project.
+    
+    [Solution]
+    Update EPOS content list, key & url for M0 project.
+    
+    [Feature] Others
+    
+    Change-Id: If4a78eb20aed091a57c8cc2db41143fb8c488b71
+    CR-Id: ALPS02229392
+
+commit d88eaed34e0ebcc2909db29f69c55377f1c92a41
+Author: chun-yi lin <chun-yi.lin@mediatek.com>
+Date:   Tue Jun 30 19:01:32 2015 +0800
+
+    [ALPS02160015] Update epos base64()
+    
+    [Detail]
+    Google now use "boringssl" to replace "openssl".
+    So we need to update related functions.
+    
+    [Solution]
+    Use boringssl API instead of openssl in base64().
+    
+    [Feature] Security
+    
+    Change-Id: Ia8a37225bec4f902840aae69edff140f248e5407
+    CR-Id: ALPS02160015
+
+commit fb6fa9944360892786999d44ae577b94b474e6f9
+Author: Alan Hu <alan.hu@mediatek.com>
+Date:   Mon Jun 29 14:08:31 2015 +0800
+
+    [ALPS02152077] Disable epos for M migration
+    
+    [Detail] Build error in M.
+    
+    [Solution] Disable it until the build issue is fixed.
+    
+    [Feature] from CQ (Auto)
+    
+    Change-Id: Id100767bf4e3bbf6a937732cf801082c08d2ec82
+    CR-Id: ALPS02152077
+
+commit 69ba5bb1a6bd57e6d6bb47434d5b13ad26242777
+Author: Yu-Hua.Huang <yu-hua.huang@mediatek.com>
+Date:   Fri Jun 5 08:16:39 2015 +0800
+
+    [ALPS02078844] Resolve memory leak
+    
+    [Detail]
+    It occur memory leak when EPO download
+    
+    [Solution]
+    Add free memory policy
+    
+    [Feature] EPOS
+    
+    Change-Id: I6b777648d11e25c62ffb07020c13f59f1b8a4736
+    CR-Id: ALPS02078844
+
+commit 104784bb652a7bfbfbf8f799b134ad610a871527
+Author: Yu-Hua.Huang <yu-hua.huang@mediatek.com>
+Date:   Thu May 14 21:39:18 2015 +0800
+
+    [ALPS02053826]Remove diff of BRM files
+    
+    [Detail]
+    [BRM] Remove diff of BRM files among op01/op02/op09 on L1
+    
+    [Solution]
+    Modify Android.mk and epos.cpp to compliant SWO policy
+    
+    [Feature] EPOS
+    
+    Change-Id: I0155e871ff378c68125d7da57f399be39c06f296
+    CR-Id: ALPS02053826
+
+commit a23b2cb9014de4506bccf0de17db1fad18fc5cdd
+Author: srv_sstgitp4 <srv_sstgitp4@mediatek.com>
+Date:   Mon Apr 13 12:16:56 2015 +0800
+
+    copy p4 to git
+
+commit 89724e9d72e1fc8e952d09a1cd714390720e4833
+Author: GitP4 Service <srv_sstgitp4@mediatek.com>
+Date:   Thu Apr 2 19:22:06 2015 +0800
+
+    Initial empty repository

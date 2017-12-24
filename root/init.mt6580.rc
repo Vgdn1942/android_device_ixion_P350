@@ -155,8 +155,7 @@ on post-fs-data
 
 # GPS
     mkdir /data/gps_mnl 0771 gps system
-    mkdir /data/misc/gps 0771 gps system
-    restorecon_recursive /data/misc/gps
+    mkdir /data/misc/gps 0770 gps system
 
     # NFC
     mkdir /data/nfc_socket 0771 nfc radio
@@ -1158,7 +1157,7 @@ service pppd_gprs /system/bin/pppd_dt /dev/ttyACM0 debug noauth refuse-eap usepe
 #    class main
 #    oneshot
 
-service agpsd /system/bin/mtk_agpsd
+service agpsd /vendor/bin/mtk_agpsd
     class main
     socket agpsd stream 660 gps system
     socket agpsd2 stream 660 gps inet
@@ -1166,16 +1165,21 @@ service agpsd /system/bin/mtk_agpsd
     user gps
     group gps radio inet sdcard_r sdcard_rw misc
 
-service wifi2agps /system/bin/wifi2agps
+service wifi2agps /vendor/bin/wifi2agps
     class main
     user wifi
     group gps inet
 
-service mnld /system/xbin/mnld
+service mnld /vendor/bin/mnld
     class main
     user gps
     group gps inet misc sdcard_rw sdcard_r media_rw system
     socket mnld stream 660 gps system
+
+service slpd /vendor/bin/slpd
+    class main
+    user gps
+    group gps inet
 
 service ipod /system/bin/ipod
     user root

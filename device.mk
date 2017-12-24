@@ -138,7 +138,12 @@ PRODUCT_COPY_FILES += \
 
 PRODUCT_PACKAGES += \
 	gps.mt6580 \
-	mtk_agpsd
+	mnld \
+	libmnl \
+	wifi2agps \
+	libwifi2agps \
+	mtk_agpsd \
+	slpd
 
 # Torch
 PRODUCT_PACKAGES += \

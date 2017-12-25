@@ -57,7 +57,7 @@ LOCAL_C_INCLUDES += \
   $(LOCAL_PATH)/mnld_entity/inc \
   $(LOCAL_PATH)/mnl/inc \
   $(LOCAL_PATH)/curl/inc \
-  $(LOCAL_PATH)/inc_libnvram_5.1 \
+  $(LOCAL_PATH)/libnvram \
   $(LOCAL_PATH)/../../kernel-headers \
   external/libxml2/include \
 

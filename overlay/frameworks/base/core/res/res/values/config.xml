@@ -101,7 +101,6 @@
     <string-array translatable="false" name="config_tether_bluetooth_regexs">
         <item>"bnep\\d"</item>
         <item>"bt-pan"</item>
-        <item>"bt-dun"</item>   
     </string-array>
 
     <bool name="config_wifi_background_scan_support">false</bool>

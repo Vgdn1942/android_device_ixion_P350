@@ -7,6 +7,7 @@ service.adb.root=1
 # Display
 ro.sf.lcd_density=293
 ro.opengles.version=131072
+ro.egl.destroy_after_detach=true
 
 # Disable dirty region for Mali
 debug.hwui.render_dirty_regions=false

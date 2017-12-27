@@ -156,10 +156,6 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
 	EngineerMode
 
-# YahooWeatherProvider
-PRODUCT_PACKAGES += \
-	YahooWeatherProvider
-
 # Keyhandler & Gestures
 #PRODUCT_PACKAGES += \
 #	com.cyanogenmod.keyhandler \

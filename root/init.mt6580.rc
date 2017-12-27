@@ -107,6 +107,7 @@ on charger
 on fs
     write /proc/bootprof "INIT:Mount_START"
     mount_all /fstab.mt6580
+    swapon_all /fstab.mt6580
     exec /system/bin/tune2fs -O has_journal -u 10010 -r 4096 /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/userdata
 
     #change partition permissions
@@ -1231,16 +1232,6 @@ service cmmb /system/bin/cmmbsp
     group system audio camera graphics inet net_bt net_bt_admin net_bw_acct media
     ioprio rt 4
 
-#service enableswap /system/bin/sh /enableswap.sh
-#    class core
-#    oneshot
-#    seclabel u:r:enableswap:s0
-
-#service swapoff_action /system/bin/sh /disableswap.sh
-#    class main
-#    disabled
-#    oneshot
-
 service dbus /system/bin/dbus-daemon --system --nofork
     class main
     socket dbus stream 660 bluetooth bluetooth
@@ -1606,12 +1597,6 @@ service program_binary /system/bin/program_binary_service
     class late_start
     user system
     group graphics
-    oneshot
-
-service ipo_swap /system/bin/ipo_swap
-    class core
-    user root
-    group root
     oneshot
 
 # originally bulk of init.project.rc

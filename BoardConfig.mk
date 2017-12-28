@@ -152,8 +152,15 @@ TARGET_POWERHAL_VARIANT := mtk-xen0n
 TARGET_POWER_SET_FEATURE_LIB := power-feature-mt6580
 
 # Odex
+USE_ODEX := false
+
+ifeq ($(USE_ODEX),true)
 WITH_DEXPREOPT := true
 DISABLE_DEXPREOPT := false
+else
+WITH_DEXPREOPT := false
+DISABLE_DEXPREOPT := true
+endif
 
 # system.prop
 TARGET_SYSTEM_PROP := $(LOCAL_PATH)/system.prop

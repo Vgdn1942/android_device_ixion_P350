@@ -228,4 +228,7 @@
 	 format is UMTS|LTE|... -->
 	<string translatable="false" name="config_radio_access_family">GSM|WCDMA</string>
 
+    <!-- Flag indicating if the user is notified when the mobile network access is restricted -->
+    <bool name="config_user_notification_of_restrictied_mobile_access">false</bool>
+
 </resources>

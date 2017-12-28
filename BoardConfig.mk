@@ -152,7 +152,7 @@ TARGET_POWERHAL_VARIANT := mtk-xen0n
 TARGET_POWER_SET_FEATURE_LIB := power-feature-mt6580
 
 # Odex
-USE_ODEX := false
+USE_ODEX := true
 
 ifeq ($(USE_ODEX),true)
 WITH_DEXPREOPT := true

@@ -19,4 +19,7 @@
     <integer name="config_proximityCheckTimeout">100</integer>
     <bool name="config_proximityCheckOnWakeEnabledByDefault">true</bool>
 
+    <!-- Default values for LiveDisplay -->
+    <integer name="config_defaultLiveDisplayMode">0</integer>
+
 </resources>

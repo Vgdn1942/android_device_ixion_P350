@@ -2,9 +2,9 @@
 
 import init.project.rc
 import init.xlog.rc
-import init.${ro.hardware}.power.rc
-import init.modem.rc
-import meta_init.modem.rc
+import init.mt6580.power.rc
+import init.mt6580.usb.rc
+import init.mt6580.modem.rc
 import init.nvdata.rc
 
 on early-boot

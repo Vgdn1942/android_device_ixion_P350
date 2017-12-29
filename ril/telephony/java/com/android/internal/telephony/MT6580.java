@@ -25,10 +25,12 @@ import android.content.Context;
 import android.os.AsyncResult;
 import android.os.Message;
 import android.os.Parcel;
+/* Disable for work airplane mod
 import android.os.SystemProperties;
 
 import android.provider.Settings;
 import android.provider.Settings.Global;
+*/
 
 import android.telephony.Rlog;
 import android.telephony.TelephonyManager;
@@ -48,8 +50,10 @@ public class MT6580 extends RIL implements CommandsInterface {
     private static final int RIL_UNSOL_CALL_INFO_INDICATION = 3049;
     private static final int RIL_UNSOL_SET_ATTACH_APN = 3073;
 
+/* Disable for work airplane mod
     private static final int RIL_REQUEST_MODEM_POWEROFF = 2010;
     private static final int RIL_REQUEST_MODEM_POWERON = 2028;
+*/
     private static final int RIL_REQUEST_RESUME_REGISTRATION = 2065;
     private static final int RIL_REQUEST_SET_CALL_INDICATION = 2086;
     private static final int RIL_REQUEST_EMERGENCY_DIAL = 2087;
@@ -60,13 +64,17 @@ public class MT6580 extends RIL implements CommandsInterface {
 
     private int[] dataCallCids = { -1, -1, -1, -1, -1 };
 
-    //private Context mContext;
+/* Disable for work airplane mod
+    private Context mContext;
+*/
     private TelephonyManager mTelephonyManager;
     private MtkEccList mEccList;
 
     public MT6580(Context context, int preferredNetworkType, int cdmaSubscription) {
         super(context, preferredNetworkType, cdmaSubscription, null);
-        //mContext = context;
+/* Disable for work airplane mod
+        mContext = context;
+*/
         Rlog.i("MT6580", "Ctor1: context is " + mContext);
         mTelephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
         mEccList = new MtkEccList();
@@ -75,7 +83,9 @@ public class MT6580 extends RIL implements CommandsInterface {
     public MT6580(Context context, int preferredNetworkType,
             int cdmaSubscription, Integer instanceId) {
         super(context, preferredNetworkType, cdmaSubscription, instanceId);
-        //mContext = context;
+/* Disable for work airplane mod
+        mContext = context;
+*/
         Rlog.i("MT6580", "Ctor2: context is " + mContext);
         mTelephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
         mEccList = new MtkEccList();
@@ -90,8 +100,10 @@ public class MT6580 extends RIL implements CommandsInterface {
             case RIL_REQUEST_EMERGENCY_DIAL: return "RIL_REQUEST_EMERGENCY_DIAL";
             case RIL_REQUEST_SET_ECC_SERVICE_CATEGORY: return "RIL_REQUEST_SET_ECC_SERVICE_CATEGORY";
             case RIL_REQUEST_SET_ECC_LIST: return "RIL_REQUEST_SET_ECC_LIST";
+/* Disable for work airplane mod
             case RIL_REQUEST_MODEM_POWEROFF: return "RIL_REQUEST_MODEM_POWEROFF";
             case RIL_REQUEST_MODEM_POWERON: return "RIL_REQUEST_MODEM_POWERON";
+*/
             default: return "<unknown response>";
         }
     }
@@ -366,6 +378,7 @@ public class MT6580 extends RIL implements CommandsInterface {
         if (mEccList != null) mEccList.updateEmergencyNumbersProperty();
     }
 
+/* Disable for work airplane mod
     @Override
     public void
     setRadioPower(boolean on, Message result) {
@@ -393,6 +406,7 @@ public class MT6580 extends RIL implements CommandsInterface {
             super.setRadioPower(on, result);
         }
     }
+*/
 
     // Solicited request handling
     @Override

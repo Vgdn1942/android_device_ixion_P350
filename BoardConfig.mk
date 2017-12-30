@@ -167,12 +167,15 @@ BOARD_GPS_LIBRARIES := true
 BOARD_CONNECTIVITY_VENDOR := MediaTek
 
 # Odex
-#WITH_DEXPREOPT := true
-#DISABLE_DEXPREOPT := false
+USE_ODEX := false
 
-# Deodex
+ifeq ($(USE_ODEX),true)
+WITH_DEXPREOPT := true
+DISABLE_DEXPREOPT := false
+else
 WITH_DEXPREOPT := false
 DISABLE_DEXPREOPT := true
+endif
 
 # system.prop
 TARGET_SYSTEM_PROP := $(LOCAL_PATH)/system.prop

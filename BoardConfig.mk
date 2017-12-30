@@ -60,7 +60,7 @@ BOARD_MKBOOTIMG_ARGS := \
 	--tags_offset 0x0e000000 \
 	--board P350_R01_13.02.
 
-TARGET_PREBUILT_KERNEL := $(LOCAL_PATH)/kernel
+#TARGET_PREBUILT_KERNEL := $(LOCAL_PATH)/kernel
 
 ifeq ($(TARGET_PREBUILT_KERNEL),)
 TARGET_KERNEL_SOURCE := kernel/mt6580/kernel-3.10-common

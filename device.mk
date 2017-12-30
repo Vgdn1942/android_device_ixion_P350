@@ -190,6 +190,10 @@ PRODUCT_COPY_FILES += \
 	$(LOCAL_PATH)/root/sbin/busybox:root/sbin/busybox \
 	$(LOCAL_KERNEL):kernel
 
+# Hack for kernel
+PRODUCT_COPY_FILES += \
+	$(LOCAL_PATH)/kernel:obj/KERNEL_OBJ/arch/arm/boot/zImage
+
 # Hack for disable deep sleep reboots
 PRODUCT_COPY_FILES += \
 	$(LOCAL_PATH)/configs/99wakelock_for_no_reboots:system/etc/init.d/99wakelock_for_no_reboots

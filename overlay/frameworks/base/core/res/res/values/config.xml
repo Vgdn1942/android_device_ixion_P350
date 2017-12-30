@@ -74,6 +74,7 @@
         <item>"mobile_fota,10,0,2,60000,true"</item>
         <item>"mobile_cbs,12,0,2,60000,true"</item>
         <item>"mobile_ia,14,0,2,-1,true"</item>
+        <item>"usb,40,40,0,-1,true"</item>
         <item>"bluetooth,7,7,2,-1,true"</item>
     </string-array>
 
@@ -175,19 +176,6 @@
         that can be set by the user. -->
     <integer name="config_screenBrightnessDim">10</integer>
 
-    <!-- MX devices normally don't light up their buttons while operating -->
-	<integer name="config_buttonBrightnessSettingDefault">0</integer>
-
-	<!-- below disabled for M bringup -->
-
-    <!-- True if button brightness should be configurable even if default
-         value is set to 0 -->
-	<!-- <bool name="config_buttonBrightnessForceConfigurable">true</bool> -->
-
-    <!-- Overridden brightness value of enabled state if button brightness is
-         forced to be configurable -->
-	<!-- <integer name="config_buttonBrightnessOverriddenEnabledValue">255</integer> -->
-
     <!--  Maximum number of supported users -->
     <integer name="config_multiuserMaximumUsers">4</integer>
     <!-- Whether UI for multi user should be shown -->
@@ -226,5 +214,11 @@
     <!-- Older rotation sensors are not setting event.timestamp correctly. Setting to
      true will use SystemClock.elapsedRealtimeNanos() to set timestamp. -->
     <bool name="config_useSystemClockforRotationSensor">true</bool>
+
+    <!-- The RadioAccessFamilies supported by the device.
+     Empty is viewed as "all".  Only used on devices which
+     don't support RIL_REQUEST_GET_RADIO_CAPABILITY
+     format is UMTS|LTE|... -->
+    <string translatable="false" name="config_radio_access_family">GSM|WCDMA</string>
 
 </resources>

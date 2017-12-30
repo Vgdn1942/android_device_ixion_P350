@@ -194,6 +194,15 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
 	$(LOCAL_PATH)/configs/99wakelock_for_no_reboots:system/etc/init.d/99wakelock_for_no_reboots
 
+# MTK rc script
+PRODUCT_COPY_FILES += \
+	$(LOCAL_PATH)/root/etc/atrace.rc:system/etc/init/atrace.rc \
+	$(LOCAL_PATH)/root/etc/audioserver.rc:system/etc/init/audioserver.rc \
+	$(LOCAL_PATH)/root/etc/drmserver.rc:system/etc/init/drmserver.rc \
+	$(LOCAL_PATH)/root/etc/mediacodec.rc:system/etc/init/mediacodec.rc \
+	$(LOCAL_PATH)/root/etc/mediadrmserver.rc:system/etc/init/mediadrmserver.rc \
+	$(LOCAL_PATH)/root/etc/mediaserver.rc:system/etc/init/mediaserver.rc
+
 # Permissions
 PRODUCT_COPY_FILES += \
 	frameworks/native/data/etc/handheld_core_hardware.xml:system/etc/permissions/handheld_core_hardware.xml \

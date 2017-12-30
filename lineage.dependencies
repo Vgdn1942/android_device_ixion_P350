@@ -1,0 +1,8 @@
+[
+  {
+     "remote":       "github",
+     "repository":   "Vgdn1942/android_vendor_ixion_P350",
+     "target_path":  "vendor/ixion/P350",
+     "revision":     "lineage-13.0"
+  }
+]

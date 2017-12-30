@@ -62,6 +62,11 @@ BOARD_MKBOOTIMG_ARGS := \
 
 TARGET_PREBUILT_KERNEL := $(LOCAL_PATH)/kernel
 
+ifeq ($(TARGET_PREBUILT_KERNEL),)
+TARGET_KERNEL_SOURCE := kernel/mt6580/kernel-3.10-common
+TARGET_KERNEL_CONFIG := common_6580_we_l_defconfig
+endif
+
 BOARD_DONT_USE_MTK_BOOTIMG := true
 
 TARGET_KMODULES := true

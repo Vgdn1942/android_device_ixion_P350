@@ -156,6 +156,11 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
 	EngineerMode
 
+# FM Radio
+PRODUCT_PACKAGES += \
+    FMRadio \
+    libfmjni
+
 # Keyhandler & Gestures
 #PRODUCT_PACKAGES += \
 #	com.cyanogenmod.keyhandler \

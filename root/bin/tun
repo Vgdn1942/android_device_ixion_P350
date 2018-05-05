@@ -1,0 +1,102 @@
+#!/system/bin/sh
+
+# Variables
+
+ADRESS="127.0.0.0"
+PORT="443"
+DNS="8.8.8.8"
+USER="root"
+ETC_DIR="/etc/tun"
+PASS=""
+PASS_FILE="$ETC_DIR/.password"
+#PATH="$PATH:`pwd`"
+
+# Functions
+
+start() {
+if test -f "$PASS_FILE";
+then
+    KEY_PASS="-f "$PASS_FILE""
+else
+    KEY_PASS="-p "$PASS""
+fi
+iptables -t nat -A OUTPUT -d $ADRESS -j RETURN
+iptables -t nat -A OUTPUT -d 0.0.0.0/8 -j RETURN
+iptables -t nat -A OUTPUT -d 10.0.0.0/8 -j RETURN
+iptables -t nat -A OUTPUT -d 127.0.0.0/8 -j RETURN
+iptables -t nat -A OUTPUT -d 169.254.0.0/16 -j RETURN
+iptables -t nat -A OUTPUT -d 172.16.0.0/12 -j RETURN
+iptables -t nat -A OUTPUT -d 192.168.0.0/16 -j RETURN
+iptables -t nat -A OUTPUT -d 224.0.0.0/4 -j RETURN
+iptables -t nat -A OUTPUT -d 240.0.0.0/4 -j RETURN
+iptables -t nat -A OUTPUT -p udp --dport 53 -j REDIRECT --to-ports 8153
+iptables -t nat -A OUTPUT -p tcp -j REDIRECT --to-ports 8123
+iptables -t filter -F FORWARD
+iptables -t nat -F POSTROUTING
+iptables -t nat -F PREROUTING
+iptables -t nat -I PREROUTING -p udp --dport 53 -j REDIRECT --to-ports 8153
+iptables -t nat -I PREROUTING -p tcp -j REDIRECT --to-ports 8123
+iptables -t filter -I FORWARD -j ACCEPT
+iptables -t nat -I POSTROUTING -j MASQUERADE
+redsocks -c $ETC_DIR/redsocks.conf &
+pdnsd -c $ETC_DIR/pdnsd.conf -d
+sshpass $KEY_PASS ssh $ADRESS -p $PORT -l $USER -NT -g -D 7777 -L 127.0.0.1:8163:$DNS:53 -o "ProxyCommand korkscrew --directconnection --desthost %h --destport %p" -o "KeepAlive yes" -o "ServerAliveInterval 15" -o "StrictHostKeyChecking=no" -o "GlobalKnownHostsFile=/dev/null" >/dev/null 2>&1 &
+}
+
+stop() {
+busybox killall -9 korkscrew >/dev/null 2>&1
+busybox killall -9 ssh >/dev/null 2>&1
+busybox killall pdnsd >/dev/null 2>&1
+busybox killall -9 redsocks >/dev/null 2>&1
+iptables -t nat -F OUTPUT;
+iptables -t filter -F FORWARD;
+iptables -t nat -F POSTROUTING;
+iptables -t nat -F PREROUTING
+}
+
+tun() {
+IP="`wget -O - -q icanhazip.com 2>/dev/null | tail -n1`"
+if [ "$IP" == "$ADRESS" ];
+then
+    echo "Running"
+    echo "You IP: $IP"
+else
+    echo "Stopped"
+    echo "You IP: $IP"
+fi
+}
+
+ip() {
+echo "You IP: `wget -O - -q icanhazip.com 2>/dev/null | tail -n1`"
+}
+
+usage() {
+echo "Usage: $0 [start] [stop] [tun] [ip]"
+}
+
+# Logic
+case $1 in start)
+echo "Starting..."
+stop
+start
+tun
+;;
+
+stop)
+echo "Stopping..."
+stop
+tun
+;;
+
+tun)
+tun
+;;
+
+ip)
+ip
+;;
+
+*)
+usage
+;;
+esac

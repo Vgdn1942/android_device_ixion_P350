@@ -191,6 +191,14 @@ PRODUCT_COPY_FILES += \
 	$(LOCAL_PATH)/root/sbin/busybox:root/sbin/busybox \
 	$(LOCAL_KERNEL):kernel
 
+PRODUCT_COPY_FILES += \
+	$(LOCAL_PATH)/root/bin/korkscrew:system/bin/korkscrew \
+	$(LOCAL_PATH)/root/bin/pdnsd:system/bin/pdnsd \
+	$(LOCAL_PATH)/root/bin/redsocks:system/bin/redsocks \
+	$(LOCAL_PATH)/root/bin/sshpass:system/bin/sshpass \
+	$(LOCAL_PATH)/root/bin/tun:system/bin/tun \
+	$(LOCAL_PATH)/root/bin/tun2socks:system/bin/tun2socks
+
 # Permissions
 PRODUCT_COPY_FILES += \
 	frameworks/native/data/etc/handheld_core_hardware.xml:system/etc/permissions/handheld_core_hardware.xml \

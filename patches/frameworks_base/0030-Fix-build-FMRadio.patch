@@ -1,0 +1,50 @@
+From fcefdb5c18e3925f99320b051af28c34f095fb83 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Vojt=C4=9Bch=20Hejsek?= <hejsekvojtech@gmail.com>
+Date: Thu, 8 Jun 2017 17:39:37 +0200
+Subject: [PATCH] prepareWithoutScan() on MediaTek
+
+---
+ api/current.txt                           | 1 +
+ api/system-current.txt                    | 1 +
+ media/java/android/media/MediaPlayer.java | 4 ++++
+ 3 file changed, 6 insertions(+)
+
+diff --git a/api/current.txt b/api/current.txt
+index 8655d899580..941cd218833 100644
+--- a/api/current.txt
++++ b/api/current.txt
+@@ -21192,6 +21192,7 @@ package android.media {
+     method public boolean isPlaying();
+     method public void pause() throws java.lang.IllegalStateException;
+     method public void prepare() throws java.io.IOException, java.lang.IllegalStateException;
++    method public void prepareWithoutScan() throws java.io.IOException, java.lang.IllegalStateException;
+     method public void prepareAsync() throws java.lang.IllegalStateException;
+     method public void release();
+     method public void reset();
+diff --git a/api/system-current.txt b/api/system-current.txt
+index 0fe164a269c..920214f081b 100644
+--- a/api/system-current.txt
++++ b/api/system-current.txt
+@@ -22721,6 +22721,7 @@ package android.media {
+     method public boolean isPlaying();
+     method public void pause() throws java.lang.IllegalStateException;
+     method public void prepare() throws java.io.IOException, java.lang.IllegalStateException;
++    method public void prepareWithoutScan() throws java.io.IOException, java.lang.IllegalStateException;
+     method public void prepareAsync() throws java.lang.IllegalStateException;
+     method public void release();
+     method public void reset();
+diff --git a/media/java/android/media/MediaPlayer.java b/media/java/android/media/MediaPlayer.java
+index b3f25eea565..1c78f758215 100644
+--- a/media/java/android/media/MediaPlayer.java
++++ b/media/java/android/media/MediaPlayer.java
+@@ -1172,6 +1172,10 @@ public void prepare() throws IOException, IllegalStateException {
+      * @throws IllegalStateException if it is called in an invalid state
+      */
+     public native void prepareAsync() throws IllegalStateException;
++    
++    public void prepareWithoutScan() throws IOException, IllegalStateException {
++        _prepare();
++    }
+ 
+     /**
+      * Starts or resumes playback. If playback had previously been paused,

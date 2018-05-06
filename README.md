@@ -36,6 +36,7 @@ Working:
 - Poweroff charge
 - Themes
 - YouTube 720p
+- VPN
 
 Not working/Bugs:
 - Some cameras do not record video
@@ -53,4 +54,5 @@ Not working/Bugs:
 * varunchitre15
 * xen0n
 * Zormax (4pda, add EngineerMode)
+* obraxys (4pda, FM-Radio)
 * and others I might have forgotten to include

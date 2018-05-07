@@ -36,7 +36,6 @@
 //#define LOG_NDEBUG 0
 #define LOG_TAG "FMPlayer"
 #include "utils/Log.h"
-#include "cutils/xlog.h"
 
 #include <stdio.h>
 #include <assert.h>
@@ -257,7 +256,7 @@ static bool getValue(String8 str)
 
 		if(eqIdx == strlen(string))
 		{
-			SXLOGE("Invailed value");
+			ALOGE("Invailed value");
 		}
 		else
 		{
@@ -272,7 +271,7 @@ static bool getValue(String8 str)
 				ret = false;
 			}
 			else
-				SXLOGE("Invailed value");
+				ALOGE("Invailed value");
 		}
 	}
 	return ret;
@@ -310,7 +309,7 @@ FMAudioPlayer *FmAudioPlayerInstance = NULL;
 
 void FMAudioPlayerCallback(void *data)
 {
-    SXLOGD("FMAudioPlayer callback 0x%x\n", FmAudioPlayerInstance);
+    ALOGD("FMAudioPlayer callback 0x%x\n", FmAudioPlayerInstance);
 
     if (FmAudioPlayerInstance != NULL)
     {
@@ -324,16 +323,16 @@ FMAudioPlayer::FMAudioPlayer() :
     mStreamType(AUDIO_STREAM_MUSIC),mAudioRecord(NULL),flagRecordError(false),
     mExit(false), mPaused(false), mRender(false), mRenderTid(-1)
 {
-    SXLOGD("[%d]FMAudioPlayer constructor\n");
+    ALOGD("[%d]FMAudioPlayer constructor\n");
 
     if (fm_use_analog_input == 1)
     {
-        SXLOGD("FM use analog input");
+        ALOGD("FM use analog input");
     }
 
     else if (fm_use_analog_input == 0)
     {
-        SXLOGD("I2S driver doesn't exists\n");
+        ALOGD("I2S driver doesn't exists\n");
     }
 
 #ifndef FAKE_FM
@@ -345,7 +344,7 @@ FMAudioPlayer::FMAudioPlayer() :
 
 void FMAudioPlayer::onFirstRef()
 {
-    SXLOGD("onFirstRef");
+    ALOGD("onFirstRef");
 
     // create playback thread
     Mutex::Autolock l(mMutex);
@@ -365,11 +364,11 @@ void FMAudioPlayer::onFirstRef()
 
     if (fm_use_analog_input == 1)
     {
-        SXLOGD("FMAudioPlayer use analog input - onFirstRef");
+        ALOGD("FMAudioPlayer use analog input - onFirstRef");
     }
     else if (fm_use_analog_input == 0)
     {
-        SXLOGD("FMAudioPlayer use digital input - onFirstRef");
+        ALOGD("FMAudioPlayer use digital input - onFirstRef");
     }
 
     createThreadEtc(renderThread, this, "FM audio player", ANDROID_PRIORITY_AUDIO);
@@ -377,7 +376,7 @@ void FMAudioPlayer::onFirstRef()
 
     if (mRenderTid > 0)
     {
-        SXLOGD("render thread(%d) started", mRenderTid);
+        ALOGD("render thread(%d) started", mRenderTid);
         mState = STATE_INIT;
     }
 }
@@ -394,7 +393,7 @@ status_t FMAudioPlayer::initCheck()
 
 FMAudioPlayer::~FMAudioPlayer()
 {
-    SXLOGD("FMAudioPlayer destructor");
+    ALOGD("FMAudioPlayer destructor");
 #ifndef FAKE_FM
     FmAudioPlayerInstance = NULL;
 #endif
@@ -402,31 +401,31 @@ FMAudioPlayer::~FMAudioPlayer()
 
     if (fm_use_analog_input == 1)
     {
-        SXLOGD("FMAudioPlayer use analog input - destructor end\n");
+        ALOGD("FMAudioPlayer use analog input - destructor end\n");
     }
 
     else if (fm_use_analog_input == 0)
     {
-        SXLOGD("FMAudioPlayer destructor end\n");
+        ALOGD("FMAudioPlayer destructor end\n");
     }
 }
 
 status_t FMAudioPlayer::setDataSource(const sp<IMediaHTTPService> &httpService, const char *url, const KeyedVector<String8, String8> *headers)
 {
-    SXLOGD("FMAudioPlayer setDataSource path=%s \n", path);
+    //ALOGD("FMAudioPlayer setDataSource path=%s \n", path);
     return setdatasource(url, -1, 0, 0x7ffffffffffffffLL); // intentionally less than LONG_MAX
 }
 
 status_t FMAudioPlayer::setDataSource(int fd, int64_t offset, int64_t length)
 {
-    SXLOGD("FMAudioPlayer setDataSource offset=%d, length=%d \n", ((int)offset), ((int)length));
+    ALOGD("FMAudioPlayer setDataSource offset=%d, length=%d \n", ((int)offset), ((int)length));
     return setdatasource(NULL, fd, offset, length);
 }
 
 
 status_t FMAudioPlayer::setdatasource(const char *path, int fd, int64_t offset, int64_t length)
 {
-    SXLOGD("setdatasource");
+    ALOGD("setdatasource");
 
     // file still open?
     Mutex::Autolock l(mMutex);
@@ -442,11 +441,11 @@ status_t FMAudioPlayer::setdatasource(const char *path, int fd, int64_t offset, 
 
 status_t FMAudioPlayer::prepare()
 {
-    SXLOGD("prepare\n");
+    ALOGD("prepare\n");
 
     if (mState != STATE_OPEN)
     {
-        SXLOGE("prepare ERROR_NOT_OPEN \n");
+        ALOGE("prepare ERROR_NOT_OPEN \n");
         return ERROR_NOT_OPEN;
     }
 
@@ -455,14 +454,14 @@ status_t FMAudioPlayer::prepare()
 
 status_t FMAudioPlayer::prepareAsync()
 {
-    SXLOGD("prepareAsync\n");
+    ALOGD("prepareAsync\n");
 
     // can't hold the lock here because of the callback
     // it's safe because we don't change state
     if (mState != STATE_OPEN && mState != STATE_PLAY && mState != STATE_STOP)
     {
         sendEvent(MEDIA_ERROR);
-        SXLOGD("prepareAsync sendEvent(MEDIA_ERROR) \n");
+        ALOGD("prepareAsync sendEvent(MEDIA_ERROR) \n");
         return NO_ERROR;
     }
 
@@ -472,12 +471,12 @@ status_t FMAudioPlayer::prepareAsync()
 
 status_t FMAudioPlayer::start()
 {
-    SXLOGD("start\n");
+    ALOGD("start\n");
     Mutex::Autolock l(mMutex);
 
     if (mState != STATE_OPEN && mState != STATE_PLAY && mState != STATE_STOP)
     {
-        SXLOGE("start ERROR_NOT_OPEN \n");
+        ALOGE("start ERROR_NOT_OPEN \n");
         return ERROR_NOT_OPEN;
     }
 
@@ -506,19 +505,19 @@ status_t FMAudioPlayer::start()
 #ifndef FAKE_FM
 #if !defined(FM_DIRECT_HW_CONNECT)
 	String8 str = AudioSystem::getParameters(0, IS_WIRED_HEADSET_ON);
-	SXLOGD("mSetRender is %d", mSetRender);
+	ALOGD("mSetRender is %d", mSetRender);
 //	if(!getValue(str))
 	if(mSetRender)
     {
         // wake up render thread
-        SXLOGD("start wakeup render thread---\n");
+        ALOGD("start wakeup render thread---\n");
         mCondition.signal();
     }
 #endif
 #else
 	mRender = true;
     // wake up render thread
-    SXLOGD("start wakeup render thread\n");
+    ALOGD("start wakeup render thread\n");
     mCondition.signal();
 
 #endif
@@ -528,12 +527,12 @@ status_t FMAudioPlayer::start()
 
 status_t FMAudioPlayer::stop()
 {
-    SXLOGD("stop\n");
+    ALOGD("stop\n");
     Mutex::Autolock l(mMutex);
 
     if (mState != STATE_OPEN && mState != STATE_PLAY && mState != STATE_STOP)
     {
-        SXLOGE("stop ERROR_NOT_OPEN \n");
+        ALOGE("stop ERROR_NOT_OPEN \n");
         return ERROR_NOT_OPEN;
     }
 	
@@ -562,22 +561,22 @@ status_t FMAudioPlayer::stop()
 
 status_t FMAudioPlayer::seekTo(int position)
 {
-    SXLOGD("seekTo %d\n", position);
+    ALOGD("seekTo %d\n", position);
     return NO_ERROR;
 }
 
 status_t FMAudioPlayer::pause()
 {
-    SXLOGD("pause\n");
+    ALOGD("pause\n");
     Mutex::Autolock l(mMutex);
 
     if (mState != STATE_OPEN && mState != STATE_PLAY && mState != STATE_STOP)
     {
-        SXLOGD("pause ERROR_NOT_OPEN \n");
+        ALOGD("pause ERROR_NOT_OPEN \n");
         return ERROR_NOT_OPEN;
     }
 
-    SXLOGD("pause got lock\n");
+    ALOGD("pause got lock\n");
 
     if (fm_use_analog_input == 1)
     {
@@ -595,7 +594,7 @@ status_t FMAudioPlayer::pause()
 
 bool FMAudioPlayer::isPlaying()
 {
-    SXLOGD("isPlaying\n");
+    ALOGD("isPlaying\n");
 
     if (mState == STATE_PLAY)
     {
@@ -607,7 +606,7 @@ bool FMAudioPlayer::isPlaying()
 
 status_t FMAudioPlayer::getCurrentPosition(int *position)
 {
-    SXLOGD("getCurrentPosition always return 0\n");
+    ALOGD("getCurrentPosition always return 0\n");
     *position = 0;
     return NO_ERROR;
 }
@@ -615,21 +614,21 @@ status_t FMAudioPlayer::getCurrentPosition(int *position)
 status_t FMAudioPlayer::getDuration(int *duration)
 {
     *duration = 1000;
-    SXLOGD("getDuration duration, always return 1000 \n");
+    ALOGD("getDuration duration, always return 1000 \n");
     return NO_ERROR;
 }
 
 status_t FMAudioPlayer::release()
 {
-    SXLOGD("release\n");
+    ALOGD("release\n");
 
     int ret = 0;
     int count = 100;
-    SXLOGD("release mMutex.tryLock ()");
+    ALOGD("release mMutex.tryLock ()");
 	
 #ifndef CHANGE_AUDIO_PRIORITY
 	int priority = getpriority(PRIO_PROCESS, 0);
-	SXLOGD("FM Render Thread priority is %d", priority);
+	ALOGD("FM Render Thread priority is %d", priority);
 #endif
 
 #ifndef FAKE_FM
@@ -642,7 +641,7 @@ status_t FMAudioPlayer::release()
 
         if (ret)
         {
-            SXLOGW("FMAudioPlayer::release() mMutex return ret = %d", ret);
+            ALOGW("FMAudioPlayer::release() mMutex return ret = %d", ret);
             usleep(20 * 1000);
             count --;
         }
@@ -655,9 +654,9 @@ status_t FMAudioPlayer::release()
     if (mRenderTid > 0)
     {
         mExit = true;
-        SXLOGD("release signal \n");
+        ALOGD("release signal \n");
         mCondition.signal();
-        SXLOGD("release wait \n");
+        ALOGD("release wait \n");
         mCondition.waitRelative(mMutex, seconds(3));
     }
 
@@ -667,7 +666,7 @@ status_t FMAudioPlayer::release()
 
 status_t FMAudioPlayer::reset()
 {
-    SXLOGD("reset\n");
+    ALOGD("reset\n");
     Mutex::Autolock l(mMutex);
     return reset_nosync();
 }
@@ -675,7 +674,7 @@ status_t FMAudioPlayer::reset()
 // always call with lock held
 status_t FMAudioPlayer::reset_nosync()
 {
-    SXLOGD("reset_nosync start\n");
+    ALOGD("reset_nosync start\n");
 
     if (fm_use_analog_input == 1)
     {
@@ -691,13 +690,13 @@ status_t FMAudioPlayer::reset_nosync()
     mDuration = -1;
     mPaused = false;
     mRender = false;
-    SXLOGD("reset_nosync end\n");
+    ALOGD("reset_nosync end\n");
     return NO_ERROR;
 }
 
 status_t FMAudioPlayer::setLooping(int loop)
 {
-    SXLOGD("setLooping, do nothing \n");
+    ALOGD("setLooping, do nothing \n");
     return NO_ERROR;
 }
 
@@ -710,7 +709,7 @@ void FMAudioPlayer::setHwCallback(bool enable)
 
 status_t FMAudioPlayer::setRender(bool enable)
 {
-    SXLOGD("setRender %d when mRender %d\n", enable, mRender);
+    ALOGD("setRender %d when mRender %d\n", enable, mRender);
     if (enable)
     {
         mSetRender = true;
@@ -746,12 +745,12 @@ status_t FMAudioPlayer::createOutputTrack()
         FM_AUDIO_SAMPLING_RATE = 32000;
     }
 
-    SXLOGD("Create AudioTrack object: rate=%d, channels=%d\n", FM_AUDIO_SAMPLING_RATE, FM_AUDIO_CHANNEL_NUM);
+    ALOGD("Create AudioTrack object: rate=%d, channels=%d\n", FM_AUDIO_SAMPLING_RATE, FM_AUDIO_CHANNEL_NUM);
 
     // open audio track
     if (mAudioSink->open(FM_AUDIO_SAMPLING_RATE, FM_AUDIO_CHANNEL_NUM, AUDIO_CHANNEL_OUT_STEREO, AUDIO_FORMAT_PCM_16_BIT, 6) != NO_ERROR)
     {
-        SXLOGE("mAudioSink open failed");
+        ALOGE("mAudioSink open failed");
         return ERROR_OPEN_FAILED;
     }
 
@@ -782,20 +781,20 @@ int FMAudioPlayer::render()
 #ifdef FM_AUDIO_FILELOG
     FILE *fp;
     fp = fopen("sdcard/test.pcm", "wb");
-    SXLOGD("fp:%d", fp);
+    ALOGD("fp:%d", fp);
 #endif
 
     bufSize = GetReadBufferSize();
-    SXLOGD("got buffer size = %d", bufSize);
+    ALOGD("got buffer size = %d", bufSize);
     mAudioBuffer = new char[bufSize * 2];
     mDummyBuffer = new char[bufSize * 2];
     memset(mDummyBuffer, 0, bufSize);
 
-    SXLOGD("mAudioBuffer: %p \n", mAudioBuffer);
+    ALOGD("mAudioBuffer: %p \n", mAudioBuffer);
 
     if (!mAudioBuffer)
     {
-        SXLOGD("mAudioBuffer allocate failed\n");
+        ALOGD("mAudioBuffer allocate failed\n");
         goto threadExit;
     }
 
@@ -809,13 +808,13 @@ int FMAudioPlayer::render()
 
         if (0 != sched_setscheduler(0, SCHED_RR, &sched_p))
         {
-            SXLOGE("[%s] failed, errno: %d", __func__, errno);
+            ALOGE("[%s] failed, errno: %d", __func__, errno);
         }
         else
         {
             sched_p.sched_priority = RTPM_PRIO_FM_AUDIOPLAYER;
             sched_getparam(0, &sched_p);
-            SXLOGD("sched_setscheduler ok, priority: %d", sched_p.sched_priority);
+            ALOGD("sched_setscheduler ok, priority: %d", sched_p.sched_priority);
         }
     }
 #endif
@@ -824,7 +823,7 @@ int FMAudioPlayer::render()
     {
         int ret = 0;
         int count = 100;
-        SXLOGD("render mMutex.tryLock ()");
+        ALOGD("render mMutex.tryLock ()");
 
         do
         {
@@ -832,14 +831,14 @@ int FMAudioPlayer::render()
 
             if (ret)
             {
-                SXLOGW("FMAudioPlayer::render() mMutex return ret = %d", ret);
+                ALOGW("FMAudioPlayer::render() mMutex return ret = %d", ret);
                 usleep(20 * 1000);
                 count --;
             }
         }while (ret && count);  // only cannot lock
 
         mRenderTid = myTid();
-        SXLOGD("render start mRenderTid=%d\n",mRenderTid);
+        ALOGD("render start mRenderTid=%d\n",mRenderTid);
         mCondition.signal();
         mMutex.unlock();
     }
@@ -854,7 +853,7 @@ int FMAudioPlayer::render()
             // pausing?
             if (mPaused || (!mSetRender && audioStarted) || flagRecordError)
             {
-                SXLOGD("render - pause\n");
+                ALOGD("render - pause\n");
 
                 if (mAudioSink->ready())
                 {
@@ -877,11 +876,11 @@ int FMAudioPlayer::render()
                 mRender = true;
             if (!mExit && !mRender)
             {
-                SXLOGD("render - signal wait\n");
+                ALOGD("render - signal wait\n");
                 mCondition.wait(mMutex);
                 frameCount = 0;
                 flagRecordError = false;
-                SXLOGD("render - signal rx'd\n");
+                ALOGD("render - signal rx'd\n");
             }
 
 			if(!mPaused && !mExit)
@@ -889,7 +888,7 @@ int FMAudioPlayer::render()
 				//flagOfRecord = createAudioRecord();
 				if(false == flagOfRecord)
 				{
-					SXLOGE("Create AudioRecord Failed !!!");
+					ALOGE("Create AudioRecord Failed !!!");
 					break;
 				}
 			}
@@ -909,7 +908,7 @@ int FMAudioPlayer::render()
 
             if (!mAudioSink->ready())
             {
-                SXLOGD("render - create output track\n");
+                ALOGD("render - create output track\n");
 
                 if (createOutputTrack() != NO_ERROR)
                 {
@@ -923,7 +922,7 @@ int FMAudioPlayer::render()
         	// codec returns negative number on error
         	if (numread < 0)
         	{
-          	  SXLOGE("Error in FMPlayer  numread=%ld", numread);
+          	  ALOGE("Error in FMPlayer  numread=%ld", numread);
           	  sendEvent(MEDIA_ERROR);
           	  break;
        		}
@@ -931,11 +930,11 @@ int FMAudioPlayer::render()
         	// start audio output if necessary
         	if (!audioStarted && !mPaused && !mExit)
         	{
-          	    SXLOGD("render - starting audio\n");
+          	    ALOGD("render - starting audio\n");
            	    mAudioSink->start();
 			    if(!mAudioRecord.get())
 				{
-					SXLOGD("stop mAudioRecord Before mAudioRecord Start");
+					ALOGD("stop mAudioRecord Before mAudioRecord Start");
 					continue;
 				}
 				else
@@ -951,21 +950,21 @@ int FMAudioPlayer::render()
            	    //firstly push some amount of buffer to make the mixer alive
             	if ((temp = mAudioSink->write(mDummyBuffer, bufSize)) < 0)
             	{
-               		 SXLOGE("Error in writing:%d", temp);
+               		 ALOGE("Error in writing:%d", temp);
                		 result = temp;
                 	break;
             	}
 
             	if ((temp = mAudioSink->write(mDummyBuffer, bufSize)) < 0)
             	{
-                	SXLOGE("Error in writing:%d", temp);
+                	ALOGE("Error in writing:%d", temp);
                 	result = temp;
                 	break;
             	}
 
             	if ((temp = mAudioSink->write(mDummyBuffer, bufSize)) < 0)
             	{
-                	SXLOGE("Error in writing:%d", temp);
+                	ALOGE("Error in writing:%d", temp);
                 	result = temp;
                 	break;
             	}
@@ -976,7 +975,7 @@ int FMAudioPlayer::render()
             Mutex::Autolock l(mMutex);
             int brt = 0, art = 0;
 
-            //SXLOGD("[%lld] before read %d",brt=getTimeMs());
+            //ALOGD("[%lld] before read %d",brt=getTimeMs());
             if (firstOutput)
             {
                 firstOutput = false;
@@ -987,7 +986,7 @@ int FMAudioPlayer::render()
 #else
 			if(!mAudioRecord.get())
 			{
-				SXLOGE("mAudioRecord is deleted by FMAudioPlayer stop !!!");
+				ALOGE("mAudioRecord is deleted by FMAudioPlayer stop !!!");
 				continue;
 			}
 			else
@@ -996,10 +995,10 @@ int FMAudioPlayer::render()
 			}
 #endif
 
-            //SXLOGD("[%lld] after read %d",art=getTimeMs());
+            //ALOGD("[%lld] after read %d",art=getTimeMs());
             if (art - brt > 90)
             {
-                SXLOGW("read time abnormal");
+                ALOGW("read time abnormal");
             }
 
             frameCount++;
@@ -1010,7 +1009,7 @@ int FMAudioPlayer::render()
 
         if (thisTime - lastTime > 160)
         {
-            SXLOGW(" !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!time diff = %d", thisTime - lastTime);
+            ALOGW(" !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!time diff = %d", thisTime - lastTime);
         }
 
         // Write data to the audio hardware
@@ -1020,21 +1019,21 @@ int FMAudioPlayer::render()
         if(numread < 0)
         {
             flagRecordError = true;
-            SXLOGE("Error in Record:%d", numread);
+            ALOGE("Error in Record:%d", numread);
             continue;
         }
         else if ((temp = mAudioSink->write(mAudioBuffer, numread)) < 0)
         {
         	Mutex::Autolock l(mMutex);
 			
-            SXLOGE("Error in writing:%d", temp);
+            ALOGE("Error in writing:%d", temp);
             result = temp;
 			if(mAudioRecord.get())
             	mAudioRecord->stop();
             break;
         }
 
-        //SXLOGD("[%lld] after write writecount = %d" ,getTimeMs(),temp);
+        //ALOGD("[%lld] after write writecount = %d" ,getTimeMs(),temp);
         //sleep to allow command to get mutex
         usleep(1000);
     }
@@ -1057,7 +1056,7 @@ threadExit:
 	if(mAudioSink != NULL)
 		mAudioSink.clear();
 	
-    SXLOGD("render end mRenderTid=%d\n",mRenderTid);
+    ALOGD("render end mRenderTid=%d\n",mRenderTid);
 
     // tell main thread goodbye  
     mRenderTid = -1;
@@ -1072,7 +1071,7 @@ threadExit:
 
 bool FMAudioPlayer::deleteAudioRecord()
 {
-	SXLOGD("deleteAudioRecord !!!");
+	ALOGD("deleteAudioRecord !!!");
 
 	if(mAudioRecord.get())
 	{

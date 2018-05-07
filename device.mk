@@ -92,6 +92,7 @@ PRODUCT_COPY_FILES += \
 
 # Wifi
 PRODUCT_PACKAGES += \
+	iw \
 	libwpa_client \
 	hostapd \
 	dhcpcd.conf \

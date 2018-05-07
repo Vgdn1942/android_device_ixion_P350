@@ -155,8 +155,7 @@ PRODUCT_PACKAGES += \
 # FM Radio
 PRODUCT_PACKAGES += \
 	FMRadio \
-	libfmjni \
-	libmtkplayer
+	libfmjni
 
 # Keyhandler & Gestures
 #PRODUCT_PACKAGES += \

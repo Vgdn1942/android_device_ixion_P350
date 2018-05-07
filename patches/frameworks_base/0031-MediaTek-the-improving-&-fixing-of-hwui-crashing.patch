@@ -1,0 +1,39 @@
+From b8438639b7eae7b32baca9ed9b745491d7cf46d2 Mon Sep 17 00:00:00 2001
+From: LineageOS-MTK <luzejij@binka.me>
+Date: Tue, 7 Feb 2017 16:20:37 +0300
+Subject: [PATCH] MediaTek: the improving & fixing of hwui crashing.
+
+---
+ libs/hwui/Caches.cpp | 12 +++++++++---
+ 1 file changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/libs/hwui/Caches.cpp b/libs/hwui/Caches.cpp
+index 2763e89e19c..521eda78418 100644
+--- a/libs/hwui/Caches.cpp
++++ b/libs/hwui/Caches.cpp
+@@ -87,16 +87,22 @@ void Caches::initFont() {
+ }
+ 
+ void Caches::initExtensions() {
++#ifndef MTK_HARDWARE
+     if (mExtensions.hasDebugMarker()) {
+         eventMark = glInsertEventMarkerEXT;
+ 
+         startMark = glPushGroupMarkerEXT;
+         endMark = glPopGroupMarkerEXT;
+     } else {
+-        eventMark = eventMarkNull;
+-        startMark = startMarkNull;
+-        endMark = endMarkNull;
++         eventMark = eventMarkNull;
++         startMark = startMarkNull;
++         endMark = endMarkNull;
+     }
++#else
++         eventMark = eventMarkNull;
++         startMark = startMarkNull;
++         endMark = endMarkNull;
++#endif
+ }
+ 
+ void Caches::initConstraints() {

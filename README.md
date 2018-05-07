@@ -55,4 +55,5 @@ Not working/Bugs:
 * xen0n
 * Zormax (4pda, add EngineerMode)
 * obraxys (4pda, FM-Radio)
+* LineageOS-MTK
 * and others I might have forgotten to include

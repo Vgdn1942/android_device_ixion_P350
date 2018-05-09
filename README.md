@@ -37,6 +37,7 @@ Working:
 - Themes
 - YouTube 720p
 - VPN
+- FM Radio
 
 Not working/Bugs:
 - Some cameras do not record video

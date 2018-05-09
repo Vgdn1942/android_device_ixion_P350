@@ -1,11 +1,9 @@
 # MTK platform .rc configure
 
 import init.project.rc
-import init.xlog.rc
 import init.mt6580.power.rc
 import init.mt6580.usb.rc
 import init.mt6580.modem.rc
-import init.nvdata.rc
 
 on early-boot
     # NOTE: early-boot is AFTER even post-fs-data!
@@ -18,9 +16,6 @@ on init
     # Support legacy paths
     symlink /sdcard /mnt/sdcard
    
-    # if primary storage is physical, set ro.vold.primary_physical to 1
-    #setprop ro.vold.primary_physical 1
-
     # BATTERY proc
     chown shell system /proc/mtk_battery_cmd/current_cmd
     chown shell system /proc/mtk_battery_cmd/discharging_cmd
@@ -41,47 +36,14 @@ on init
 
     mkdir /protect_f 0771 system system
     mkdir /protect_s 0771 system system
-    mkdir /system
-    mkdir /data 0771 system system
-    mkdir /cache 0770 system cache
+
     #create mountpoint for persist partition
     mkdir /persist 0771 system system
 
-# Mount staging areas for devices managed by vold
-    # See storage config details at http://source.android.com/tech/storage/
-    mkdir /mnt 0755 root system
-    mount tmpfs tmpfs /mnt mode=0755,uid=0,gid=1000
-    restorecon_recursive /mnt
-    # Support legacy paths
-    symlink /sdcard /mnt/sdcard
-
-    mkdir /mnt/secure 0700 root root
-    mkdir /mnt/secure/asec 0700 root root
-    mkdir /mnt/asec 0755 root system
-    mkdir /mnt/obb 0755 root system
-    mkdir /mnt/media_rw 0750 root media_rw
-    mkdir /mnt/user 0755 root root
-    mkdir /mnt/user/0 0755 root root
-    mkdir /mnt/expand 0771 system system
-
-    # Storage views to support runtime permissions
-    mkdir /storage 0755 root root
-    mkdir /mnt/runtime 0700 root root
-    mkdir /mnt/runtime/default 0755 root root
-    mkdir /mnt/runtime/default/self 0755 root root
-    mkdir /mnt/runtime/read 0755 root root
-    mkdir /mnt/runtime/read/self 0755 root root
-    mkdir /mnt/runtime/write 0755 root root
-    mkdir /mnt/runtime/write/self 0755 root root
-
-    # Symlink to keep legacy apps working in multi-user world
-    symlink /storage/self/primary /sdcard
-    symlink /mnt/user/0/primary /mnt/runtime/default/self/primary
-
+#Create nvdata mount point
+    mkdir /nvdata 0771 system system
 # Create CIP mount point
     mkdir /custom
-
-    mkdir /mnt/cd-rom 0000 system system
 
 # Change ION driver permission
     chmod 0666 /dev/ion
@@ -94,11 +56,7 @@ on charger
     mount ext4 /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/system /system ro wait
     # simplest way to fix libshowlogo.so reading from legacy path
     symlink /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/logo /dev/logo
-    #mount ubifs ...
-    #start spm_script
-    #start fuelgauged
-    #start kpoc_charger
-    #start servicemanager
+
     start charger
 
     # disable USB
@@ -108,34 +66,9 @@ on fs
     write /proc/bootprof "INIT:Mount_START"
     mount_all /fstab.mt6580
     swapon_all /fstab.mt6580
-    exec /system/bin/tune2fs -O has_journal -u 10010 -r 4096 /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/userdata
-
-    #change partition permissions
-    exec /system/bin/chmod 0640 /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/boot
-    exec /system/bin/chown root:system /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/boot
-    exec /system/bin/chmod 0640 /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/recovery
-    exec /system/bin/chown root:system /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/recovery
-    exec /system/bin/chmod 0640 /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/secro
-    exec /system/bin/chown root:system /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/secro
-    exec /system/bin/chmod 0660 /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/seccfg
-    exec /system/bin/chown root:system /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/seccfg
-    exec /system/bin/chmod 0660 /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/proinfo
-    exec /system/bin/chown root:system /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/proinfo
-    exec /system/bin/chmod 0640 /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/otp
-    exec /system/bin/chown root:system /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/otp
-    exec /system/bin/chmod 0660 /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/nvram
-    exec /system/bin/chown root:system /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/nvram
-    exec /system/bin/chmod 0660 /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/para
-    exec /system/bin/chown root:system /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/para
-    exec /system/bin/chmod 0640 /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/logo
-    exec /system/bin/chown root:system /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/logo
-    exec /system/bin/chown root:system /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/frp
-    exec /system/bin/chmod 0660 /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/frp
     write /proc/bootprof "INIT:Mount_END"
 
 on post-fs
-    # Mount default storage into root namespace
-    mount none /mnt/runtime/default /storage slave bind rec
     # Support legacy paths
     symlink /sdcard /storage/sdcard0
 
@@ -178,8 +111,16 @@ on post-fs
 
 on post-fs-data
 
-    # Emulated internal storage area
-    mkdir /data/media 0770 media_rw media_rw
+    # create basic filesystem structure
+    # mkdir /data/nvram 2770 root system
+    # We chown/chmod /nvdata again so because mount is run as root + defaults
+    chown root system /nvdata
+    chmod 2771 /nvdata
+    mkdir /nvdata/media 0771 media audio
+    symlink /nvdata /data/nvram
+
+    # Set SELinux security contexts on upgrade or policy update.
+    restorecon_recursive /nvdata
 
     # Char device for BT 3.0 HS
     exec /system/bin/mknod /dev/ampc0 c 151 0
@@ -814,6 +755,9 @@ on post-fs-data
     exec /system/bin/rm -f /cache/.ipoh.img
 
     chmod 0666 /dev/exm0
+
+    #Thermal
+    mkdir /data/.tp/ 0775 system system
 
 # End of adding by MTK drivers
 # -----------------------
@@ -1513,12 +1457,10 @@ service thermal_manager /system/bin/thermal_manager
     user root
     oneshot
 
-# this repeatedly crashes due to incompatible libnetutils or something,
-# disable for now.
-#service thermal /system/bin/thermal
-#    class main
-#    user system
-#    group system
+service thermal /system/bin/thermal
+    class main
+    user system
+    group system
 
 service thermald /system/bin/thermald
     class main

@@ -109,6 +109,9 @@ fmradio.driver.enable=1
 ro.config.low_ram=true
 persist.sys.force_highendgfx=true
 
+# OTA
+cm.updater.uri=https://raw.githubusercontent.com/vgdn1942/ota/master/api.json
+
 #
 # MTK bits
 #

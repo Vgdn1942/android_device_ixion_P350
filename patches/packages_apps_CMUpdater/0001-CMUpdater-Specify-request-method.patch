@@ -1,0 +1,31 @@
+From 18b7ef7323ce7915a070973bd9f8891b5747785d Mon Sep 17 00:00:00 2001
+From: LineageOS-MTK <luzejij@binka.me>
+Date: Fri, 28 Apr 2017 00:26:55 +0300
+Subject: [PATCH] CMUpdater: Specify request method
+
+Fixes 400 error when attempting to check for updates.
+---
+ src/com/cyanogenmod/updater/requests/UpdatesJsonObjectRequest.java | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/com/cyanogenmod/updater/requests/UpdatesJsonObjectRequest.java b/src/com/cyanogenmod/updater/requests/UpdatesJsonObjectRequest.java
+index 13d22b75..10975dfa 100644
+--- a/src/com/cyanogenmod/updater/requests/UpdatesJsonObjectRequest.java
++++ b/src/com/cyanogenmod/updater/requests/UpdatesJsonObjectRequest.java
+@@ -10,6 +10,7 @@
+ package com.cyanogenmod.updater.requests;
+ 
+ import com.android.volley.AuthFailureError;
++import com.android.volley.Request;
+ import com.android.volley.Response;
+ import com.android.volley.toolbox.JsonObjectRequest;
+ import org.json.JSONObject;
+@@ -23,7 +24,7 @@
+ 
+     public UpdatesJsonObjectRequest(String url, String userAgent, JSONObject jsonRequest,
+             Response.Listener<JSONObject> listener, Response.ErrorListener errorListener) {
+-        super(url, jsonRequest, listener, errorListener);
++        super(Request.Method.GET, url, jsonRequest, listener, errorListener);
+         mUserAgent = userAgent;
+     }
+ 

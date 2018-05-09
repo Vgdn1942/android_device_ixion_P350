@@ -1,0 +1,30 @@
+From 775403fe97f0abae3a397485145ac6b0db17ac2e Mon Sep 17 00:00:00 2001
+From: LineageOS-MTK <luzejij@binka.me>
+Date: Fri, 28 Apr 2017 00:28:27 +0300
+Subject: [PATCH] UpdateCheckService: Don't append /v1/* to updateUri
+
+Change-Id: I58e5a20e706903522f5f172e24b3b06c638e4884
+---
+ src/com/cyanogenmod/updater/service/UpdateCheckService.java | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/com/cyanogenmod/updater/service/UpdateCheckService.java b/src/com/cyanogenmod/updater/service/UpdateCheckService.java
+index 9fc81d6..526d533 100644
+--- a/src/com/cyanogenmod/updater/service/UpdateCheckService.java
++++ b/src/com/cyanogenmod/updater/service/UpdateCheckService.java
+@@ -205,9 +205,9 @@ public class UpdateCheckService extends IntentService
+             updateUri = getString(R.string.conf_update_server_url_def);
+         }
+ 
+-        String incrementalVersion = SystemProperties.get("ro.build.version.incremental");
+-        updateUri += "/v1/" + Utils.getDeviceType() + "/" +
+-                Utils.getInstalledBuildType() + "/" + incrementalVersion;
++        //String incrementalVersion = SystemProperties.get("ro.build.version.incremental");
++        //updateUri += "/v1/" + Utils.getDeviceType() + "/" +
++        //        Utils.getInstalledBuildType() + "/" + incrementalVersion;
+ 
+         return URI.create(updateUri);
+     }
+-- 
+2.7.4
+

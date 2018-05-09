@@ -4,7 +4,7 @@ LOCAL_PATH := device/ixion/P350
 -include $(LOCAL_PATH)/ProjectConfig.mk
 
 # For porting disable block ota & deodex
-FOR_PORTING := true
+FOR_PORTING := false
 
 # Platform
 TARGET_BOARD_PLATFORM := mt6580

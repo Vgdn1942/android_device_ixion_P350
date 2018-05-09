@@ -3,6 +3,9 @@ LOCAL_PATH := device/ixion/P350
 
 -include $(LOCAL_PATH)/ProjectConfig.mk
 
+# For porting disable block ota & deodex
+FOR_PORTING := true
+
 # Platform
 TARGET_BOARD_PLATFORM := mt6580
 MTK_PLATFORM := MT6580
@@ -71,7 +74,10 @@ TARGET_CPU_MEMCPY_OPT_DISABLE := true
 
 # OTA
 TARGET_OTA_ASSERT_DEVICE := "dexp_ixion_p350","DEXP Ixion P350","Ixion P350","P350"
-#BLOCK_BASED_OTA := false
+
+ifeq ($(FOR_PORTING),true)
+BLOCK_BASED_OTA := false
+endif
 
 # Offline charger
 WITH_CM_CHARGER := false
@@ -153,7 +159,11 @@ TARGET_POWERHAL_VARIANT := mtk-xen0n
 TARGET_POWER_SET_FEATURE_LIB := power-feature-mt6580
 
 # Odex
+ifeq ($(FOR_PORTING),true)
+USE_ODEX := false
+else
 USE_ODEX := true
+endif
 
 ifeq ($(USE_ODEX),true)
 WITH_DEXPREOPT := true

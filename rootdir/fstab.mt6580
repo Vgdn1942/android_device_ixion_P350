@@ -13,7 +13,7 @@
 /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/nvdata	/nvdata		ext4	noatime,nosuid,nodev,noauto_da_alloc,discard wait,check,autoformat
 /dev/block/platform/mtk-msdc.0/11120000.MSDC0/by-name/frp		/persistent	emmc	defaults defaults
 
-/dev/block/zram0                                                none        swap    defaults zramsize=1073741824,notrim
+/dev/block/zram0                                                none        swap    defaults zramsize=524288000,zramstreams=3
 
 /devices/mtk-msdc.0/11130000.MSDC1*	auto auto defaults voldmanaged=sdcard1:auto,noemulatedsd,encryptable=userdata
 /devices/platform/mt_usb*			auto auto defaults voldmanaged=usbotg:auto

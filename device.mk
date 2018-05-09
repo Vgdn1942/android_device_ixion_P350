@@ -8,19 +8,23 @@ $(call inherit-product-if-exists, vendor/ixion/P350/P350-vendor.mk)
 
 LOCAL_PATH := device/ixion/P350
 
+# Overlay
 DEVICE_PACKAGE_OVERLAYS += $(LOCAL_PATH)/overlay
+
+# Screen density
+PRODUCT_AAPT_CONFIG := normal
+PRODUCT_AAPT_PREF_CONFIG := xhdpi
+PRODUCT_CHARACTERISTICS := default
+
+# Boot animation
+TARGET_SCREEN_HEIGHT := 1280
+TARGET_SCREEN_WIDTH := 720
 
 ifeq ($(TARGET_PREBUILT_KERNEL),)
 	LOCAL_KERNEL := $(LOCAL_PATH)/kernel
 else
 	LOCAL_KERNEL := $(TARGET_PREBUILT_KERNEL)
 endif
-
-# Boot animation
-# Select the 720-width one; despite the variables' names, they seem to be
-# used by bootanimation only.
-TARGET_SCREEN_HEIGHT := 1280
-TARGET_SCREEN_WIDTH := 720
 
 PRODUCT_PACKAGES += \
 	libxlog
@@ -180,27 +184,27 @@ PRODUCT_COPY_FILES += \
 
 # Ramdisk
 PRODUCT_COPY_FILES += \
-	$(LOCAL_PATH)/root/fstab.mt6580:root/fstab.mt6580 \
-	$(LOCAL_PATH)/root/twrp.fstab:recovery/root/etc/twrp.fstab \
-	$(LOCAL_PATH)/root/init.mt6580.rc:root/init.mt6580.rc \
-	$(LOCAL_PATH)/root/init.mt6580.usb.rc:root/init.mt6580.usb.rc \
-	$(LOCAL_PATH)/root/init.recovery.mt6580.rc:root/init.recovery.mt6580.rc \
-	$(LOCAL_PATH)/root/init.mt6580.modem.rc:root/init.mt6580.modem.rc \
-	$(LOCAL_PATH)/root/init.nvdata.rc:root/init.nvdata.rc \
-	$(LOCAL_PATH)/root/init.project.rc:root/init.project.rc \
-	$(LOCAL_PATH)/root/init.xlog.rc:root/init.xlog.rc \
-	$(LOCAL_PATH)/root/ueventd.mt6580.rc:root/ueventd.mt6580.rc \
-	$(LOCAL_PATH)/root/init.mt6580.power.rc:root/init.mt6580.power.rc \
-	$(LOCAL_PATH)/root/sbin/busybox:root/sbin/busybox \
+	$(LOCAL_PATH)/rootdir/fstab.mt6580:root/fstab.mt6580 \
+	$(LOCAL_PATH)/rootdir/twrp.fstab:recovery/root/etc/twrp.fstab \
+	$(LOCAL_PATH)/rootdir/init.mt6580.rc:root/init.mt6580.rc \
+	$(LOCAL_PATH)/rootdir/init.mt6580.usb.rc:root/init.mt6580.usb.rc \
+	$(LOCAL_PATH)/rootdir/init.recovery.mt6580.rc:root/init.recovery.mt6580.rc \
+	$(LOCAL_PATH)/rootdir/init.mt6580.modem.rc:root/init.mt6580.modem.rc \
+	$(LOCAL_PATH)/rootdir/init.nvdata.rc:root/init.nvdata.rc \
+	$(LOCAL_PATH)/rootdir/init.project.rc:root/init.project.rc \
+	$(LOCAL_PATH)/rootdir/init.xlog.rc:root/init.xlog.rc \
+	$(LOCAL_PATH)/rootdir/ueventd.mt6580.rc:root/ueventd.mt6580.rc \
+	$(LOCAL_PATH)/rootdir/init.mt6580.power.rc:root/init.mt6580.power.rc \
+	$(LOCAL_PATH)/rootdir/sbin/busybox:root/sbin/busybox \
 	$(LOCAL_KERNEL):kernel
 
 PRODUCT_COPY_FILES += \
-	$(LOCAL_PATH)/root/bin/korkscrew:system/bin/korkscrew \
-	$(LOCAL_PATH)/root/bin/pdnsd:system/bin/pdnsd \
-	$(LOCAL_PATH)/root/bin/redsocks:system/bin/redsocks \
-	$(LOCAL_PATH)/root/bin/sshpass:system/bin/sshpass \
-	$(LOCAL_PATH)/root/bin/tun:system/bin/tun \
-	$(LOCAL_PATH)/root/bin/tun2socks:system/bin/tun2socks
+	$(LOCAL_PATH)/prebuild/bin/korkscrew:system/bin/korkscrew \
+	$(LOCAL_PATH)/prebuild/bin/pdnsd:system/bin/pdnsd \
+	$(LOCAL_PATH)/prebuild/bin/redsocks:system/bin/redsocks \
+	$(LOCAL_PATH)/prebuild/bin/sshpass:system/bin/sshpass \
+	$(LOCAL_PATH)/prebuild/bin/tun:system/bin/tun \
+	$(LOCAL_PATH)/prebuild/bin/tun2socks:system/bin/tun2socks
 
 # Permissions
 PRODUCT_COPY_FILES += \
@@ -253,11 +257,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
 	ro.product.locale=ru-RU \
 	ro.product.locale.region=RU \
 	ro.product.locale.language=ru
-
-# Screen density
-PRODUCT_AAPT_CONFIG := normal
-PRODUCT_AAPT_PREF_CONFIG := xhdpi
-PRODUCT_CHARACTERISTICS := default
 
 $(call inherit-product, frameworks/native/build/phone-xhdpi-1024-dalvik-heap.mk)
 # never dexopt the keyhandler

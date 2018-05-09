@@ -83,16 +83,11 @@ PRODUCT_COPY_FILES += \
 	$(LOCAL_PATH)/configs/audio_policy.conf:system/etc/audio_policy.conf
 
 # Digital Restrictions Management
-# many many many segfaults, disable for now
-#PRODUCT_PACKAGES += \
-#	com.google.widevine.software.drm.xml \
-#	libdrmctaplugin \
-#	libdrmmtkplugin \
-#	libdrmwvmplugin \
-#	libwvm \
-#	# libdrmmtkutil -- pulled in by libwvm
-#	# libwvdrm_L3 libWVStreamControlAPI_L3 -- pulled in by libdrmwvmplugin
-#	# libdrmmtkwhitelist -- pulled in by libdrmmtkutil
+PRODUCT_PACKAGES += \
+	com.google.widevine.software.drm.xml \
+	libdrmmtkplugin \
+	libdrmwvmplugin \
+	libwvm
 
 # Wifi
 PRODUCT_PACKAGES += \

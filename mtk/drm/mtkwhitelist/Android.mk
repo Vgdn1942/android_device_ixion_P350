@@ -26,6 +26,7 @@ LOCAL_C_INCLUDES += \
     $(TOP)/frameworks/native/include \
     $(TOP)/frameworks/av/include \
     $(TOP)/frameworks/av/drm \
+    $(LOCAL_PATH)/../include \
     bionic
 
 LOCAL_SHARED_LIBRARIES := \
@@ -36,6 +37,4 @@ LOCAL_PRELINK_MODULE := false
 
 LOCAL_MODULE_TAGS := optional
 
-LOCAL_EXPORT_C_INCLUDE_DIRS += $(TOP)/frameworks/av/drm
-LOCAL_EXPORT_C_INCLUDE_DIRS += $(LOCAL_PATH)/../include
 include $(BUILD_SHARED_LIBRARY)

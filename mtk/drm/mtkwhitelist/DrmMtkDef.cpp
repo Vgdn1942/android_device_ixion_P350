@@ -89,6 +89,40 @@ bool DrmTrustedApp::init() {
     TRUSTED_APP.push_back(String8("android.process.media"));//for mediaprocess
     TRUSTED_APP.push_back(String8("com.android.gallery3d:widgetservice"));//for gallery widget
     //Add your special process name here
+    TRUSTED_APP.push_back(String8("com.android.bluetooth"));
+    TRUSTED_APP.push_back(String8("com.android.bluetoothmidiservice"));
+    TRUSTED_APP.push_back(String8("com.android.browser"));
+    TRUSTED_APP.push_back(String8("com.android.chrome"));
+    TRUSTED_APP.push_back(String8("com.android.documentsui"));
+    TRUSTED_APP.push_back(String8("com.android.dreams.basic"));
+    TRUSTED_APP.push_back(String8("com.android.dreams.phototable"));
+    TRUSTED_APP.push_back(String8("com.android.email"));
+    TRUSTED_APP.push_back(String8("com.android.exchange"));
+    TRUSTED_APP.push_back(String8("com.android.externalstorage"));
+    TRUSTED_APP.push_back(String8("com.android.htmlviewer"));
+    TRUSTED_APP.push_back(String8("com.android.messaging"));
+    TRUSTED_APP.push_back(String8("com.android.mms.service"));
+    TRUSTED_APP.push_back(String8("com.android.providers.media"));
+    TRUSTED_APP.push_back(String8("com.android.systemui"));
+    TRUSTED_APP.push_back(String8("com.android.wallpaper"));
+    TRUSTED_APP.push_back(String8("com.android.wallpaper.holospiral"));
+    TRUSTED_APP.push_back(String8("com.android.wallpaper.livepicker"));
+    TRUSTED_APP.push_back(String8("com.android.wallpapercropper"));
+    TRUSTED_APP.push_back(String8("com.android.webview"));
+    TRUSTED_APP.push_back(String8("com.cyanogenmod.eleven"));
+    TRUSTED_APP.push_back(String8("com.cyanogenmod.filemanager"));
+    TRUSTED_APP.push_back(String8("com.cyanogenmod.trebuchet"));
+    TRUSTED_APP.push_back(String8("com.cyanogenmod.wallpapers"));
+    TRUSTED_APP.push_back(String8("com.google.android.youtube"));
+    TRUSTED_APP.push_back(String8("org.cyanogenmod.platform"));
+    TRUSTED_APP.push_back(String8("org.cyanogenmod.audiofx"));
+    TRUSTED_APP.push_back(String8("org.cyanogenmod.cmaudio.service"));
+    TRUSTED_APP.push_back(String8("org.cyanogenmod.livelockscreen.service"));
+    TRUSTED_APP.push_back(String8("org.cyanogenmod.theme.chooser2"));
+    TRUSTED_APP.push_back(String8("org.cyanogenmod.themes.provider"));
+    TRUSTED_APP.push_back(String8("org.cyanogenmod.themeservice"));
+    TRUSTED_APP.push_back(String8("org.cyanogenmod.wallpaperpicker"));
+    TRUSTED_APP.push_back(String8("org.cyanogenmod.wallpapers.photophase"));
 
     return true;
 }
@@ -132,6 +166,40 @@ bool DrmTrustedClient::init() {
     TRUSTED_PROC.push_back(String8("android.process.media"));//for mediaprocess
     TRUSTED_PROC.push_back(String8("com.android.gallery3d:widgetservice"));//for gallery widget 
     //Add your special process name here
+    TRUSTED_PROC.push_back(String8("com.android.bluetooth"));
+    TRUSTED_PROC.push_back(String8("com.android.bluetoothmidiservice"));
+    TRUSTED_PROC.push_back(String8("com.android.browser"));
+    TRUSTED_PROC.push_back(String8("com.android.chrome"));
+    TRUSTED_PROC.push_back(String8("com.android.documentsui"));
+    TRUSTED_PROC.push_back(String8("com.android.dreams.basic"));
+    TRUSTED_PROC.push_back(String8("com.android.dreams.phototable"));
+    TRUSTED_PROC.push_back(String8("com.android.email"));
+    TRUSTED_PROC.push_back(String8("com.android.exchange"));
+    TRUSTED_PROC.push_back(String8("com.android.externalstorage"));
+    TRUSTED_PROC.push_back(String8("com.android.htmlviewer"));
+    TRUSTED_PROC.push_back(String8("com.android.messaging"));
+    TRUSTED_PROC.push_back(String8("com.android.mms.service"));
+    TRUSTED_PROC.push_back(String8("com.android.providers.media"));
+    TRUSTED_PROC.push_back(String8("com.android.systemui"));
+    TRUSTED_PROC.push_back(String8("com.android.wallpaper"));
+    TRUSTED_PROC.push_back(String8("com.android.wallpaper.holospiral"));
+    TRUSTED_PROC.push_back(String8("com.android.wallpaper.livepicker"));
+    TRUSTED_PROC.push_back(String8("com.android.wallpapercropper"));
+    TRUSTED_PROC.push_back(String8("com.android.webview"));
+    TRUSTED_PROC.push_back(String8("com.cyanogenmod.eleven"));
+    TRUSTED_PROC.push_back(String8("com.cyanogenmod.filemanager"));
+    TRUSTED_PROC.push_back(String8("com.cyanogenmod.trebuchet"));
+    TRUSTED_PROC.push_back(String8("com.cyanogenmod.wallpapers"));
+    TRUSTED_PROC.push_back(String8("com.google.android.youtube"));
+    TRUSTED_PROC.push_back(String8("org.cyanogenmod.platform"));
+    TRUSTED_PROC.push_back(String8("org.cyanogenmod.audiofx"));
+    TRUSTED_PROC.push_back(String8("org.cyanogenmod.cmaudio.service"));
+    TRUSTED_PROC.push_back(String8("org.cyanogenmod.livelockscreen.service"));
+    TRUSTED_PROC.push_back(String8("org.cyanogenmod.theme.chooser2"));
+    TRUSTED_PROC.push_back(String8("org.cyanogenmod.themes.provider"));
+    TRUSTED_PROC.push_back(String8("org.cyanogenmod.themeservice"));
+    TRUSTED_PROC.push_back(String8("org.cyanogenmod.wallpaperpicker"));
+    TRUSTED_PROC.push_back(String8("org.cyanogenmod.wallpapers.photophase"));
 
     return true;
 }
@@ -162,6 +230,13 @@ bool DrmTrustedVideoApp::init() {
     TRUSTED_VIDEO_APP.push_back(String8("com.mediatek.videoplayer2"));
     TRUSTED_VIDEO_APP.push_back(String8("com.mediatek.dataprotection"));
     //Add your special process name here
+    TRUSTED_VIDEO_APP.push_back(String8("com.android.browser"));
+    TRUSTED_VIDEO_APP.push_back(String8("com.android.chrome"));
+    TRUSTED_VIDEO_APP.push_back(String8("com.android.documentsui"));
+    TRUSTED_VIDEO_APP.push_back(String8("com.android.providers.media"));
+    TRUSTED_VIDEO_APP.push_back(String8("com.android.webview"));
+    TRUSTED_VIDEO_APP.push_back(String8("com.google.android.youtube"));
+    TRUSTED_VIDEO_APP.push_back(String8("org.cyanogenmod.platform"));
 
     return true;
 }
@@ -208,6 +283,40 @@ bool CtaTrustedClient::initTrustedClient() {
     TRUSTED_PROC.push_back(String8("com.mediatek.dataprotection"));
     TRUSTED_PROC.push_back(String8("/system/bin/mediaserver"));
     //Add your special process name here
+    TRUSTED_PROC.push_back(String8("com.android.bluetooth"));
+    TRUSTED_PROC.push_back(String8("com.android.bluetoothmidiservice"));
+    TRUSTED_PROC.push_back(String8("com.android.browser"));
+    TRUSTED_PROC.push_back(String8("com.android.chrome"));
+    TRUSTED_PROC.push_back(String8("com.android.documentsui"));
+    TRUSTED_PROC.push_back(String8("com.android.dreams.basic"));
+    TRUSTED_PROC.push_back(String8("com.android.dreams.phototable"));
+    TRUSTED_PROC.push_back(String8("com.android.email"));
+    TRUSTED_PROC.push_back(String8("com.android.exchange"));
+    TRUSTED_PROC.push_back(String8("com.android.externalstorage"));
+    TRUSTED_PROC.push_back(String8("com.android.htmlviewer"));
+    TRUSTED_PROC.push_back(String8("com.android.messaging"));
+    TRUSTED_PROC.push_back(String8("com.android.mms.service"));
+    TRUSTED_PROC.push_back(String8("com.android.providers.media"));
+    TRUSTED_PROC.push_back(String8("com.android.systemui"));
+    TRUSTED_PROC.push_back(String8("com.android.wallpaper"));
+    TRUSTED_PROC.push_back(String8("com.android.wallpaper.holospiral"));
+    TRUSTED_PROC.push_back(String8("com.android.wallpaper.livepicker"));
+    TRUSTED_PROC.push_back(String8("com.android.wallpapercropper"));
+    TRUSTED_PROC.push_back(String8("com.android.webview"));
+    TRUSTED_PROC.push_back(String8("com.cyanogenmod.eleven"));
+    TRUSTED_PROC.push_back(String8("com.cyanogenmod.filemanager"));
+    TRUSTED_PROC.push_back(String8("com.cyanogenmod.trebuchet"));
+    TRUSTED_PROC.push_back(String8("com.cyanogenmod.wallpapers"));
+    TRUSTED_PROC.push_back(String8("com.google.android.youtube"));
+    TRUSTED_PROC.push_back(String8("org.cyanogenmod.platform"));
+    TRUSTED_PROC.push_back(String8("org.cyanogenmod.audiofx"));
+    TRUSTED_PROC.push_back(String8("org.cyanogenmod.cmaudio.service"));
+    TRUSTED_PROC.push_back(String8("org.cyanogenmod.livelockscreen.service"));
+    TRUSTED_PROC.push_back(String8("org.cyanogenmod.theme.chooser2"));
+    TRUSTED_PROC.push_back(String8("org.cyanogenmod.themes.provider"));
+    TRUSTED_PROC.push_back(String8("org.cyanogenmod.themeservice"));
+    TRUSTED_PROC.push_back(String8("org.cyanogenmod.wallpaperpicker"));
+    TRUSTED_PROC.push_back(String8("org.cyanogenmod.wallpapers.photophase"));
 
     return true;
 }

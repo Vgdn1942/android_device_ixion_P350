@@ -17,7 +17,7 @@ LOCAL_SRC_FILES := \
 	libfm_jni.cpp
 	
 LOCAL_C_INCLUDES := $(JNI_H_INCLUDE) \
-	frameworks/av/include/media
+	frameworks/base/include/media
 
 LOCAL_SHARED_LIBRARIES := \
 	libcutils \
@@ -41,7 +41,7 @@ LOCAL_SRC_FILES := \
 	common.cpp 
 
 LOCAL_C_INCLUDES := $(JNI_H_INCLUDE) \
-	frameworks/av/include/media \
+	frameworks/base/include/media \
 
 LOCAL_SHARED_LIBRARIES := \
 	libcutils \

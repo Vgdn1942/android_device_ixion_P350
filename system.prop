@@ -110,7 +110,7 @@ ro.config.low_ram=true
 persist.sys.force_highendgfx=true
 
 # OTA
-cm.updater.uri=https://raw.githubusercontent.com/vgdn1942/ota/master/api.json
+cm.updater.uri=https://raw.githubusercontent.com/vgdn1942/ota/lineage-13.0/api.json
 
 #
 # MTK bits

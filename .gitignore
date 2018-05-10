@@ -1,6 +1,8 @@
 EngineerMode/
 include/cfgdefault/*.h
 !include/cfgdefault/CFG_BT_Default.h
+!include/cfgdefault/CFG_GPS_Default.h
+!include/cfgdefault/CFG_file_lid.h
 include/Audio*
 include/audio*
 include/README.md

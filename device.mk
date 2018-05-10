@@ -143,12 +143,7 @@ PRODUCT_COPY_FILES += \
 	 $(LOCAL_PATH)/configs/agps_profiles_conf2.xml:system/etc/agps_profiles_conf2.xml
 
 PRODUCT_PACKAGES += \
-	BGW \
-	gps.mt6580 \
-	libmnl \
-	mnld \
-	mtk_agpsd \
-	wifi2agps
+	gps.mt6580
 
 # Torch
 PRODUCT_PACKAGES += \

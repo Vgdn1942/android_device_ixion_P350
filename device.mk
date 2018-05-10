@@ -106,6 +106,12 @@ PRODUCT_COPY_FILES += \
 # Bluetooth
 PRODUCT_PACKAGES += \
 	libbt-vendor \
+	libbluetooth_mtk \
+	libbluetooth_mtk_pure \
+	libbluetooth_relayer \
+	libbluetoothem_mtk
+
+PRODUCT_PACKAGES += \
 	audio.a2dp.default
 
 PRODUCT_COPY_FILES += \

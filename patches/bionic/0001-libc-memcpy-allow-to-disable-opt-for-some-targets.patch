@@ -1,0 +1,495 @@
+From 4a0120aebe931bc2fc7b1173801be5d630565fe8 Mon Sep 17 00:00:00 2001
+From: Varun Chitre <varun.chitre15@gmail.com>
+Date: Fri, 22 May 2015 05:56:47 -0400
+Subject: [PATCH] libc : memcpy : allow to disable opt for some targets
+
+Ported to CM13.0 by @xen0n. Needed by MTK audio blobs or the following
+crash happens during audio recording:
+
+    pid: 3306, tid: 3327, name: readThread0  >>> /system/bin/mediaserver <<<
+    signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x1d4
+	r0 000001d4  r1 b1d72004  r2 00000ef4  r3 0000000c
+	r4 000001e0  r5 00000000  r6 00000034  r7 00000000
+	r8 00000034  r9 b1002000  sl 00000000  fp 00000000
+	ip 80000000  sp b0ffe7d0  lr b1f140fc  pc b6a2c7ac  cpsr a80f0010
+
+    backtrace:
+	#00 pc 000177ac  /system/lib/libc.so (memcpy+72)
+	#01 pc 000030f8  /system/lib/libblisrc32.so (fastBliConvert_32bit+2040)
+	#02 pc 000059e0  /system/lib/libblisrc32.so (Blisrc_Process+164)
+	#03 pc 00002b13  /system/lib/libaudiocomponentengine.so (_ZN7android11MtkAudioSrc7ProcessEPvPjS1_S2_+46)
+	#04 pc 0007875c  /system/lib/hw/audio.primary.mt6595.so (_ZN7android26AudioALSACaptureDataClient19BesRecordPreprocessEPvj+196)
+	#05 pc 0007987c  /system/lib/hw/audio.primary.mt6595.so (_ZN7android26AudioALSACaptureDataClient23copyCaptureDataToClientENS_7RingBufE+720)
+	#06 pc 0007a9f8  /system/lib/hw/audio.primary.mt6595.so (_ZN7android32AudioALSACaptureDataProviderBase30provideCaptureDataToAllClientsEj+340)
+	#07 pc 0007b0f8  /system/lib/hw/audio.primary.mt6595.so (_ZN7android34AudioALSACaptureDataProviderNormal10readThreadEPv+832)
+	#08 pc 0003fa2b  /system/lib/libc.so (_ZL15__pthread_startPv+30)
+	#09 pc 0001a065  /system/lib/libc.so (__start_thread+6)
+
+Change-Id: I487b9e208c032c7d01523e9b36984075027e9bff
+
+Conflicts:
+	libc/arch-arm/cortex-a15/cortex-a15.mk
+---
+ libc/arch-arm/cortex-a15/cortex-a15.mk       |  10 +-
+ libc/arch-arm/cortex-a7/bionic/memcpy.S      | 103 +++++++++
+ libc/arch-arm/cortex-a7/bionic/memcpy_base.S | 318 +++++++++++++++++++++++++++
+ 3 files changed, 430 insertions(+), 1 deletion(-)
+ create mode 100644 libc/arch-arm/cortex-a7/bionic/memcpy.S
+ create mode 100644 libc/arch-arm/cortex-a7/bionic/memcpy_base.S
+
+diff --git a/libc/arch-arm/cortex-a15/cortex-a15.mk b/libc/arch-arm/cortex-a15/cortex-a15.mk
+index 202a3bf9d8..068196db03 100644
+--- a/libc/arch-arm/cortex-a15/cortex-a15.mk
++++ b/libc/arch-arm/cortex-a15/cortex-a15.mk
+@@ -1,5 +1,4 @@
+ libc_bionic_src_files_arm += \
+-    arch-arm/cortex-a15/bionic/memcpy.S \
+     arch-arm/cortex-a15/bionic/memset.S \
+     arch-arm/cortex-a15/bionic/stpcpy.S \
+     arch-arm/cortex-a15/bionic/strcat.S \
+@@ -15,3 +14,12 @@ libc_bionic_src_files_arm += \
+ 
+ libc_bionic_src_files_arm += \
+     arch-arm/denver/bionic/memmove.S \
++
++# Optimization not required for some targets
++ifeq ($(TARGET_CPU_MEMCPY_OPT_DISABLE),true)
++libc_bionic_src_files_arm += \
++    arch-arm/cortex-a7/bionic/memcpy.S
++else
++libc_bionic_src_files_arm += \
++    arch-arm/cortex-a15/bionic/memcpy.S
++endif
+diff --git a/libc/arch-arm/cortex-a7/bionic/memcpy.S b/libc/arch-arm/cortex-a7/bionic/memcpy.S
+new file mode 100644
+index 0000000000..410b663e26
+--- /dev/null
++++ b/libc/arch-arm/cortex-a7/bionic/memcpy.S
+@@ -0,0 +1,103 @@
++/*
++ * Copyright (C) 2008 The Android Open Source Project
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ *  * Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ *  * Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in
++ *    the documentation and/or other materials provided with the
++ *    distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
++ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
++ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
++ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
++ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
++ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
++ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
++ * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
++ * SUCH DAMAGE.
++ */
++/*
++ * Copyright (c) 2013 ARM Ltd
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ * 3. The name of the company may not be used to endorse or promote
++ *    products derived from this software without specific prior written
++ *    permission.
++ *
++ * THIS SOFTWARE IS PROVIDED BY ARM LTD ``AS IS'' AND ANY EXPRESS OR IMPLIED
++ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
++ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL ARM LTD BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
++ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
++ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
++ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
++ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
++ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
++ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++
++// Prototype: void *memcpy (void *dst, const void *src, size_t count).
++
++#include <private/bionic_asm.h>
++#include <private/libc_events.h>
++
++        .text
++        .syntax unified
++        .fpu    neon
++
++ENTRY(__memcpy_chk)
++        cmp     r2, r3
++        bhi     __memcpy_chk_fail
++
++        // Fall through to memcpy...
++END(__memcpy_chk)
++
++ENTRY(memcpy)
++        pld     [r1, #64]
++        push    {r0, lr}
++        .cfi_def_cfa_offset 8
++        .cfi_rel_offset r0, 0
++        .cfi_rel_offset lr, 4
++END(memcpy)
++
++#define MEMCPY_BASE         __memcpy_base
++#define MEMCPY_BASE_ALIGNED __memcpy_base_aligned
++#include "memcpy_base.S"
++
++ENTRY_PRIVATE(__memcpy_chk_fail)
++        // Preserve lr for backtrace.
++        push    {lr}
++        .cfi_def_cfa_offset 4
++        .cfi_rel_offset lr, 0
++
++        ldr     r0, error_message
++        ldr     r1, error_code
++1:
++        add     r0, pc
++        bl      __fortify_chk_fail
++error_code:
++        .word   BIONIC_EVENT_MEMCPY_BUFFER_OVERFLOW
++error_message:
++        .word   error_string-(1b+8)
++END(__memcpy_chk_fail)
++
++        .data
++error_string:
++        .string "memcpy: prevented write past end of buffer"
+diff --git a/libc/arch-arm/cortex-a7/bionic/memcpy_base.S b/libc/arch-arm/cortex-a7/bionic/memcpy_base.S
+new file mode 100644
+index 0000000000..2a7385247d
+--- /dev/null
++++ b/libc/arch-arm/cortex-a7/bionic/memcpy_base.S
+@@ -0,0 +1,318 @@
++/*
++ * Copyright (C) 2008 The Android Open Source Project
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ *  * Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ *  * Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in
++ *    the documentation and/or other materials provided with the
++ *    distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
++ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
++ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
++ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
++ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
++ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
++ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
++ * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
++ * SUCH DAMAGE.
++ */
++/*
++ * Copyright (c) 2013 ARM Ltd
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ * 3. The name of the company may not be used to endorse or promote
++ *    products derived from this software without specific prior written
++ *    permission.
++ *
++ * THIS SOFTWARE IS PROVIDED BY ARM LTD ``AS IS'' AND ANY EXPRESS OR IMPLIED
++ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
++ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL ARM LTD BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
++ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
++ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
++ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
++ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
++ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
++ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++
++ENTRY_PRIVATE(MEMCPY_BASE)
++        .cfi_def_cfa_offset 8
++        .cfi_rel_offset r0, 0
++        .cfi_rel_offset lr, 4
++
++        // Assumes that n >= 0, and dst, src are valid pointers.
++        // For any sizes less than 832 use the neon code that doesn't
++        // care about the src alignment. This avoids any checks
++        // for src alignment, and offers the best improvement since
++        // smaller sized copies are dominated by the overhead of
++        // the pre and post main loop.
++        // For larger copies, if src and dst cannot both be aligned to
++        // word boundaries, use the neon code.
++        // For all other copies, align dst to a double word boundary
++        // and copy using LDRD/STRD instructions.
++
++        cmp     r2, #16
++        blo     .L_copy_less_than_16_unknown_align
++
++        // TODO: The aligned copy code is extremely slow copying some large
++        //       buffers so always go through the unaligned path for now.
++        //cmp     r2, #832
++        //bge     .L_check_alignment
++
++.L_copy_unknown_alignment:
++        // Unknown alignment of src and dst.
++        // Assumes that the first few bytes have already been prefetched.
++
++        // Align destination to 128 bits. The mainloop store instructions
++        // require this alignment or they will throw an exception.
++        rsb         r3, r0, #0
++        ands        r3, r3, #0xF
++        beq         2f
++
++        // Copy up to 15 bytes (count in r3).
++        sub         r2, r2, r3
++        movs        ip, r3, lsl #31
++
++        itt         mi
++        ldrbmi      lr, [r1], #1
++        strbmi      lr, [r0], #1
++        itttt       cs
++        ldrbcs      ip, [r1], #1
++        ldrbcs      lr, [r1], #1
++        strbcs      ip, [r0], #1
++        strbcs      lr, [r0], #1
++
++        movs        ip, r3, lsl #29
++        bge         1f
++        // Copies 4 bytes, dst 32 bits aligned before, at least 64 bits after.
++        vld4.8      {d0[0], d1[0], d2[0], d3[0]}, [r1]!
++        vst4.8      {d0[0], d1[0], d2[0], d3[0]}, [r0, :32]!
++1:      bcc         2f
++        // Copies 8 bytes, dst 64 bits aligned before, at least 128 bits after.
++        vld1.8      {d0}, [r1]!
++        vst1.8      {d0}, [r0, :64]!
++
++2:      // Make sure we have at least 64 bytes to copy.
++        subs        r2, r2, #64
++        blo         2f
++
++1:      // The main loop copies 64 bytes at a time.
++        vld1.8      {d0  - d3},   [r1]!
++        vld1.8      {d4  - d7},   [r1]!
++        pld         [r1, #(64*4)]
++        subs        r2, r2, #64
++        vst1.8      {d0  - d3},   [r0, :128]!
++        vst1.8      {d4  - d7},   [r0, :128]!
++        bhs         1b
++
++2:      // Fix-up the remaining count and make sure we have >= 32 bytes left.
++        adds        r2, r2, #32
++        blo         3f
++
++        // 32 bytes. These cache lines were already preloaded.
++        vld1.8      {d0 - d3},  [r1]!
++        sub         r2, r2, #32
++        vst1.8      {d0 - d3},  [r0, :128]!
++3:      // Less than 32 left.
++        add         r2, r2, #32
++        tst         r2, #0x10
++        beq         .L_copy_less_than_16_unknown_align
++        // Copies 16 bytes, destination 128 bits aligned.
++        vld1.8      {d0, d1}, [r1]!
++        vst1.8      {d0, d1}, [r0, :128]!
++
++.L_copy_less_than_16_unknown_align:
++        // Copy up to 15 bytes (count in r2).
++        movs        ip, r2, lsl #29
++        bcc         1f
++        vld1.8      {d0}, [r1]!
++        vst1.8      {d0}, [r0]!
++1:      bge         2f
++        vld4.8      {d0[0], d1[0], d2[0], d3[0]}, [r1]!
++        vst4.8      {d0[0], d1[0], d2[0], d3[0]}, [r0]!
++
++2:      // Copy 0 to 4 bytes.
++        lsls        r2, r2, #31
++        itt         ne
++        ldrbne      lr, [r1], #1
++        strbne      lr, [r0], #1
++        itttt       cs
++        ldrbcs      ip, [r1], #1
++        ldrbcs      lr, [r1]
++        strbcs      ip, [r0], #1
++        strbcs      lr, [r0]
++
++        pop         {r0, pc}
++
++.L_check_alignment:
++        // If src and dst cannot both be aligned to a word boundary,
++        // use the unaligned copy version.
++        eor     r3, r0, r1
++        ands    r3, r3, #0x3
++        bne     .L_copy_unknown_alignment
++END(MEMCPY_BASE)
++
++ENTRY_PRIVATE(MEMCPY_BASE_ALIGNED)
++        .cfi_def_cfa_offset 8
++        .cfi_rel_offset r0, 0
++        .cfi_rel_offset lr, 4
++
++        // To try and improve performance, stack layout changed,
++        // i.e., not keeping the stack looking like users expect
++        // (highest numbered register at highest address).
++        strd    r4, r5, [sp, #-8]!
++        .cfi_adjust_cfa_offset 8
++        .cfi_rel_offset r4, 0
++        .cfi_rel_offset r5, 4
++        strd    r6, r7, [sp, #-8]!
++        .cfi_adjust_cfa_offset 8
++        .cfi_rel_offset r6, 0
++        .cfi_rel_offset r7, 0
++        strd    r8, r9, [sp, #-8]!
++        .cfi_adjust_cfa_offset 8
++        .cfi_rel_offset r8, 0
++        .cfi_rel_offset r9, 4
++
++        // Optimized for already aligned dst code.
++        ands    ip, r0, #3
++        bne     .L_dst_not_word_aligned
++
++.L_word_aligned:
++        // Align the destination buffer to 8 bytes, to make sure double
++        // loads and stores don't cross a cache line boundary,
++        // as they are then more expensive even if the data is in the cache
++        // (require two load/store issue cycles instead of one).
++        // If only one of the buffers is not 8 bytes aligned,
++        // then it's more important to align dst than src,
++        // because there is more penalty for stores
++        // than loads that cross a cacheline boundary.
++        // This check and realignment are only done if there is >= 832
++        // bytes to copy.
++
++        // Dst is word aligned, but check if it is already double word aligned.
++        ands    r3, r0, #4
++        beq     1f
++        ldr     r3, [r1], #4
++        str     r3, [r0], #4
++        sub     r2, #4
++
++1:      // Can only get here if > 64 bytes to copy, so don't do check r2.
++        sub     r2, #64
++
++2:      // Every loop iteration copies 64 bytes.
++        .irp    offset, #0, #8, #16, #24, #32
++        ldrd    r4, r5, [r1, \offset]
++        strd    r4, r5, [r0, \offset]
++        .endr
++
++        ldrd    r4, r5, [r1, #40]
++        ldrd    r6, r7, [r1, #48]
++        ldrd    r8, r9, [r1, #56]
++
++        // Keep the pld as far from the next load as possible.
++        // The amount to prefetch was determined experimentally using
++        // large sizes, and verifying the prefetch size does not affect
++        // the smaller copies too much.
++        // WARNING: If the ldrd and strd instructions get too far away
++        //          from each other, performance suffers. Three loads
++        //          in a row is the best tradeoff.
++        pld     [r1, #(64*16)]
++        strd    r4, r5, [r0, #40]
++        strd    r6, r7, [r0, #48]
++        strd    r8, r9, [r0, #56]
++
++        add     r0, r0, #64
++        add     r1, r1, #64
++        subs    r2, r2, #64
++        bge     2b
++
++        // Fix-up the remaining count and make sure we have >= 32 bytes left.
++        adds    r2, r2, #32
++        blo     4f
++
++        // Copy 32 bytes. These cache lines were already preloaded.
++        .irp    offset, #0, #8, #16, #24
++        ldrd    r4, r5, [r1, \offset]
++        strd    r4, r5, [r0, \offset]
++        .endr
++        add     r1, r1, #32
++        add     r0, r0, #32
++        sub     r2, r2, #32
++4:      // Less than 32 left.
++        add     r2, r2, #32
++        tst     r2, #0x10
++        beq     5f
++        // Copy 16 bytes.
++        .irp    offset, #0, #8
++        ldrd    r4, r5, [r1, \offset]
++        strd    r4, r5, [r0, \offset]
++        .endr
++        add     r1, r1, #16
++        add     r0, r0, #16
++
++5:      // Copy up to 15 bytes (count in r2).
++        movs    ip, r2, lsl #29
++        bcc     1f
++        // Copy 8 bytes.
++        ldrd    r4, r5, [r1], #8
++        strd    r4, r5, [r0], #8
++1:      bge         2f
++        // Copy 4 bytes.
++        ldr     r4, [r1], #4
++        str     r4, [r0], #4
++2:      // Copy 0 to 4 bytes.
++        lsls    r2, r2, #31
++        itt     ne
++        ldrbne  lr, [r1], #1
++        strbne  lr, [r0], #1
++        itttt   cs
++        ldrbcs  ip, [r1], #1
++        ldrbcs  lr, [r1]
++        strbcs  ip, [r0], #1
++        strbcs  lr, [r0]
++
++        // Restore registers: optimized pop {r0, pc}
++        ldrd    r8, r9, [sp], #8
++        ldrd    r6, r7, [sp], #8
++        ldrd    r4, r5, [sp], #8
++        pop     {r0, pc}
++
++.L_dst_not_word_aligned:
++        // Align dst to word.
++        rsb     ip, ip, #4
++        cmp     ip, #2
++
++        itt     gt
++        ldrbgt  lr, [r1], #1
++        strbgt  lr, [r0], #1
++
++        itt     ge
++        ldrbge  lr, [r1], #1
++        strbge  lr, [r0], #1
++
++        ldrb    lr, [r1], #1
++        strb    lr, [r0], #1
++
++        sub     r2, r2, ip
++
++        // Src is guaranteed to be at least word aligned by this point.
++        b       .L_word_aligned
++END(MEMCPY_BASE_ALIGNED)

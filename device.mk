@@ -148,6 +148,10 @@ PRODUCT_PACKAGES += \
 	mnld \
 	libmnl
 
+# YGPS
+PRODUCT_PACKAGES += \
+	YGPS
+
 # Torch
 PRODUCT_PACKAGES += \
 	Torch

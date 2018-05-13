@@ -1,0 +1,49 @@
+From 09a32e34f978b01ec1dc08990bd90fbb893561c6 Mon Sep 17 00:00:00 2001
+From: vgdn1942 <vgdn1942@gmail.com>
+Date: Sun, 13 May 2018 17:57:13 +0300
+Subject: [PATCH] Update gps
+
+Change-Id: I5ec6f18b4bface72e329234eb4d86ac923fea8e8
+---
+ .../core/jni/com_android_server_location_GpsLocationProvider.cpp | 9 ++++-----
+ 1 file changed, 4 insertions(+), 5 deletions(-)
+
+diff --git a/services/core/jni/com_android_server_location_GpsLocationProvider.cpp b/services/core/jni/com_android_server_location_GpsLocationProvider.cpp
+index 40a4a7a..d29b185 100644
+--- a/services/core/jni/com_android_server_location_GpsLocationProvider.cpp
++++ b/services/core/jni/com_android_server_location_GpsLocationProvider.cpp
+@@ -163,19 +163,18 @@ static pthread_t create_thread_callback(const char* name, void (*start)(void *),
+     return (pthread_t)AndroidRuntime::createJavaThread(name, start, arg);
+ }
+ 
+-GpsCallbacks_mtk sGpsCallbacks = {
+-    sizeof(GpsCallbacks_mtk),
++GpsCallbacks sGpsCallbacks = {
++    sizeof(GpsCallbacks),
+     location_callback,
+     status_callback,
+     sv_status_callback,
++    gnss_sv_status_callback,
+     nmea_callback,
+     set_capabilities_callback,
+     acquire_wakelock_callback,
+     release_wakelock_callback,
+     create_thread_callback,
+     request_utc_time_callback,
+-
+-    gnss_sv_status_callback,
+ };
+ 
+ static void xtra_download_request_callback()
+@@ -549,7 +548,7 @@ static jboolean android_location_GpsLocationProvider_init(JNIEnv* env, jobject o
+         mCallbacksObj = env->NewGlobalRef(obj);
+ 
+     // fail if the main interface fails to initialize
+-    if (!sGpsInterface || sGpsInterface->init((GpsCallbacks*)&sGpsCallbacks) != 0)
++    if (!sGpsInterface || sGpsInterface->init(&sGpsCallbacks) != 0)
+         return JNI_FALSE;
+ 
+     // if XTRA initialization fails we will disable it by sGpsXtraInterface to NULL,
+-- 
+2.7.4
+

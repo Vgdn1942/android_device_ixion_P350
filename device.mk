@@ -144,9 +144,7 @@ PRODUCT_COPY_FILES += \
 
 PRODUCT_PACKAGES += \
 	gps.mt6580 \
-	mtk_agpsd \
-	mnld \
-	libmnl
+	mtk_agpsd
 
 # YGPS
 PRODUCT_PACKAGES += \

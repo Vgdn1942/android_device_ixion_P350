@@ -1,0 +1,164 @@
+From 773113463b9a497431b18850e31d5416c4e5df59 Mon Sep 17 00:00:00 2001
+From: vgdn1942 <vgdn1942@gmail.com>
+Date: Sun, 13 May 2018 17:46:47 +0300
+Subject: [PATCH] Update gps include
+
+Change-Id: I26a713610d5666749019f0db3396ffc2fc3fe8aa
+---
+ include/hardware/gps.h     | 47 ++++++++++++++++++++++++++++++++++++++++++++
+ include/hardware/gps_mtk.h | 49 +---------------------------------------------
+ 2 files changed, 48 insertions(+), 48 deletions(-)
+
+diff --git a/include/hardware/gps.h b/include/hardware/gps.h
+index 76b6cb7..9c303fb 100644
+--- a/include/hardware/gps.h
++++ b/include/hardware/gps.h
+@@ -37,6 +37,9 @@ __BEGIN_DECLS
+ /** Milliseconds since January 1, 1970 */
+ typedef int64_t GpsUtcTime;
+ 
++/** Maximum number of GNSS SVs for gps_sv_status_callback(). */
++#define GNSS_MAX_SVS 256
++
+ /** Maximum number of SVs for gps_sv_status_callback(). */
+ #define GPS_MAX_SVS 32
+ 
+@@ -471,6 +474,32 @@ typedef struct {
+     float   azimuth;
+ } GpsSvInfo;
+ 
++/** Represents GNSS SV information. */
++typedef struct {
++    /** set to sizeof(GnssSvInfo) */
++    size_t          size;
++    /** Pseudo-random number for the SV. */
++    int     prn;
++    /** Signal to noise ratio. */
++    float   snr;
++    /** Elevation of SV in degrees. */
++    float   elevation;
++    /** Azimuth of SV in degrees. */
++    float   azimuth;
++    /**
++     * SVs have ephemeris data.
++     */
++    bool has_ephemeris;
++    /**
++     * SVs have almanac data.
++     */
++    bool has_almanac;
++    /**
++     * SVs were used for computing the most recent position fix.
++     */
++    bool used_in_fix;
++} GnssSvInfo;
++
+ /** Represents SV status. */
+ typedef struct {
+     /** set to sizeof(GpsSvStatus) */
+@@ -499,6 +528,17 @@ typedef struct {
+     uint32_t    used_in_fix_mask;
+ } GpsSvStatus;
+ 
++/** Represents GNSS SV status. */
++typedef struct {
++    /** set to sizeof(GnssSvStatus) */
++    size_t          size;
++
++    /** Number of SVs currently visible. */
++    int         num_svs;
++
++    /** Contains an array of GNSS SV information. */
++    GnssSvInfo   sv_list[GNSS_MAX_SVS];
++} GnssSvStatus;
+ 
+ /* 2G and 3G */
+ /* In 3G lac is discarded */
+@@ -539,6 +579,12 @@ typedef void (* gps_status_callback)(GpsStatus* status);
+  */
+ typedef void (* gps_sv_status_callback)(GpsSvStatus* sv_info);
+ 
++/**
++ * Callback with GNSS SV status information.
++ * Can only be called from a thread created by create_thread_cb.
++ */
++typedef void (* gnss_sv_status_callback)(GnssSvStatus* sv_info);
++
+ /** Callback for reporting NMEA sentences.
+  *  Can only be called from a thread created by create_thread_cb.
+  */
+@@ -572,6 +618,7 @@ typedef struct {
+     gps_location_callback location_cb;
+     gps_status_callback status_cb;
+     gps_sv_status_callback sv_status_cb;
++    gnss_sv_status_callback gnss_sv_status_cb;
+     gps_nmea_callback nmea_cb;
+     gps_set_capabilities set_capabilities_cb;
+     gps_acquire_wakelock acquire_wakelock_cb;
+diff --git a/include/hardware/gps_mtk.h b/include/hardware/gps_mtk.h
+index 2ebd40d..b6209cd 100755
+--- a/include/hardware/gps_mtk.h
++++ b/include/hardware/gps_mtk.h
+@@ -21,58 +21,11 @@
+ 
+ __BEGIN_DECLS
+ 
+-/** Maximum number of GNSS SVs for gps_sv_status_callback(). */
+-#define GNSS_MAX_SVS 256
+-
+-/** Represents GNSS SV information. */
+-typedef struct {
+-    /** set to sizeof(GnssSvInfo) */
+-    size_t          size;
+-    /** Pseudo-random number for the SV. */
+-    int     prn;
+-    /** Signal to noise ratio. */
+-    float   snr;
+-    /** Elevation of SV in degrees. */
+-    float   elevation;
+-    /** Azimuth of SV in degrees. */
+-    float   azimuth;
+-    /**
+-     * SVs have ephemeris data.
+-     */
+-    bool has_ephemeris;
+-    /**
+-     * SVs have almanac data.
+-     */
+-    bool has_almanac;
+-    /**
+-     * SVs were used for computing the most recent position fix.
+-     */
+-    bool used_in_fix;
+-} GnssSvInfo;
+-
+-/** Represents GNSS SV status. */
+-typedef struct {
+-    /** set to sizeof(GnssSvStatus) */
+-    size_t          size;
+-
+-    /** Number of SVs currently visible. */
+-    int         num_svs;
+-
+-    /** Contains an array of GNSS SV information. */
+-    GnssSvInfo   sv_list[GNSS_MAX_SVS];
+-} GnssSvStatus;
+-
+-/**
+- * Callback with GNSS SV status information.
+- * Can only be called from a thread created by create_thread_cb.
+- */
+-typedef void (* gnss_sv_status_callback)(GnssSvStatus* sv_info);
+-
+ /** GPS callback structure with Mediatek extension. */
+ typedef struct _GpsCallbacks_mtk {
+     GpsCallbacks base;
+ 
+-    gnss_sv_status_callback gnss_sv_status_cb;
++//    gnss_sv_status_callback gnss_sv_status_cb;
+ } GpsCallbacks_mtk;
+ 
+ __END_DECLS
+-- 
+2.7.4
+

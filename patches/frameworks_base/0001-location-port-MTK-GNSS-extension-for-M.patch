@@ -1,0 +1,764 @@
+From 77f1a41ae6870bb9436941256e55957868ae5512 Mon Sep 17 00:00:00 2001
+From: Wang Xuerui <idontknw.wang@gmail.com>
+Date: Sun, 13 May 2018 19:09:42 +0300
+Subject: [PATCH] location: port MTK GNSS extension for M
+
+Change-Id: Ia81f3bd7c5037f953a1d3b7a098d32835b6dc39d
+---
+ location/java/android/location/GpsStatus.java      |  29 ++
+ .../java/android/location/IGpsStatusListener.aidl  |   4 +
+ .../java/android/location/LocationManager.java     |  18 +
+ .../server/location/GpsLocationProvider.java       |  48 ++-
+ .../server/location/GpsStatusListenerHelper.java   |  28 ++
+ .../java/com/mediatek/location/LocationExt.java    | 375 +++++++++++++++++++++
+ ...android_server_location_GpsLocationProvider.cpp |  66 +++-
+ 7 files changed, 566 insertions(+), 2 deletions(-)
+ create mode 100644 services/core/java/com/mediatek/location/LocationExt.java
+
+diff --git a/location/java/android/location/GpsStatus.java b/location/java/android/location/GpsStatus.java
+index 323f326..aad9ecf 100644
+--- a/location/java/android/location/GpsStatus.java
++++ b/location/java/android/location/GpsStatus.java
+@@ -168,6 +168,35 @@ public final class GpsStatus {
+     }
+ 
+     /**
++     * M: Used internally within {@link LocationManager} to copy GNSS status
++     * data from the Location Manager Service to its cached GnssStatus instance.
++     * Is synchronized to ensure that GNSS status updates are atomic.
++     */
++    synchronized void setGnssStatus(int svCount, int[] prns, float[] snrs,
++            float[] elevations, float[] azimuths, boolean[] ephemeris,
++            boolean[] almanac, boolean[] usedInFix) {
++        clearSatellites();
++        for (int i = 0; i < svCount; i++) {
++            int prn = prns[i];
++            if (prn > 0 && prn <= NUM_SATELLITES) {
++                GpsSatellite satellite = mSatellites.get(prn);
++                if (satellite == null) {
++                    satellite = new GpsSatellite(prn);
++                    mSatellites.put(prn, satellite);
++                }
++
++                satellite.mValid = true;
++                satellite.mSnr = snrs[i];
++                satellite.mElevation = elevations[i];
++                satellite.mAzimuth = azimuths[i];
++                satellite.mHasEphemeris = ephemeris[i];
++                satellite.mHasAlmanac = almanac[i];
++                satellite.mUsedInFix = usedInFix[i];
++            }
++        }
++    }
++
++    /**
+      * Used by {@link LocationManager#getGpsStatus} to copy LocationManager's
+      * cached GpsStatus instance to the client's copy.
+      * Since this method is only used within {@link LocationManager#getGpsStatus},
+diff --git a/location/java/android/location/IGpsStatusListener.aidl b/location/java/android/location/IGpsStatusListener.aidl
+index 62b1c6b..a47b910 100644
+--- a/location/java/android/location/IGpsStatusListener.aidl
++++ b/location/java/android/location/IGpsStatusListener.aidl
+@@ -29,5 +29,9 @@ oneway interface IGpsStatusListener
+     void onSvStatusChanged(int svCount, in int[] prns, in float[] snrs, 
+             in float[] elevations, in float[] azimuths, 
+             int ephemerisMask, int almanacMask, int usedInFixMask);
++    /// M: added to support multiple Gnss systems
++    void onGnssSvStatusChanged(int svCount, in int[] prns, in float[] snrs,
++            in float[] elevations, in float[] azimuths,
++            in boolean[] ephemeris, in boolean[] almanac, in boolean[] usedInFix);
+     void onNmeaReceived(long timestamp, String nmea);
+ }
+diff --git a/location/java/android/location/LocationManager.java b/location/java/android/location/LocationManager.java
+index 4544814..a686709 100644
+--- a/location/java/android/location/LocationManager.java
++++ b/location/java/android/location/LocationManager.java
+@@ -1478,6 +1478,24 @@ public class LocationManager {
+             }
+         }
+ 
++        /// M: added to support multiple Gnss
++        @Override
++        public void onGnssSvStatusChanged(int svCount, int[] prns, float[] snrs,
++                float[] elevations, float[] azimuths, boolean[] ephemeris,
++                boolean[]  almanac, boolean[]  usedInFix) {
++            if (mListener != null) {
++                mGpsStatus.setGnssStatus(svCount, prns, snrs, elevations, azimuths,
++                        ephemeris, almanac, usedInFix);
++
++                Message msg = Message.obtain();
++                msg.what = GpsStatus.GPS_EVENT_SATELLITE_STATUS;
++                // remove any SV status messages already in the queue
++                mGpsHandler.removeMessages(GpsStatus.GPS_EVENT_SATELLITE_STATUS);
++                mGpsHandler.sendMessage(msg);
++            }
++        }
++        /// MTK add end
++
+         @Override
+         public void onNmeaReceived(long timestamp, String nmea) {
+             if (mNmeaListener != null) {
+diff --git a/services/core/java/com/android/server/location/GpsLocationProvider.java b/services/core/java/com/android/server/location/GpsLocationProvider.java
+index 833c340..426d8bf 100644
+--- a/services/core/java/com/android/server/location/GpsLocationProvider.java
++++ b/services/core/java/com/android/server/location/GpsLocationProvider.java
+@@ -94,6 +94,11 @@ import java.util.Properties;
+ 
+ import libcore.io.IoUtils;
+ 
++//mtk add start
++import com.mediatek.location.LocationExt;
++import com.mediatek.location.LocationExt.GnssSvStatusHolder;
++//mtk add end
++
+ /**
+  * A GPS implementation of LocationProvider used by LocationManager.
+  *
+@@ -504,6 +509,7 @@ public class GpsLocationProvider implements LocationProviderInterface {
+     }
+ 
+     private void checkWapSuplInit(Intent intent) {
++        if (!LocationExt.checkWapSuplInit(intent)) return; // mtk add: SUPL_2.0 TC_001
+         byte[] supl_init = (byte[]) intent.getExtra("data");
+         native_agps_ni_message(supl_init,supl_init.length);
+     }
+@@ -732,6 +738,8 @@ public class GpsLocationProvider implements LocationProviderInterface {
+                 return isEnabled();
+             }
+         };
++
++        initLocationExt();
+     }
+ 
+     /**
+@@ -1271,7 +1279,7 @@ public class GpsLocationProvider implements LocationProviderInterface {
+             native_delete_aiding_data(flags);
+             return true;
+         }
+-
++        LocationExt.deleteAidingData(extras, flags); // mtk add: log for bad data
+         return false;
+     }
+ 
+@@ -1283,6 +1291,7 @@ public class GpsLocationProvider implements LocationProviderInterface {
+             mStarted = true;
+             mSingleShot = singleShot;
+             mPositionMode = GPS_POSITION_MODE_STANDALONE;
++            LocationExt.startNavigating(singleShot); // mtk add: System Time Sync by GPS
+ 
+             boolean agpsEnabled =
+                     (Settings.Global.getInt(mContext.getContentResolver(),
+@@ -1421,6 +1430,7 @@ public class GpsLocationProvider implements LocationProviderInterface {
+             // notify status listeners
+             mListenerHelper.onFirstFix(mTimeToFirstFix);
+         }
++        LocationExt.doSystemTimeSyncByGps(flags, timestamp); // mtk add
+ 
+         if (mSingleShot) {
+             stopNavigating();
+@@ -2204,6 +2214,38 @@ public class GpsLocationProvider implements LocationProviderInterface {
+         }
+     }
+ 
++    //mtk add start
++    /**
++     * locationExt creation function.
++     */
++    public void initLocationExt() {
++        boolean mtkGpsSupport = SystemProperties.get("ro.mtk_gps_support").equals("1");
++
++        if (mtkGpsSupport) {
++            mInjectNtpTimePending = mDownloadXtraDataPending = STATE_IDLE; // no download
++            LocationExt.getInstance(this, mContext, mHandler, mConnMgr);
++            Log.d(TAG, "LocationExt is created");
++        }
++    }
++
++    /**
++     * called from native code to update GNSS SV info
++     */
++    private void reportGnssSvStatus() {
++        GnssSvStatusHolder h = LocationExt.getGnssSvStatusHolder();
++        if (null == h) return;
++        int svCount = native_read_gnss_sv_status(h.mGnssSvs, h.mGnssSnrs, h.mGnssSvElevations,
++                h.mGnssSvAzimuths, h.mGnssSvEphemeris, h.mGnssSvAlmanac, h.mGnssSvInFix);
++        mListenerHelper.onGnssSvStatusChanged(svCount, h.mGnssSvs, h.mGnssSnrs, h.mGnssSvElevations,
++                h.mGnssSvAzimuths, h.mGnssSvEphemeris, h.mGnssSvAlmanac, h.mGnssSvInFix);
++        int svFixCount = h.reportGnssSvStatusStep2(svCount);
++        updateStatus(mStatus, svFixCount);
++        if (h.reportGnssSvStatusStep3(mNavigating, mStatus, mLastFixTime, RECENT_FIX_TIMEOUT)) {
++            updateStatus(LocationProvider.TEMPORARILY_UNAVAILABLE, mSvCount);
++        }
++    }
++    //mtk add end
++
+     @Override
+     public void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
+         StringBuilder s = new StringBuilder();
+@@ -2286,6 +2328,10 @@ public class GpsLocationProvider implements LocationProviderInterface {
+             float[] elevations, float[] azimuths, int[] masks);
+     private native int native_read_nmea(byte[] buffer, int bufferSize);
+     private native void native_inject_location(double latitude, double longitude, float accuracy);
++    /// M: added to support multiple Gnss
++    private native int native_read_gnss_sv_status(int[] svs, float[] snrs,
++            float[] elevations, float[] azimuths, boolean[] ephemeris, boolean[] almanac,
++            boolean[] infix);
+ 
+     // XTRA Support
+     private native void native_inject_time(long time, long timeReference, int uncertainty);
+diff --git a/services/core/java/com/android/server/location/GpsStatusListenerHelper.java b/services/core/java/com/android/server/location/GpsStatusListenerHelper.java
+index 53ff6c2..fe2bf7b 100644
+--- a/services/core/java/com/android/server/location/GpsStatusListenerHelper.java
++++ b/services/core/java/com/android/server/location/GpsStatusListenerHelper.java
+@@ -98,6 +98,34 @@ abstract class GpsStatusListenerHelper extends RemoteListenerHelper<IGpsStatusLi
+         foreach(operation);
+     }
+ 
++    /// M: added to support multiple Gnss
++    public void onGnssSvStatusChanged(
++            final int svCount,
++            final int[] prns,
++            final float[] snrs,
++            final float[] elevations,
++            final float[] azimuths,
++            final boolean[] ephemeris,
++            final boolean[] almanac,
++            final boolean[] usedInFix) {
++        Operation operation = new Operation() {
++            @Override
++            public void execute(IGpsStatusListener listener) throws RemoteException {
++                listener.onGnssSvStatusChanged(
++                        svCount,
++                        prns,
++                        snrs,
++                        elevations,
++                        azimuths,
++                        ephemeris,
++                        almanac,
++                        usedInFix);
++            }
++        };
++
++        foreach(operation);
++    }
++
+     public void onNmeaReceived(final long timestamp, final String nmea) {
+         Operation operation = new Operation() {
+             @Override
+diff --git a/services/core/java/com/mediatek/location/LocationExt.java b/services/core/java/com/mediatek/location/LocationExt.java
+new file mode 100644
+index 0000000..ab48c44
+--- /dev/null
++++ b/services/core/java/com/mediatek/location/LocationExt.java
+@@ -0,0 +1,375 @@
++/* Copyright Statement:
++ *
++ * This software/firmware and related documentation ("MediaTek Software") are
++ * protected under relevant copyright laws. The information contained herein
++ * is confidential and proprietary to MediaTek Inc. and/or its licensors.
++ * Without the prior written permission of MediaTek inc. and/or its licensors,
++ * any reproduction, modification, use or disclosure of MediaTek Software,
++ * and information contained herein, in whole or in part, shall be strictly prohibited.
++ *
++ * MediaTek Inc. (C) 2010. All rights reserved.
++ *
++ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
++ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
++ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
++ * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
++ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
++ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
++ * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
++ * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
++ * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
++ * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
++ * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
++ * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
++ * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
++ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
++ * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
++ * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
++ * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
++ * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
++ *
++ * The following software/firmware and/or related documentation ("MediaTek Software")
++ * have been modified by MediaTek Inc. All revisions are subject to any receiver's
++ * applicable license agreements with MediaTek Inc.
++ */
++
++package com.mediatek.location;
++
++import com.android.internal.telephony.Phone;
++import com.android.internal.telephony.PhoneConstants;
++
++import android.content.BroadcastReceiver;
++import android.content.Context;
++import android.content.Intent;
++import android.content.IntentFilter;
++import android.location.LocationManager;
++import android.location.LocationProvider;
++import android.net.ConnectivityManager;
++import android.os.Bundle;
++import android.os.Handler;
++import android.os.SystemClock;
++import android.os.UserHandle;
++import android.provider.Settings;
++import android.provider.Settings.SettingNotFoundException;
++import android.telephony.TelephonyManager;
++import android.util.Log;
++
++import java.io.File;
++import java.util.Calendar;
++import java.util.HashMap;
++
++import com.android.server.location.GpsLocationProvider;
++
++public class LocationExt {
++    private static final String TAG = "MtkLocationExt";
++
++    private static final boolean DEBUG = true; //Log.isLoggable(TAG, Log.DEBUG);
++    private static final boolean VERBOSE = true; //Log.isLoggable(TAG, Log.VERBOSE);
++
++    // these need to match GpsLocationFlags enum in gps.h
++    //private static final int LOCATION_INVALID = 0;
++    private static final int LOCATION_HAS_LAT_LONG = 1;
++    //private static final int LOCATION_HAS_ALTITUDE = 2;
++    //private static final int LOCATION_HAS_SPEED = 4;
++    //private static final int LOCATION_HAS_BEARING = 8;
++    //private static final int LOCATION_HAS_ACCURACY = 16;
++
++    private static LocationExt sSingleton;
++
++    private final GpsLocationProvider mGpsProvider;
++    private final Context mContext;
++    private final Handler mGpsHandler;
++    private final ConnectivityManager mConnMgr;
++
++    /*mGpsTimeSyncFlag : true: need to check the time sync, false: no need to check the time sync*/
++    private boolean mGpsTimeSyncFlag = true;
++    /*isEmergencyCallDialed: [true] IMS emergency call is dialed,
++    [false] IMS emergency call is ended*/
++    private boolean mIsEmergencyCallDialed;
++    private int mRouteNetworkType = ConnectivityManager.TYPE_MOBILE_SUPL;
++    private GnssSvStatusHolder mGnssSvStatusHolder = new GnssSvStatusHolder();
++
++    //============================================================================================
++    // APIs for GpsLocationProvider
++
++    public static synchronized LocationExt getInstance(
++            GpsLocationProvider gpsProvider,
++            Context context,
++            Handler gpsHandler,
++            ConnectivityManager connMgr) {
++        if (null == sSingleton && null != gpsProvider) {
++            sSingleton = new LocationExt(gpsProvider, context, gpsHandler, connMgr);
++        }
++        return sSingleton;
++    }
++
++    public static boolean isEnabled() {
++        return (null != sSingleton);
++    }
++
++    // Return true to allow sending SuplInit to the native
++    public static boolean checkWapSuplInit(Intent intent) {
++        if (!isEnabled()) return true;
++
++        boolean ret = sSingleton.isWapPushLegal(intent);
++        if (DEBUG) Log.d(TAG, "[agps] WARNING: checkWapSuplInit ret=" + ret);
++        return ret;
++    }
++
++    public static void deleteAidingData(Bundle extras, int flags) {
++        if (!isEnabled()) return;
++        if (DEBUG) Log.d(TAG, "deleteAidingData extras:" + extras + "flags:" + flags);
++    }
++
++    public static boolean setGpsTimeSyncFlag(boolean flag) {
++        if (!isEnabled()) return false;
++        sSingleton.mGpsTimeSyncFlag = flag;
++        if (DEBUG) Log.d(TAG, "setGpsTimeSyncFlag: " + flag);
++        return flag;
++    }
++
++    public static void startNavigating(boolean singleShot) {
++        setGpsTimeSyncFlag(true);
++    }
++
++    public static void doSystemTimeSyncByGps(int flags, long timestamp) {
++        if (!isEnabled()) return;
++        if (sSingleton.mGpsTimeSyncFlag &&
++                (flags & LOCATION_HAS_LAT_LONG) == LOCATION_HAS_LAT_LONG) {
++            if (sSingleton.getAutoGpsState()) {
++                sSingleton.mGpsTimeSyncFlag = false;
++                Log.d(TAG, "GPS time sync is enabled");
++                Log.d(TAG, " ########## Auto-sync time with GPS: timestamp = " + timestamp
++                        + " ########## ");
++                Calendar c = Calendar.getInstance();
++                c.setTimeInMillis(timestamp);
++                long when = c.getTimeInMillis();
++                if (when / 1000 < Integer.MAX_VALUE) {
++                    SystemClock.setCurrentTimeMillis(when);
++                }
++            } else {
++                Log.d(TAG, "Auto-sync time with GPS is disabled by user settings!");
++                Log.d(TAG, "GPS time sync is disabled");
++            }
++        }
++    }
++
++    public static GnssSvStatusHolder getGnssSvStatusHolder() {
++        if (!isEnabled()) return null;
++        return sSingleton.mGnssSvStatusHolder;
++    }
++
++    public static int getRouteNetworkType() {
++        if (!isEnabled()) return ConnectivityManager.TYPE_MOBILE_SUPL;
++        return sSingleton.mRouteNetworkType;
++    }
++
++    public static int doStartUsingNetwork(ConnectivityManager connMgr, int networkType,
++            String feature) {
++        if (!isEnabled()) {
++            return -1;
++        } else {
++            return sSingleton.doMtkStartUsingNetwork();
++        }
++    }
++
++    //============================================================================================
++    // Utilties
++
++    public static boolean isFileExists(String path) {
++        File f = new File(path);
++        return f.exists();
++    }
++
++    public static boolean isESUPL() {
++        return isFileExists("/data/agps_supl/isESUPL");
++    }
++
++    //============================================================================================
++    // Internal implementation
++
++    private LocationExt(GpsLocationProvider gpsProvider, Context context,
++            Handler gpsHandler, ConnectivityManager connMgr) {
++        mGpsProvider = gpsProvider;
++        mContext = context;
++        mGpsHandler = gpsHandler;
++        mConnMgr = connMgr;
++        listenForBroadcasts();
++    }
++
++    private void listenForBroadcasts() {
++        IntentFilter intentFilter = new IntentFilter();
++        intentFilter.addAction("android.location.agps.EMERGENCY_CALL");
++        mContext.registerReceiver(mBroadcastReceiver, intentFilter, null, mGpsHandler);
++    }
++
++    private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
++        @Override public void onReceive(Context context, Intent intent) {
++            String action = intent.getAction();
++
++            if (DEBUG) Log.d(TAG, "receive broadcast intent, action: " + action);
++            if ("android.location.agps.EMERGENCY_CALL".equals(action)) {
++                Bundle bundle = intent.getExtras();
++                if (bundle != null) {
++                    int state = bundle.getInt("EM_Call_State");
++                    if (1 == state) {
++                        if (DEBUG) Log.d(TAG, "E911 dialed");
++                        mIsEmergencyCallDialed = true;
++                    } else {
++                        if (DEBUG) Log.d(TAG, "E911 ended");
++                        mIsEmergencyCallDialed = false;
++                    }
++                } else {
++                    Log.e(TAG, "E911 null bundle");
++                }
++            }
++        }
++    };
++
++    private boolean isWapPushLegal(Intent intent) {
++        try {
++            String type = intent.getType();
++            if (type == null || !type.equals("application/vnd.omaloc-supl-init")) {
++                Log.e(TAG, "[agps] ERR: content type is [" + type
++                        + "], but we expect [application/vnd.omaloc-supl-init]");
++                return false;
++            }
++            Bundle bundle = intent.getExtras();
++            if (bundle == null) {
++                Log.e(TAG, "[agps] ERR: wspBundle is null");
++                return false;
++            }
++            HashMap<String, String> wspHeaders = (HashMap<String, String>) bundle.get("wspHeaders");
++            if (wspHeaders == null) {
++                Log.e(TAG, "[agps] ERR: wspHeader is null");
++                return false;
++            }
++            String appId = wspHeaders.get("X-Wap-Application-Id");
++            if (appId == null) {
++                Log.e(TAG, "[agps] ERR: appId(X-Wap-Application-Id) is null");
++                return false;
++            }
++            if (!appId.equals("x-oma-application:ulp.ua")) {
++                Log.e(TAG, "[agps] ERR: appId is [" + appId
++                        + "], but we expect [x-oma-application:ulp.ua]");
++                return false;
++            }
++            return true;
++        } catch (Exception e) {
++            e.printStackTrace();
++            return false;
++        }
++    }
++
++    private boolean getAutoGpsState() {
++//        try {
++//            return Settings.System.getInt(mContext.getContentResolver(),
++//                    Settings.System.AUTO_TIME_GPS) > 0;
++//        } catch (SettingNotFoundException snfe) {
++            return false;
++//        }
++    }
++
++    public class GnssSvStatusHolder {
++        // preallocated arrays, to avoid memory allocation in reportStatus()
++        public static final int MAX_GNSS_SVS = 256;
++        public int mGnssSvs[] = new int[MAX_GNSS_SVS];
++        public float mGnssSnrs[] = new float[MAX_GNSS_SVS];
++        public float mGnssSvElevations[] = new float[MAX_GNSS_SVS];
++        public float mGnssSvAzimuths[] = new float[MAX_GNSS_SVS];
++        public boolean mGnssSvEphemeris[] = new boolean[MAX_GNSS_SVS];
++        public boolean mGnssSvAlmanac[] = new boolean[MAX_GNSS_SVS];
++        public boolean mGnssSvInFix[] = new boolean[MAX_GNSS_SVS];
++
++        public int reportGnssSvStatusStep2(int svCount) {
++            if (VERBOSE) {
++                Log.v(TAG, "GNSS SV count: " + svCount);
++                for (int i = 0; i < svCount; i++) {
++                    Log.v(TAG, "sv: " + mGnssSvs[i] +
++                            " snr: " + mGnssSnrs[i] / 10 +
++                            " elev: " + mGnssSvElevations[i] +
++                            " azimuth: " + mGnssSvAzimuths[i] +
++                            ((mGnssSvEphemeris[i]) ? " E" : " ") +
++                            ((mGnssSvAlmanac[i]) ? " A" : " ") +
++                            ((mGnssSvInFix[i]) ? " U" : " "));
++                }
++            }
++            int svFixCount = 0;
++            for (boolean value : mGnssSvInFix) {
++                if (value) {
++                    svFixCount++;
++                }
++            }
++            return svFixCount;
++        }
++
++        public boolean reportGnssSvStatusStep3(boolean navigating, int gpsStatus,
++                long lastFixTime, long recentFixTimeout) {
++            if (navigating && gpsStatus == LocationProvider.AVAILABLE && lastFixTime > 0 &&
++                System.currentTimeMillis() - lastFixTime > recentFixTimeout) {
++                // send an intent to notify that the GPS is no longer receiving fixes.
++                Intent intent = new Intent(LocationManager.GPS_FIX_CHANGE_ACTION);
++                intent.putExtra(LocationManager.EXTRA_GPS_ENABLED, false);
++                mContext.sendBroadcastAsUser(intent, UserHandle.ALL);
++                return true;
++            }
++            return false;
++        }
++    }
++
++    private boolean isEmergencyCallDialed() {
++        return (isFileExists("/data/agps_supl/isEmergencyCallDialed") ||
++                mIsEmergencyCallDialed);
++    }
++
++    private boolean hasIccCard() {
++        TelephonyManager tpMgr = (TelephonyManager)
++                mContext.getSystemService(Context.TELEPHONY_SERVICE);
++        if (tpMgr != null) {
++            return tpMgr.hasIccCard();
++        }
++        return false;
++    }
++
++    private boolean isAirplaneModeOn() {
++        return Settings.System.getInt(mContext.getContentResolver(),
++                Settings.System.AIRPLANE_MODE_ON, 0) == 1;
++    }
++
++    private int doMtkStartUsingNetwork() {
++        int networkType = ConnectivityManager.TYPE_MOBILE;
++        String feature = Phone.FEATURE_ENABLE_SUPL;
++        mRouteNetworkType = ConnectivityManager.TYPE_MOBILE_SUPL;
++
++        TelephonyManager phone = (TelephonyManager)
++                mContext.getSystemService(Context.TELEPHONY_SERVICE);
++
++        //IR92 requirements for emergency location
++        int phoneNetwokrType = phone.getNetworkType();
++
++        Log.d(TAG, "[agps] WARNING: GpsLocationProvider  phoneNetwokrType=[" +
++            phoneNetwokrType + "] isESUPL=[" + isESUPL() + "] isEmergencyCallDialed=["
++            + isEmergencyCallDialed() + "]");
++        if (phoneNetwokrType == TelephonyManager.NETWORK_TYPE_LTE && isESUPL()) {
++            if (isEmergencyCallDialed()) {
++                networkType = ConnectivityManager.TYPE_MOBILE_EMERGENCY;
++                feature = Phone.FEATURE_ENABLE_EMERGENCY;
++                mRouteNetworkType = ConnectivityManager.TYPE_MOBILE_EMERGENCY;
++            } else {
++                networkType = ConnectivityManager.TYPE_MOBILE_IMS;
++                feature = Phone.FEATURE_ENABLE_IMS;
++                mRouteNetworkType = ConnectivityManager.TYPE_MOBILE_IMS;
++            }
++        }
++
++        if ((networkType == ConnectivityManager.TYPE_MOBILE && hasIccCard() == false)
++            || isAirplaneModeOn()) {
++            Log.d(TAG, "[agps] APN_REQUEST_FAILED: hasIccCard=" +
++                    hasIccCard() + " isAirplaneModeOn="
++                    + isAirplaneModeOn());
++            return PhoneConstants.APN_REQUEST_FAILED;
++        }
++
++        return mConnMgr.startUsingNetworkFeature(networkType, feature);
++    }
++}
+diff --git a/services/core/jni/com_android_server_location_GpsLocationProvider.cpp b/services/core/jni/com_android_server_location_GpsLocationProvider.cpp
+index 91eeb8b..d29b185 100644
+--- a/services/core/jni/com_android_server_location_GpsLocationProvider.cpp
++++ b/services/core/jni/com_android_server_location_GpsLocationProvider.cpp
+@@ -21,7 +21,7 @@
+ #include "JNIHelp.h"
+ #include "jni.h"
+ #include "hardware/hardware.h"
+-#include "hardware/gps.h"
++#include "hardware/gps_mtk.h"
+ #include "hardware_legacy/power.h"
+ #include "utils/Log.h"
+ #include "utils/misc.h"
+@@ -39,6 +39,7 @@ static jobject mCallbacksObj = NULL;
+ static jmethodID method_reportLocation;
+ static jmethodID method_reportStatus;
+ static jmethodID method_reportSvStatus;
++static jmethodID method_reportGnssSvStatus;
+ static jmethodID method_reportAGpsStatus;
+ static jmethodID method_reportNmea;
+ static jmethodID method_setEngineCapabilities;
+@@ -69,6 +70,8 @@ static const GnssConfigurationInterface* sGnssConfigurationInterface = NULL;
+ 
+ // temporary storage for GPS callbacks
+ static GpsSvStatus  sGpsSvStatus;
++static GnssSvStatus  sGnssSvStatus;
++
+ static const char* sNmeaString;
+ static int sNmeaStringLength;
+ 
+@@ -110,6 +113,15 @@ static void sv_status_callback(GpsSvStatus* sv_status)
+     checkAndClearExceptionFromCallback(env, __FUNCTION__);
+ }
+ 
++static void gnss_sv_status_callback(GnssSvStatus* sv_status)
++{
++    JNIEnv* env = AndroidRuntime::getJNIEnv();
++    memcpy(&sGnssSvStatus, sv_status, sizeof(sGnssSvStatus));
++    env->CallVoidMethod(mCallbacksObj, method_reportGnssSvStatus);
++    checkAndClearExceptionFromCallback(env, __FUNCTION__);
++}
++
++
+ static void nmea_callback(GpsUtcTime timestamp, const char* nmea, int length)
+ {
+     JNIEnv* env = AndroidRuntime::getJNIEnv();
+@@ -156,6 +168,7 @@ GpsCallbacks sGpsCallbacks = {
+     location_callback,
+     status_callback,
+     sv_status_callback,
++    gnss_sv_status_callback,
+     nmea_callback,
+     set_capabilities_callback,
+     acquire_wakelock_callback,
+@@ -446,6 +459,7 @@ static void android_location_GpsLocationProvider_class_init_native(JNIEnv* env,
+     method_reportLocation = env->GetMethodID(clazz, "reportLocation", "(IDDDFFFJ)V");
+     method_reportStatus = env->GetMethodID(clazz, "reportStatus", "(I)V");
+     method_reportSvStatus = env->GetMethodID(clazz, "reportSvStatus", "()V");
++    method_reportGnssSvStatus = env->GetMethodID(clazz, "reportGnssSvStatus", "()V");
+     method_reportAGpsStatus = env->GetMethodID(clazz, "reportAGpsStatus", "(II[B)V");
+     method_reportNmea = env->GetMethodID(clazz, "reportNmea", "(J)V");
+     method_setEngineCapabilities = env->GetMethodID(clazz, "setEngineCapabilities", "(I)V");
+@@ -615,6 +629,12 @@ static jint android_location_GpsLocationProvider_read_sv_status(JNIEnv* env, job
+ {
+     // this should only be called from within a call to reportSvStatus
+ 
++    size_t status_size = sGpsSvStatus.size;
++    if (status_size != sizeof(GpsSvStatus)) {
++        jniThrowException(env, "java/lang/IllegalArgumentException ", "size wrong");
++        return (jint)0;
++    }
++
+     jint* prns = env->GetIntArrayElements(prnArray, 0);
+     jfloat* snrs = env->GetFloatArrayElements(snrArray, 0);
+     jfloat* elev = env->GetFloatArrayElements(elevArray, 0);
+@@ -640,6 +660,47 @@ static jint android_location_GpsLocationProvider_read_sv_status(JNIEnv* env, job
+     return (jint) num_svs;
+ }
+ 
++static jint android_location_GpsLocationProvider_read_gnss_sv_status(JNIEnv* env, jobject obj,
++        jintArray prnArray, jfloatArray snrArray, jfloatArray elevArray, jfloatArray azumArray,
++        jbooleanArray ephmArray,jbooleanArray almArray,jbooleanArray fixArray)
++{
++    // this should only be called from within a call to reportGnssSvStatus
++    size_t status_size = sGnssSvStatus.size;
++    if (status_size != sizeof(GnssSvStatus)) {
++        jniThrowException(env, "java/lang/IllegalArgumentException ", "size wrong");
++        return (jint)0;
++    }
++
++    jint* prns = env->GetIntArrayElements(prnArray, 0);
++    jfloat* snrs = env->GetFloatArrayElements(snrArray, 0);
++    jfloat* elev = env->GetFloatArrayElements(elevArray, 0);
++    jfloat* azim = env->GetFloatArrayElements(azumArray, 0);
++    jboolean* ephm = env->GetBooleanArrayElements(ephmArray, 0);
++    jboolean* alm = env->GetBooleanArrayElements(almArray, 0);
++    jboolean* fix = env->GetBooleanArrayElements(fixArray, 0);
++
++    int num_svs = sGnssSvStatus.num_svs;
++    for (int i = 0; i < num_svs; i++) {
++        prns[i] = sGnssSvStatus.sv_list[i].prn;
++        snrs[i] = sGnssSvStatus.sv_list[i].snr;
++        elev[i] = sGnssSvStatus.sv_list[i].elevation;
++        azim[i] = sGnssSvStatus.sv_list[i].azimuth;
++        ephm[i] = sGnssSvStatus.sv_list[i].has_ephemeris;
++        alm[i] = sGnssSvStatus.sv_list[i].has_almanac;
++        fix[i] = sGnssSvStatus.sv_list[i].used_in_fix;
++    }
++
++    env->ReleaseIntArrayElements(prnArray, prns, 0);
++    env->ReleaseFloatArrayElements(snrArray, snrs, 0);
++    env->ReleaseFloatArrayElements(elevArray, elev, 0);
++    env->ReleaseFloatArrayElements(azumArray, azim, 0);
++    env->ReleaseBooleanArrayElements(ephmArray, ephm, 0);
++    env->ReleaseBooleanArrayElements(almArray, alm, 0);
++    env->ReleaseBooleanArrayElements(fixArray, fix, 0);
++
++    return (jint) num_svs;
++}
++
+ static void android_location_GpsLocationProvider_agps_set_reference_location_cellid(
+         JNIEnv* /* env */, jobject /* obj */, jint type, jint mcc, jint mnc, jint lac, jint cid, jint psc)
+ {
+@@ -1533,6 +1594,9 @@ static JNINativeMethod sMethods[] = {
+     {"native_configuration_update",
+             "(Ljava/lang/String;)V",
+             (void*)android_location_GpsLocationProvider_configuration_update},
++    {"native_read_gnss_sv_status",
++            "([I[F[F[F[Z[Z[Z)I",
++            (void*) android_location_GpsLocationProvider_read_gnss_sv_status},
+ };
+ 
+ int register_android_server_location_GpsLocationProvider(JNIEnv* env)
+-- 
+2.7.4
+

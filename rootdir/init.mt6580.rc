@@ -156,6 +156,11 @@ on post-fs-data
     # GPS 5.1
     mkdir /data/gps_mnl 0771 gps system
 
+    mkdir /data/mpe_mnl 0771 gps system
+    chown gps system /data/mpe_mnl
+
+    mkdir /data/misc/gps 0771 gps system
+
     # AGPS
     mkdir /data/agps_supl 0771 gps system
 

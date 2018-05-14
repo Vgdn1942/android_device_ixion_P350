@@ -76,7 +76,7 @@
 #define MTK_EPO_EXPIRED 3*24*60*60    // 7 days(s)
 #define BUF_SIZE MTK_EPO_SET_MAX_SIZE
 #define GPS_CONF_FILE_SIZE 100
-#define EPO_CONTROL_FILE_PATH "/data/misc/gps.conf"
+#define EPO_CONTROL_FILE_PATH "/system/etc/epo.conf"
 #define IS_SPACE(ch) ((ch == ' ') || (ch == '\t') || (ch == '\n'))
 #endif
 
@@ -250,7 +250,7 @@ static char gps_epo_md_file_name[GPS_EPO_FILE_LEN] = {0};
 static int gps_epo_type = 0;    // o for G+G;1 for GPS only, default is G+G
 static int gnss_mode = 2;
 const char *mnl_prop_path[] = {
-    "/data/misc/gps/mnl.prop",   /*mainly for target*/
+    "/system/etc/mnl.prop",   /*mainly for target*/
     "/sbin/mnl.prop",   /*mainly for emulator*/
 };
 typedef struct retry_alarm

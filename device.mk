@@ -140,7 +140,9 @@ PRODUCT_COPY_FILES += \
 
 # GPS
 PRODUCT_COPY_FILES += \
-	 $(LOCAL_PATH)/configs/agps_profiles_conf2.xml:system/etc/agps_profiles_conf2.xml
+	$(LOCAL_PATH)/configs/agps_profiles_conf2.xml:system/etc/agps_profiles_conf2.xml \
+	$(LOCAL_PATH)/configs/epo.conf:system/etc/epo.conf \
+	$(LOCAL_PATH)/configs/mnl.prop:system/etc/mnl.prop
 
 PRODUCT_PACKAGES += \
 	gps.mt6580 \

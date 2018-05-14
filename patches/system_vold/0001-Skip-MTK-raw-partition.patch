@@ -1,0 +1,31 @@
+From 3d38614e6b6389050fdbfe227e69567e61018190 Mon Sep 17 00:00:00 2001
+From: vgdn1942 <vgdn1942@gmail.com>
+Date: Tue, 15 May 2018 00:36:15 +0300
+Subject: [PATCH] Skip MTK raw partition
+
+Change-Id: Ia296e047d44b8964a3ad8e7f9f36ca0f28141de9
+---
+ VolumeManager.cpp | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/VolumeManager.cpp b/VolumeManager.cpp
+index 2f623ef..8398b20 100755
+--- a/VolumeManager.cpp
++++ b/VolumeManager.cpp
+@@ -294,6 +294,13 @@ void VolumeManager::handleBlockEvent(NetlinkEvent *evt) {
+ 
+     switch (evt->getAction()) {
+     case NetlinkEvent::Action::kAdd: {
++#ifdef MTK_HARDWARE
++        std::string devName(evt->findParam("DEVNAME"));
++        if (strstr(devName.c_str(), "boot") || strstr(devName.c_str(), "rpmb")) {
++               LOG(DEBUG) << "Skip '" << devName << "' disk uevent";
++               break;
++        }
++#endif
+         for (auto source : mDiskSources) {
+             if (source->matches(eventPath)) {
+                 // For now, assume that MMC devices are SD, and that
+-- 
+2.7.4
+

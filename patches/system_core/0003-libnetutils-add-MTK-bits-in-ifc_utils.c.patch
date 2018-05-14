@@ -1,16 +1,16 @@
-From 832f04742e4354b467912c6ebd9dcc8913cd07bf Mon Sep 17 00:00:00 2001
+From 974c65bb11cd64675632f902231ab56f73c49cd3 Mon Sep 17 00:00:00 2001
 From: Wang Xuerui <idontknw.wang@gmail.com>
-Date: Wed, 23 Mar 2016 23:03:24 +0800
-Subject: [PATCH] libnetutils: add MTK bits in ifc_utils.c
+Date: Tue, 15 May 2018 02:46:16 +0300
+Subject: [PATCH 3/3] libnetutils: add MTK bits in ifc_utils.c
 
-Change-Id: I82f04b26feaaa3dfd14e1cceffbc116b4cef093a
+Change-Id: If1fc8abff0adf896fa6849ad11a0157f3f1d2a33
 ---
  include/netutils/ifc.h  |  15 +++
  libnetutils/ifc_utils.c | 266 ++++++++++++++++++++++++++++++++++++++++++++++++
  2 files changed, 281 insertions(+)
 
 diff --git a/include/netutils/ifc.h b/include/netutils/ifc.h
-index 3b272343d6..a9a39eb70d 100644
+index 3b27234..a9a39eb 100644
 --- a/include/netutils/ifc.h
 +++ b/include/netutils/ifc.h
 @@ -61,6 +61,21 @@ extern int ifc_configure(const char *ifname, in_addr_t address,
@@ -36,7 +36,7 @@ index 3b272343d6..a9a39eb70d 100644
  
  #endif /* _NETUTILS_IFC_H_ */
 diff --git a/libnetutils/ifc_utils.c b/libnetutils/ifc_utils.c
-index 3bd59c7896..42f572f5fd 100644
+index 0bd7628..6395f38 100644
 --- a/libnetutils/ifc_utils.c
 +++ b/libnetutils/ifc_utils.c
 @@ -37,6 +37,10 @@
@@ -61,7 +61,7 @@ index 3bd59c7896..42f572f5fd 100644
  #endif
  
  static int ifc_ctl_sock = -1;
-@@ -703,3 +711,261 @@ ifc_configure(const char *ifname,
+@@ -710,3 +718,261 @@ ifc_configure(const char *ifname,
  
      return 0;
  }
@@ -323,3 +323,6 @@ index 3bd59c7896..42f572f5fd 100644
 +    return ret;
 +}
 +#endif
+-- 
+2.7.4
+

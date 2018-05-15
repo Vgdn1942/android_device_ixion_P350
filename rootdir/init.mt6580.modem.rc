@@ -86,10 +86,10 @@ service ril-daemon-mtkmd2 /system/bin/mtkrildmd2
     disabled
     oneshot
 
-#service md_minilog_util /system/bin/md_minilog_util
-#    user radio
-#    disabled
-#    oneshot
+service md_minilog_util /system/bin/md_minilog_util
+    user radio
+    disabled
+    oneshot
 
 #
 #  Modem related services (Begin)
@@ -107,11 +107,11 @@ service ccci_fsd /system/bin/ccci_fsd 0
     class core
     oneshot
 
-service ccci2_fsd /system/bin/ccci_fsd 1
-    user radio
-    group radio system
-    class core
-    oneshot
+#service ccci2_fsd /system/bin/ccci_fsd 1
+#    user radio
+#    group radio system
+#    class core
+#    oneshot
 
 service ccci_mdinit /system/bin/ccci_mdinit 0
     user system
@@ -119,17 +119,17 @@ service ccci_mdinit /system/bin/ccci_mdinit 0
     class core
     oneshot
 
-service ccci2_mdinit /system/bin/ccci_mdinit 1
-    user system
-    group radio system
-    class core
-    oneshot
-
-#service ccci_rpcd /system/bin/ccci_rpcd 0
-#    user radio
+#service ccci2_mdinit /system/bin/ccci_mdinit 1
+#    user system
 #    group radio system
 #    class core
 #    oneshot
+
+service ccci_rpcd /system/bin/ccci_rpcd 0
+    user radio
+    group radio system
+    class core
+    oneshot
 
 #service ccci2_rpcd /system/bin/ccci_rpcd 1
 #    user radio

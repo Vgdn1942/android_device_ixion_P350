@@ -1207,9 +1207,34 @@ service mtkbt /system/bin/mtkbt
     group system vpn net_admin inet net_raw net_bt bluetooth net_bt_admin net_bt_stack sdcard_r
     oneshot
 
+
 #service dpfd /system/bin/dpfd
 #    user root
 #    group system media
+
+#
+#  External Modme control related services
+#
+
+#
+#  Modem related services (Begin)
+#
+service pppd_gprs /system/bin/pppd_dt /dev/ttyACM0 debug noauth refuse-eap usepeerdns nodetach
+    user root
+    group radio cache inet misc
+    disabled
+    oneshot
+
+##Add by T.Zh for ppp daemon
+#service pppd /system/bin/pppd file /data/misc/ppp/ppp_options
+#    user root
+#    disabled
+#    oneshot
+#
+##
+#
+#  Modem related services (End)
+#
 
 #service agpsdcainit /system/bin/agpscacertinit
 #    class main
@@ -1488,6 +1513,18 @@ service guiext-server /system/bin/guiext-server
     class main
     user system
     group system graphics
+
+# OperaMax Service
+service OperaMaxSystem /system/bin/OperaMaxSystem
+    socket tunman stream 0666 system system
+    class main
+    disabled
+
+on property:persist.service.operamax=1
+    start OperaMaxSystem
+
+on property:persist.service.operamax=0
+    stop OperaMaxSystem
 
 service kpoc_charger /system/bin/kpoc_charger
     class charger

@@ -6,8 +6,8 @@ LOCAL_PATH := device/ixion/P350
 # For porting disable block ota & deodex
 FOR_PORTING := false
 
-# Enable/disable adb insecure. Do not enable in product
-DEBUG_BUILD := false
+# Enable/disable adb insecure.
+DEBUG_BUILD := true
 
 # Platform
 TARGET_BOARD_PLATFORM := mt6580

@@ -233,31 +233,43 @@ PRODUCT_COPY_FILES += \
 	frameworks/native/data/etc/android.software.midi.xml:system/etc/permissions/android.software.midi.xml \
 	frameworks/native/data/etc/android.software.sip.voip.xml:system/etc/permissions/android.software.sip.voip.xml
 
-PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
-	ro.secure=0 \
-	ro.adb.secure=0 \
-	ro.allow.mock.location=1 \
-	ro.debuggable=1 \
-	ro.zygote=zygote32 \
-	camera.disable_zsl_mode=1 \
-	ro.mount.fs=EXT4 \
-	persist.sys.usb.config=mtp \
-	ro.hardware=mt6580
-
+ifeq ($(DEBUG_BUILD),true)
 ADDITIONAL_DEFAULT_PROPERTIES += \
 	ro.secure=0 \
 	ro.adb.secure=0 \
 	ro.allow.mock.location=1 \
-	ro.debuggable=1 \
+	ro.debuggable=1
+endif
+
+ADDITIONAL_DEFAULT_PROPERTIES += \
 	persist.service.acm.enable=0 \
 	ro.oem_unlock_supported=1
+
+ifeq ($(DEBUG_BUILD),true)
+PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
+	ro.secure=0 \
+	ro.adb.secure=0 \
+	ro.allow.mock.location=1 \
+	ro.debuggable=1
+endif
+
+PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
+	ro.zygote=zygote32 \
+	camera.disable_zsl_mode=1 \
+	ro.mount.fs=EXT4 \
+	persist.sys.usb.config=mtp,adb \
+	ro.hardware=mt6580
 
 PRODUCT_PROPERTY_OVERRIDES += \
 	persist.sys.timezone=Europe/Minsk \
 	ro.product.locale=ru-RU \
 	ro.product.locale.region=RU \
-	ro.product.locale.language=ru \
+	ro.product.locale.language=ru
+
+ifeq ($(DEBUG_BUILD),true)
+PRODUCT_PROPERTY_OVERRIDES += \
 	service.adb.root=1
+endif
 
 $(call inherit-product, frameworks/native/build/phone-xhdpi-1024-dalvik-heap.mk)
 # never dexopt the keyhandler

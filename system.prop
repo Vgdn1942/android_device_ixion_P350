@@ -2,8 +2,6 @@
 # system.prop for P350
 #
 
-service.adb.root=1
-
 # Display
 ro.sf.lcd_density=300
 ro.opengles.version=131072

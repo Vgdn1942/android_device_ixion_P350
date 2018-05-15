@@ -256,7 +256,8 @@ PRODUCT_PROPERTY_OVERRIDES += \
 	persist.sys.timezone=Europe/Minsk \
 	ro.product.locale=ru-RU \
 	ro.product.locale.region=RU \
-	ro.product.locale.language=ru
+	ro.product.locale.language=ru \
+	service.adb.root=1
 
 $(call inherit-product, frameworks/native/build/phone-xhdpi-1024-dalvik-heap.mk)
 # never dexopt the keyhandler

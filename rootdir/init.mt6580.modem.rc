@@ -3,7 +3,7 @@
 # IMPORTANT: Do not create world writable files or directories.
 # This is a common source of Android security bugs.
 #
-
+   
 on post-fs-data
 
     write /proc/bootprof "post-fs-data: on modem start"
@@ -56,8 +56,6 @@ service ril-daemon-mtk /system/bin/mtkrild
     socket rild-mtk-ut-2 stream 660 radio net_bt
     socket rild-mtk-modem stream 660 radio system
     socket rild-atci stream 660 root radio
-    socket rild-mal stream 660 radio system
-    socket rild-mal-at stream 660 radio system
     socket rild-vsim stream 660 root radio
     socket sap_uim_socket1 stream 660 bluetooth bluetooth
     socket sap_uim_socket2 stream 660 bluetooth bluetooth
@@ -79,8 +77,6 @@ service ril-daemon-mtkmd2 /system/bin/mtkrildmd2
     socket rild-mtk-modem-md2 stream 660 radio system
     socket rild-atci-md2 stream 660 root radio
     socket rild-vsim-md2 stream 660 root radio
-    socket rild-mal-md2 stream 660 radio system
-    socket rild-mal-at-md2 stream 660 radio system
     user root
     group radio cache inet misc audio sdcard_r sdcard_rw log system
     disabled
@@ -107,11 +103,11 @@ service ccci_fsd /system/bin/ccci_fsd 0
     class core
     oneshot
 
-#service ccci2_fsd /system/bin/ccci_fsd 1
-#    user radio
-#    group radio system
-#    class core
-#    oneshot
+service ccci2_fsd /system/bin/ccci_fsd 1
+    user radio
+    group  radio system
+    class core
+    oneshot
 
 service ccci_mdinit /system/bin/ccci_mdinit 0
     user system
@@ -119,11 +115,11 @@ service ccci_mdinit /system/bin/ccci_mdinit 0
     class core
     oneshot
 
-#service ccci2_mdinit /system/bin/ccci_mdinit 1
-#    user system
-#    group radio system
-#    class core
-#    oneshot
+service ccci2_mdinit /system/bin/ccci_mdinit 1
+    user system
+    group radio system
+    class core
+    oneshot
 
 service ccci_rpcd /system/bin/ccci_rpcd 0
     user radio
@@ -131,11 +127,11 @@ service ccci_rpcd /system/bin/ccci_rpcd 0
     class core
     oneshot
 
-#service ccci2_rpcd /system/bin/ccci_rpcd 1
-#    user radio
-#    group radio system
-#    class core
-#    oneshot
+service ccci2_rpcd /system/bin/ccci_rpcd 1
+    user radio
+    group radio system
+    class core
+    oneshot
 
 service pppd_gprs /system/bin/pppd_dt /dev/ttyACM0 debug noauth refuse-eap usepeerdns nodetach
     user root

@@ -74,7 +74,6 @@
         <item>"mobile_fota,10,0,2,60000,true"</item>
         <item>"mobile_cbs,12,0,2,60000,true"</item>
         <item>"mobile_ia,14,0,2,-1,true"</item>
-        <item>"usb,40,40,0,-1,true"</item>
         <item>"bluetooth,7,7,2,-1,true"</item>
     </string-array>
 

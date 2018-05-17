@@ -3,6 +3,12 @@ LOCAL_PATH := device/ixion/P350
 
 -include $(LOCAL_PATH)/ProjectConfig.mk
 
+# For porting disable block ota & deodex
+FOR_PORTING := false
+
+# Enable/disable adb insecure.
+DEBUG_BUILD := true
+
 # Platform
 TARGET_BOARD_PLATFORM := mt6580
 MTK_PLATFORM := MT6580
@@ -60,12 +66,7 @@ BOARD_MKBOOTIMG_ARGS := \
 	--tags_offset 0x0e000000 \
 	--board P350_R01_13.02.
 
-#TARGET_PREBUILT_KERNEL := $(LOCAL_PATH)/kernel
-
-ifeq ($(TARGET_PREBUILT_KERNEL),)
-TARGET_KERNEL_SOURCE := kernel/mt6580/kernel-3.10-common
-TARGET_KERNEL_CONFIG := common_6580_we_l_defconfig
-endif
+TARGET_PREBUILT_KERNEL := $(LOCAL_PATH)/kernel
 
 BOARD_DONT_USE_MTK_BOOTIMG := true
 
@@ -76,7 +77,10 @@ TARGET_CPU_MEMCPY_OPT_DISABLE := true
 
 # OTA
 TARGET_OTA_ASSERT_DEVICE := "dexp_ixion_p350","DEXP Ixion P350","Ixion P350","P350"
-#BLOCK_BASED_OTA := false
+
+ifeq ($(FOR_PORTING),true)
+BLOCK_BASED_OTA := false
+endif
 
 # Offline charger
 WITH_CM_CHARGER := false
@@ -123,9 +127,6 @@ BOARD_GLOBAL_CFLAGS += -DCOMPAT_SENSORS_M
 # Camera
 TARGET_HAS_LEGACY_CAMERA_HAL1 := true
 
-# RIL
-BOARD_PROVIDES_RILD := true
-BOARD_RIL_CLASS := ../../../$(LOCAL_PATH)/ril/
 
 # CMHW
 #BOARD_USES_CYANOGEN_HARDWARE := true
@@ -138,8 +139,11 @@ TARGET_TAP_TO_WAKE_NODE := "/sys/class/tpd_gesture/gesture_mode"
 # Include
 TARGET_SPECIFIC_HEADER_PATH := $(LOCAL_PATH)/include
 
+# RIL
+BOARD_PROVIDES_RILD := true
+BOARD_RIL_CLASS := ../../../$(LOCAL_PATH)/ril
+
 # WIFI
-#BOARD_WLAN_DEVICE := MediaTek
 WPA_SUPPLICANT_VERSION := VER_0_8_X
 BOARD_HOSTAPD_DRIVER := NL80211
 BOARD_HOSTAPD_PRIVATE_LIB := lib_driver_cmd_mt66xx
@@ -149,9 +153,6 @@ WIFI_DRIVER_FW_PATH_PARAM := "/dev/wmtWifi"
 WIFI_DRIVER_FW_PATH_STA := STA
 WIFI_DRIVER_FW_PATH_AP := AP
 WIFI_DRIVER_FW_PATH_P2P := P2P
-#WIFI_DRIVER_STATE_CTRL_PARAM := "/dev/wmtWifi"
-#WIFI_DRIVER_STATE_ON := 1
-#WIFI_DRIVER_STATE_OFF := 0
 
 # Bluetooth
 BOARD_HAVE_BLUETOOTH := true
@@ -167,7 +168,11 @@ BOARD_GPS_LIBRARIES := true
 BOARD_CONNECTIVITY_VENDOR := MediaTek
 
 # Odex
+ifeq ($(FOR_PORTING),true)
 USE_ODEX := false
+else
+USE_ODEX := true
+endif
 
 ifeq ($(USE_ODEX),true)
 WITH_DEXPREOPT := true
@@ -190,9 +195,9 @@ TARGET_PREBUILT_RECOVERY_KERNEL := $(LOCAL_PATH)/kernel
 TARGET_USE_CUSTOM_LUN_FILE_PATH := "/sys/devices/platform/mt_usb/musb-hdrc.0.auto/gadget/lun%d/file"
 
 ifeq ($(RECOVERY_VARIANT),twrp)
-TARGET_RECOVERY_FSTAB := $(LOCAL_PATH)/root/fstab.mt6580
+TARGET_RECOVERY_FSTAB := $(LOCAL_PATH)/rootdir/fstab.mt6580
 else
-TARGET_RECOVERY_FSTAB := $(LOCAL_PATH)/root/recovery.fstab
+TARGET_RECOVERY_FSTAB := $(LOCAL_PATH)/rootdir/recovery.fstab
 endif
 
 # TWRP
@@ -215,6 +220,9 @@ TW_CRYPTO_FS_OPTIONS := "nosuid,nodev,noatime,discard,noauto_da_alloc,data=order
 TW_CUSTOM_CPU_TEMP_PATH := "/sys/devices/virtual/thermal/thermal_zone1/temp"
 TW_INCLUDE_FB2PNG := true
 endif
+
+# Include an expanded selection of fonts
+EXTENDED_FONT_FOOTPRINT := true
 
 # SELinux
 BOARD_SEPOLICY_DIRS += \

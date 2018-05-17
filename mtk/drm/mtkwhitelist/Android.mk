@@ -26,6 +26,7 @@ LOCAL_C_INCLUDES += \
     $(TOP)/frameworks/native/include \
     $(TOP)/frameworks/av/include \
     $(TOP)/frameworks/av/drm \
+    $(LOCAL_PATH)/../include \
     bionic
 
 LOCAL_SHARED_LIBRARIES := \

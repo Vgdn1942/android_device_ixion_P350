@@ -1,0 +1,4 @@
+dev.gps=/dev/gps
+EPO_enabled=1
+SUPL_enabled=1
+

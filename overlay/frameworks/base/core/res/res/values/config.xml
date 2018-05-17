@@ -74,7 +74,6 @@
         <item>"mobile_fota,10,0,2,60000,true"</item>
         <item>"mobile_cbs,12,0,2,60000,true"</item>
         <item>"mobile_ia,14,0,2,-1,true"</item>
-        <item>"usb,40,40,0,-1,true"</item>
         <item>"bluetooth,7,7,2,-1,true"</item>
     </string-array>
 
@@ -101,7 +100,6 @@
     <string-array translatable="false" name="config_tether_bluetooth_regexs">
         <item>"bnep\\d"</item>
         <item>"bt-pan"</item>
-        <item>"bt-dun"</item>   
     </string-array>
 
     <bool name="config_wifi_background_scan_support">false</bool>
@@ -220,5 +218,8 @@
      don't support RIL_REQUEST_GET_RADIO_CAPABILITY
      format is UMTS|LTE|... -->
     <string translatable="false" name="config_radio_access_family">GSM|WCDMA</string>
+
+    <!-- Flag indicating if the user is notified when the mobile network access is restricted -->
+    <bool name="config_user_notification_of_restrictied_mobile_access">false</bool>
 
 </resources>

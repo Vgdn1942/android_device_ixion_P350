@@ -1,0 +1,54 @@
+From e19fc85aa3711e81193f95600a508807520a159a Mon Sep 17 00:00:00 2001
+From: vgdn1942 <vgdn1942@gmail.com>
+Date: Thu, 17 May 2018 11:04:25 +0300
+Subject: [PATCH] Add mtk gps header
+
+Change-Id: I495900de5c8c4d62ebdeaa480bd9b7779ab1c0f3
+---
+ include/hardware/gps_mtk.h | 34 ++++++++++++++++++++++++++++++++++
+ 1 file changed, 34 insertions(+)
+ create mode 100755 include/hardware/gps_mtk.h
+
+diff --git a/include/hardware/gps_mtk.h b/include/hardware/gps_mtk.h
+new file mode 100755
+index 0000000..c7162e2
+--- /dev/null
++++ b/include/hardware/gps_mtk.h
+@@ -0,0 +1,34 @@
++/*
++ * Copyright (C) 2010 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#ifndef ANDROID_INCLUDE_HARDWARE_GPS_MTK_H
++#define ANDROID_INCLUDE_HARDWARE_GPS_MTK_H
++
++#include <hardware/gps_internal.h>
++
++__BEGIN_DECLS
++
++/** GPS callback structure with Mediatek extension. */
++typedef struct _GpsCallbacks_mtk {
++    GpsCallbacks base;
++
++//    gnss_sv_status_callback gnss_sv_status_cb;
++} GpsCallbacks_mtk;
++
++__END_DECLS
++
++#endif /* ANDROID_INCLUDE_HARDWARE_GPS_MTK_H */
++
+-- 
+2.7.4
+

@@ -2,10 +2,8 @@
 # system.prop for P350
 #
 
-service.adb.root=1
-
 # Display
-ro.sf.lcd_density=293
+ro.sf.lcd_density=300
 ro.opengles.version=131072
 ro.egl.destroy_after_detach=true
 
@@ -111,6 +109,9 @@ fmradio.driver.enable=1
 # Low-ram optimizations
 ro.config.low_ram=true
 persist.sys.force_highendgfx=true
+
+# OTA
+cm.updater.uri=https://raw.githubusercontent.com/vgdn1942/ota/lineage-14.1/api.json
 
 #
 # MTK bits

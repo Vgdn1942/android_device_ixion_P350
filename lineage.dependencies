@@ -4,11 +4,5 @@
      "repository":   "Vgdn1942/android_vendor_ixion_P350",
      "target_path":  "vendor/ixion/P350",
      "revision":     "lineage-14.1"
-  },
-  {
-     "remote":       "github",
-     "repository":   "Vgdn1942/kernel_mt6580_kernel-3.10-common",
-     "target_path":  "kernel/mt6580/kernel-3.10-common",
-     "revision":     "lineage-14.1"
   }
 ]

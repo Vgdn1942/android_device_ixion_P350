@@ -215,9 +215,6 @@ TW_CUSTOM_CPU_TEMP_PATH := "/sys/devices/virtual/thermal/thermal_zone1/temp"
 TW_INCLUDE_FB2PNG := true
 endif
 
-# Include an expanded selection of fonts
-EXTENDED_FONT_FOOTPRINT := true
-
 # SELinux
 BOARD_SEPOLICY_DIRS += \
 	$(LOCAL_PATH)/sepolicy

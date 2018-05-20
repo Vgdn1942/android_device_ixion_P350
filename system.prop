@@ -57,6 +57,11 @@ ro.telephony.sim.count=2
 ro.telephony.ril_class=MT6580
 ro.telephony.ril.config=signalstrength
 
+ro.boot.opt_md1_support=1
+ro.boot.opt_md2_support=0
+ro.boot.opt_md3_support=0
+ro.boot.opt_md5_support=0
+
 ro.mediatek.gemini_support=true
 ro.gemini.smart_sim_switch=false
 ro.sim_refresh_reset_by_modem=1

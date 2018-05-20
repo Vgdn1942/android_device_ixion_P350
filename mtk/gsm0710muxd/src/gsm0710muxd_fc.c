@@ -231,7 +231,6 @@ void _fc_cacheFrameData(
 
     LOGMUX(LOG_INFO, "Case2:Frame List=0x%08X, pending_frame_bytes=%d, frame_len=%d",
            (unsigned int)channel->rx_fl, channel->rx_fl_total, frame->length);
-    destroy_frame(frame);
     return;
 }
 
@@ -306,6 +305,8 @@ static void *retry_write_pty_thread(
                     usleep(msec * (++waiting));
                 } else {
                     written = 0;
+                    //This frame is sent to pty, free it here.
+                    destroy_frame(frame);
                     break;
                 }
             } else {
